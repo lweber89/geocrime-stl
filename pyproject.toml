@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geocrime-stl"
+version = "0.0.1"
+description = "A utility for cleaning St. Louis crime data sets."
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "pandas",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
