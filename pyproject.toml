@@ -9,7 +9,11 @@ description = "A utility for cleaning St. Louis crime data sets."
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-    "pandas",
+    "pandas>=2.0.0",
+    "geopandas>=0.14.0",
+    "requests>=2.31.0",
+    "shapely>=2.0.0",
+    "pyogrio>=0.7.0"
 ]
 
 [tool.setuptools.packages.find]
