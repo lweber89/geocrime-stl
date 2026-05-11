@@ -1,21 +1,43 @@
 import pandas as pd
 import geopandas as gpd
+import re
 
-def fetch_stl_crime_data(url):
-    """Downloads CSV from SLMPD with necessary headers."""
+def extract_date_from_url(url):
+    """
+    Parses 'April2026' from '.../April2026.csv' 
+    Returns: (month_int, year_int)
+    """
+    # Regex to find MonthNameYear (e.g., April2026)
+    match = re.search(r'([a-zA-Z]+)(\d{4})', url)
+    if not match:
+        raise ValueError(f"Could not parse Month/Year from URL: {url}")
+    
+    month_name, year = match.groups()
+    
+    # Map name to number
+    months = {
+        'January': 1, 'February': 2, 'March': 3, 'April': 4,
+        'May': 5, 'June': 6, 'July': 7, 'August': 8,
+        'September': 9, 'October': 10, 'November': 11, 'December': 12
+    }
+    
+    return months[month_name.capitalize()], int(year)
+
+def fetch_and_clean_stl_crime(url):
+    """The new 'all-in-one' function to replace manual steps."""
+    # Step 1: Get parameters from the URL itself
+    month, year = extract_date_from_url(url)
+    
+    # Step 2: Fetch
     headers = {'User-Agent': 'Mozilla/5.0'}
-    return pd.read_csv(url, storage_options=headers)
-
-def clean_crime_dataframe(df, month=4, year=2026):
-    """Handles date conversion, filtering, and coordinate cleanup."""
-    # Convert dates
+    df = pd.read_csv(url, storage_options=headers)
+    
+    # Step 3: Clean (using extracted month/year)
     df['IncidentDate'] = pd.to_datetime(df['IncidentDate'], format='%m/%d/%Y', exact=False)
     
-    # Filter by time
     df_filtered = df[(df['IncidentDate'].dt.month == month) & 
                      (df['IncidentDate'].dt.year == year)].copy()
     
-    # Force coordinates to numbers and drop invalid ones
     df_filtered['Longitude'] = pd.to_numeric(df_filtered['Longitude'], errors='coerce')
     df_filtered['Latitude'] = pd.to_numeric(df_filtered['Latitude'], errors='coerce')
     
