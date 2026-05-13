@@ -4,7 +4,7 @@ import re
 
 def extract_date_from_url(url):
     """
-    Parses 'April2026' from '.../April2026.csv' 
+    Parses Month and Year from provided URL
     Returns: (month_int, year_int)
     """
     # Regex to find MonthNameYear (e.g., April2026)
