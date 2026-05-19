@@ -11,6 +11,7 @@ import requests
 
 
 def construct_url(month: str = None, year: str = None):
+
     """
     Constructs a URL based on the provided month and year.
     Defaults to the most recent completed month and year if none are provided.
@@ -80,6 +81,16 @@ def construct_url(month: str = None, year: str = None):
         sys.exit(1)
 
 def fetch_and_clean(month=None, year=None, keep_raw_csv=False):
+    """_summary_
+
+    Args:
+        month (_type_, optional): _description_. Defaults to None.
+        year (_type_, optional): _description_. Defaults to None.
+        keep_raw_csv (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        _type_: _description_
+    """
     # 1. Generate the target URL
     url, month_int, year_int = construct_url(month, year)
     
@@ -219,8 +230,19 @@ def fetch_and_clean(month=None, year=None, keep_raw_csv=False):
 
 
 def clip_df(df):
-    """Converts DataFrame to GeoDataFrame and clips to boundary."""
-    
+
+    """_summary_
+
+    Args:
+        df (_type_): _description_
+
+    Raises:
+        FileNotFoundError: _description_
+
+    Returns:
+        _type_: _description_
+    """
+  
     # Strategy A: Check relative to where this specific python file is located
     base_dir = os.path.dirname(os.path.abspath(__file__))
     boundary_path = os.path.join(base_dir, 'data', 'stl_boundary.geojson')
