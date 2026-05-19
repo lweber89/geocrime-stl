@@ -2,6 +2,7 @@
 from datetime import datetime
 import io
 import os
+import sys
 
 # Group 2: Third-Party Libraries
 import geopandas as gpd
@@ -9,48 +10,74 @@ import pandas as pd
 import requests
 
 
-
 def construct_url(month: str = None, year: str = None):
     """
     Constructs a URL based on the provided month and year.
     Defaults to the most recent completed month and year if none are provided.
+    Exits cleanly if invalid inputs are provided.
     """
-    # 1. Establish the default "last month" baseline to handle lag and year rollovers
-    now = datetime.now()
-    if now.month == 1:
-        default_month = 12
-        default_year = now.year - 1
-    else:
-        default_month = now.month - 1
-        default_year = now.year
+    try:
+        # 1. Establish the default "last month" baseline to handle lag and year rollovers
+        now = datetime.now()
+        if now.month == 1:
+            default_month = 12
+            default_year = now.year - 1
+        else:
+            default_month = now.month - 1
+            default_year = now.year
 
-    # 2. Use default year if none provided, otherwise parse user input
-    if year is None:
-        year_int = default_year
-        year_str = str(year_int)
-    else:
-        year_str = str(year).strip()
-        year_int = int(year_str)
-        
-    # 3. Use default month if none provided, otherwise parse user input
-    if month is None:
-        month_int = default_month
-        month_name = datetime.strptime(str(month_int), "%m").strftime("%B")
-    else:
-        try:
-            month_int = int(month)
+        # 2. Use default year if none provided, otherwise parse user input
+        if year is None:
+            year_int = default_year
+            year_str = str(year_int)
+        else:
+            year_str = str(year).strip()
+            year_int = int(year_str)
+            
+        # 3. Use default month if none provided, otherwise parse user input
+        if month is None:
+            month_int = default_month
             month_name = datetime.strptime(str(month_int), "%m").strftime("%B")
-        except ValueError:
-            month_name = str(month).strip().capitalize()
-            month_int = datetime.strptime(month_name, "%B").month
+        else:
+            # Clean up the input string
+            clean_month = str(month).strip()
+            
+            try:
+                # Case A: Input is an integer/digit string (e.g., "12" or 12)
+                month_int = int(clean_month)
+                month_name = datetime.strptime(str(month_int), "%m").strftime("%B")
+            except ValueError:
+                # Case B: Input is a string name. Try full name first (%B), then abbreviation (%b)
+                try:
+                    # e.g., "December"
+                    dt = datetime.strptime(clean_month.capitalize(), "%B")
+                except ValueError:
+                    # e.g., "Dec"
+                    dt = datetime.strptime(clean_month.capitalize(), "%b")
+                
+                month_int = dt.month
+                month_name = dt.strftime("%B")
 
-    # 4. Calculate the upload folder string (always 1 month ahead of data month)
-    folder_int = (month_int % 12) + 1
-    folder_str = f"{folder_int:02d}"
+        # 4. Calculate the upload folder string (always 1 month ahead of data month)
+        folder_int = (month_int % 12) + 1
+        folder_month_str = f"{folder_int:02d}"
 
-    # 5. Construct and return final values
-    base_url = "https://slmpd.org/wp-content/uploads"
-    return f"{base_url}/{year_str}/{folder_str}/{month_name}{year_str}.csv", month_int, year_int
+        # Calculate year if December (advance 1 year)
+        if month_int == 12:
+            folder_year_str = str(year_int + 1)
+        else:
+            folder_year_str = year_str
+
+        # 5. Construct and return final values
+        base_url = "https://slmpd.org/wp-content/uploads"
+        url = f"{base_url}/{folder_year_str}/{folder_month_str}/{month_name}{year_str}.csv"
+        
+        return url, month_int, year_int
+
+    except Exception as e:
+        # Catches any unexpected input parsing or math errors, prints a clean message, and halts
+        print(f"❌Error: Invalid month ('{month}') or year ('{year}') provided. Details: {e}")
+        sys.exit(1)
 
 def fetch_and_clean(month=None, year=None, keep_raw_csv=False):
     # 1. Generate the target URL
