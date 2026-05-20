@@ -15,20 +15,22 @@ def hotspot_maps(data_package):
     
     map_label = f"{calendar.month_name[data_package.month]} {data_package.year}"
 
-    # 1. Filter and copy your dataframes
+    # Filter dataframes
+    
     persons_df = df[df["off_type"].str.lower().str.contains("person", na=False)].copy()
     property_df = df[df["off_type"].str.lower().str.contains("property", na=False)].copy()
     society_df = df[df["off_type"].str.lower().str.contains("society", na=False)].copy()
 
+    #Add column for hotspot weighting
+    #Set to "1" to treat each point in seperated layers equally
+    
     persons_df["intensity"] = 1
     property_df["intensity"] = 1
     society_df["intensity"] = 1
 
-    # 2. Initialize the map base
+    # Initialize the map base
 
-
-    # 3. Store the [latitude, longitude] center in your variable
-    stl_center = [38.62827082238057, -90.24760264969585]
+    stl_center = [38.6282, -90.2476]
 
     m = leafmap.Map(
         center=stl_center,
@@ -41,7 +43,8 @@ def hotspot_maps(data_package):
         toolbar_control=False
     )
 
-    # 3. Inner Helper Functions (Nested functions must be indented an extra 4 spaces!)
+    # Inner Helper Functions
+
     def get_person_layer():
         if persons_df.empty: return None
         return Heatmap(
@@ -72,7 +75,7 @@ def hotspot_maps(data_package):
         "Society": get_society_layer
     }
 
-    # 4. Setup Dropdown & Update Logic
+    # Setup Dropdown & Visualisation Update Logic
     dropdown = Dropdown(
         options=[k for k, v in generator_mapping.items()],
         value="Persons",
@@ -91,6 +94,7 @@ def hotspot_maps(data_package):
         if layer_generator is not None:
             fresh_layer = layer_generator()
             if fresh_layer is not None:
+
                 neighborhood_style = {
                     "color": "#7a8a99",
                     "weight": 0.6,
@@ -110,8 +114,8 @@ def hotspot_maps(data_package):
     dropdown_control = WidgetControl(widget=dropdown, position='topright')
     m.add_control(dropdown_control)
 
-    # 5. Trigger initial map render
+    # Trigger initial map render
     update_map_layer(dropdown.value)
 
-    # 6. CRITICAL STEP: Return the map object back to the user
+    # Return map object
     return m
