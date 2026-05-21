@@ -1,34 +1,109 @@
 import os
-import geopandas as gpd
+import logging
 import pandas as pd
+import geopandas as gpd
 
-def export_data(df, output_name, output_dir="output"):
+logging.basicConfig(level=logging.INFO)
+
+def export_to_csv(data_package: tuple, output_dir: str = ".") -> bool:
     """
-    Takes the cleaned pandas DataFrame, converts it to a GeoDataFrame,
-    and exports it to CSV, GeoJSON, Shapefile, or GeoPackage.
+    Exports the dataframe to a standardized CSV file.
     """
-    # Ensure the output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-    base_path = os.path.join(output_dir, output_name)
 
-    # 1. Export standard tabular CSV first (no spatial geometries needed)
-    df.to_csv(f"{base_path}.csv", index=False)
-    print(f"📁 Exported Tabular: {base_path}.csv")
+    #Unpack the data package, set local variables
 
-    # 2. Convert to GeoDataFrame for spatial formats
+    df = data_package.df
+    month = data_package.month
+    year = data_package.year
+    
+    # Format month to always be 2 digits (e.g., 4 -> '04')
+    
+    filename = f"stl_crime_data_{month:02d}_{year}.csv"
+    full_path = os.path.join(output_dir, filename)
+    
+    try:
+        # Drop geometry column for pure CSV if it exists
+        df_to_export = df.drop(columns=['geometry']) if 'geometry' in df.columns else df
+        
+        df_to_export.to_csv(full_path, index=False)
+        logging.info(f"CSV successfully written to {full_path}")
+        return True
+    except PermissionError:
+        logging.error(f"Cannot write CSV. Is {full_path} open in Excel?")
+        return False
+    except Exception as e:
+        logging.error(f"Error exporting CSV to {full_path}: {e}")
+        return False
+
+
+def export_to_geojson(data_package: tuple, output_dir: str = ".") -> bool:
+    """
+    Exports the dataframe to a standardized GeoJSON file.
+
+    """
+    #Unpack the data package, set local variables
+
+    df = data_package.df
+    month = data_package.month
+    year = data_package.year
+
+    #Convert to gdf in prep for conversion to GPKG
+    
     gdf = gpd.GeoDataFrame(
-        df, 
-        geometry=gpd.points_from_xy(df.lon, df.lat),
-        crs="EPSG:4326"
+        df, geometry=gpd.points_from_xy(df.lon, df.lat), crs="EPSG:4326"
     )
 
-    # 3. Export Spatial Formats
-    gdf.to_file(f"{base_path}.geojson", driver="GeoJSON")
-    print(f"🌍 Exported Spatial: {base_path}.geojson")
+    #Prepare the filename (tagging with month and year from data_package)
 
-    gdf.to_file(f"{base_path}.gpkg", driver="GPKG", layer="crime_incidents")
-    print(f"📦 Exported Spatial: {base_path}.gpkg")
+    filename = f"stl_crime_data_{month:02d}_{year}.geojson"
+    full_path = os.path.join(output_dir, filename)
+    
+    try:
+        # Quick fallback check just in case CRS wasn't set by the cleaner
+        if hasattr(gdf, 'crs') and gdf.crs is None:
+            logging.warning("No CRS detected. Defaulting to EPSG:4326 for GeoJSON.")
+            gdf = gdf.set_crs("EPSG:4326")
+            
+        gdf.to_file(full_path, driver="GeoJSON")
+        logging.info(f"GeoJSON successfully written to {full_path}")
+        return True
+    except Exception as e:
+        logging.error(f"Error exporting GeoJSON to {full_path}: {e}")
+        return False
 
-    # ESRI Shapefiles truncate column names to 10 chars, but it's great for desktop GIS
-    gdf.to_file(f"{base_path}_shp", driver="ESRI Shapefile")
-    print(f"🗺️ Exported Spatial: {base_path}_shp/ (Shapefile Directory)")
+
+def export_to_gpkg(data_package: tuple, output_dir: str = ".") -> bool:
+    """
+    Exports the dataframe to a standardized GeoPackage file.
+
+    """
+    df = data_package.df
+    month = data_package.month
+    year = data_package.year
+
+    #Convert to gdf in prep for conversion to GPKG
+
+    gdf = gpd.GeoDataFrame(
+    df, geometry=gpd.points_from_xy(df.lon, df.lat), crs="EPSG:4326"
+    )
+
+    #Prepare the filename (tagging with month and year from data_package)
+
+    filename = f"stl_crime_data_{month:02d}_{year}.gpkg"
+
+    full_path = os.path.join(output_dir, filename)
+    
+    # Layer name inside the GPKG can match the filename pattern for clarity
+    
+    layer_name = f"stl_crime_{month:02d}_{year}"
+    
+    try:
+        gdf.to_file(full_path, driver="GPKG", layer=layer_name)
+        logging.info(f"GeoPackage successfully written to {full_path} (Layer: {layer_name})")
+        return True
+    except PermissionError:
+        logging.error(f"Cannot write GPKG. Is {full_path} locked by GIS software?")
+        return False
+    except Exception as e:
+        logging.error(f"Error exporting GeoPackage to {full_path}: {e}")
+        return False

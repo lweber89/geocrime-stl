@@ -1,7 +1,5 @@
 import calendar
 
-
-
 def generate_summary_dashboard(data_package):
 
     df = data_package.df

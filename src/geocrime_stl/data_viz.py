@@ -101,7 +101,7 @@ def hotspot_maps(data_package):
                     "opacity": 0.35,
                     "fillOpacity": 0
                 }
-                m.add_geojson("data/neighborhoods.geojson", style=neighborhood_style, hover_style=neighborhood_style, info_mode=None)
+                m.add_geojson("data/stl_neighborhoods.geojson", style=neighborhood_style, hover_style=neighborhood_style, info_mode=None)
                 m.add_layer(fresh_layer)
                 m.current_crime_layer = fresh_layer
 
