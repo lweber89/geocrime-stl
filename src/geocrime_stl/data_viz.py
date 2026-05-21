@@ -23,7 +23,7 @@ def hotspot_maps(data_package):
 
     #Add column for hotspot weighting
     #Set to "1" to treat each point in seperated layers equally
-    
+
     persons_df["intensity"] = 1
     property_df["intensity"] = 1
     society_df["intensity"] = 1
@@ -79,7 +79,7 @@ def hotspot_maps(data_package):
     dropdown = Dropdown(
         options=[k for k, v in generator_mapping.items()],
         value="Persons",
-        description= map_label + " Hotspots:",
+        description= map_label + " Crime Hotspots:",
         style={'description_width': 'initial'}
     )
 

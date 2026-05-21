@@ -1,4 +1,13 @@
-def generate_summary_dashboard(df):
+import calendar
+
+
+
+def generate_summary_dashboard(data_package):
+
+    df = data_package.df
+    
+
+
     """Prints a high-level statistical overview of the cleaned dataset."""
     print("==================================================")
     print(f"📊 ST. LOUIS CRIME DATA SUMMARY REPORT")
