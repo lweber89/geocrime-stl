@@ -5,7 +5,7 @@ from ipyleaflet import Heatmap
 HOTSPOT_RADIUS = 30
 HOTSPOT_BLUR = 15
 
-def hotspot_maps(data_package, crime_category="Persons"):
+def hotspot_maps(data_package, crime_category="Person"):
     """
     Generates an interactive leafmap (ipyleaflet) object 
     displaying a specific crime category hotspot.
