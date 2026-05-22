@@ -229,6 +229,20 @@ def fetch_and_clean(
     )
     df_filtered["inc_#"] = df_filtered["inc_#"].astype("string")
 
+    # =========================================================================
+    # 🔥 FIX: STRIP PREFIXES (G-88, etc.) AND FORCE NEIGHBORHOOD ID TO INT
+    # =========================================================================
+    df_filtered["nbhd_num"] = (
+        df_filtered["nbhd_num"]
+        .astype(str)
+        .str.extract(r"(\d+)", expand=False)
+    )
+    df_filtered["nbhd_num"] = pd.to_numeric(
+        df_filtered["nbhd_num"], errors="coerce"
+    ).astype("Int64")
+    # =========================================================================
+
+
     # Normalize classifications
     df_filtered["off_type"] = df_filtered["off_type"].replace(
         "Unspecified", "Other"

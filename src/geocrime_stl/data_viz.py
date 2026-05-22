@@ -16,11 +16,11 @@ def hotspot_maps(data_package, crime_category="Person", radius = HOTSPOT_RADIUS,
     df = data_package.df
     
     # Base map initialization
-    #stl_center = [38.6282, -90.2476]
+
     m = leafmap.Map(
         center=STL_MAP_CONFIG[0],
         zoom=STL_MAP_CONFIG[1],
-        height="800px",
+        height=STL_MAP_CONFIG[2],
         basemap="CartoDB.DarkMatter",
         layer_control=False,
         draw_control=False,
