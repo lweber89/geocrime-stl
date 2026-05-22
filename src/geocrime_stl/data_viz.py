@@ -1,11 +1,13 @@
-import calendar
 import leafmap
 from ipyleaflet import Heatmap
+from ipyleaflet import Marker, MarkerCluster, AwesomeIcon
+from ipywidgets import HTML
+    
 
 HOTSPOT_RADIUS = 30
 HOTSPOT_BLUR = 15
 
-def hotspot_maps(data_package, crime_category="Person"):
+def hotspot_maps(data_package, crime_category="Person", radius = HOTSPOT_RADIUS, blur = HOTSPOT_BLUR):
     """
     Generates an interactive leafmap (ipyleaflet) object 
     displaying a specific crime category hotspot.
@@ -71,4 +73,59 @@ def hotspot_maps(data_package, crime_category="Person"):
     )
     
     m.add_layer(heatmap_layer)
+    return m
+
+
+def plot_all_crimes(data_package):
+
+
+    df = data_package.df
+
+    m = leafmap.Map(
+        center=[df["lat"].mean(), df["lon"].mean()],
+        zoom=12,
+        basemap="CartoDB.Positron",
+    )
+
+    # Icons setup
+    icon_persons = AwesomeIcon(name='user', marker_color='red', icon_color='white', prefix='fa')
+    icon_property = AwesomeIcon(name='home', marker_color='blue', icon_color='white', prefix='fa')
+    icon_society = AwesomeIcon(name='shield', marker_color='green', icon_color='white', prefix='fa')
+    icon_other = AwesomeIcon(name='gavel', marker_color='purple', icon_color='white', prefix='fa')
+
+    icon_mapping = {
+        'Person': icon_persons,
+        'Property': icon_property,
+        'Society': icon_society,
+        'Other': icon_other
+    }
+
+    # 1. Expand the list comprehension to generate tooltips and popups dynamically
+    markers = []
+    for _, row in df.iterrows():
+        
+        # CLICK TEXT: Rich HTML layout for clean structure
+        click_html = HTML(value=f"""
+            <div style="font-family: sans-serif; min-width: 200px;">
+                <h4 style="margin: 0 0 5px 0; color: #333;">Incident #{row['inc_#']}</h4>
+                <hr style="border: 0; border-top: 1px solid #ccc; margin: 5px 0;">
+                <b>Offense:</b> {row['offense']}<br>
+                <b>Date/Time:</b> {row['date_time']}<br>
+                <b>Location:</b> {row['address']}
+            </div>
+        """)
+        
+        # Create the marker with all its interactive layers
+        marker = Marker(
+            location=[row["lat"], row["lon"]], 
+            icon=icon_mapping.get(row["off_type"], icon_other),
+            popup=click_html
+        )
+        markers.append(marker)
+
+
+    # 2. Bundle into the cluster and add to map
+    marker_cluster = MarkerCluster(markers=markers, name="All NIBRS Incidents")
+    m.add_layer(marker_cluster)
+
     return m

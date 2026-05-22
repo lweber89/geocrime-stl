@@ -1,10 +1,8 @@
 import calendar
 
-def generate_summary_dashboard(data_package):
+def summary_dashboard(data_package):
 
     df = data_package.df
-    
-
 
     """Prints a high-level statistical overview of the cleaned dataset."""
     print("==================================================")
