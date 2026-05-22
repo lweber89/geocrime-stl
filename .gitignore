@@ -221,3 +221,6 @@ __marimo__/
 test.ipynb
 historical_data_baseline.ipynb
 tinker.ipynb
+
+#Data
+*.parquet
