@@ -2,6 +2,7 @@ import leafmap
 from ipyleaflet import Heatmap
 from ipyleaflet import Marker, MarkerCluster, AwesomeIcon
 from ipywidgets import HTML
+from geocrime_stl.constants import STL_MAP_CONFIG
     
 
 HOTSPOT_RADIUS = 30
@@ -15,10 +16,10 @@ def hotspot_maps(data_package, crime_category="Person", radius = HOTSPOT_RADIUS,
     df = data_package.df
     
     # Base map initialization
-    stl_center = [38.6282, -90.2476]
+    #stl_center = [38.6282, -90.2476]
     m = leafmap.Map(
-        center=stl_center,
-        zoom=12,
+        center=STL_MAP_CONFIG[0],
+        zoom=STL_MAP_CONFIG[1],
         height="800px",
         basemap="CartoDB.DarkMatter",
         layer_control=False,
@@ -82,8 +83,9 @@ def plot_all_crimes(data_package):
     df = data_package.df
 
     m = leafmap.Map(
-        center=[df["lat"].mean(), df["lon"].mean()],
-        zoom=12,
+        #center=[df["lat"].mean(), df["lon"].mean()],
+        center=STL_MAP_CONFIG[0],
+        zoom=STL_MAP_CONFIG[1],
         basemap="CartoDB.Positron",
     )
 
