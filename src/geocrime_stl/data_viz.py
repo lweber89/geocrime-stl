@@ -36,7 +36,7 @@ def hotspot_maps(data_package, crime_category="Person", radius = HOTSPOT_RADIUS,
         "fillOpacity": 0
     }
     
-    #Pass style via lambda function to comply with ipyleaflet backend requirements
+    # Pass style via lambda function to comply with ipyleaflet backend requirements
     m.add_geojson(
         "data/stl_neighborhoods.geojson", 
         style_callback=lambda feature: neighborhood_style,
@@ -44,10 +44,8 @@ def hotspot_maps(data_package, crime_category="Person", radius = HOTSPOT_RADIUS,
         info_mode=None
     )
 
-    # 2. Filter down to chosen category
+    # Filter down to chosen category
     filtered_df = df[df["off_type"].str.lower().str.contains(crime_category.lower(), na=False)].copy()
-
-    df["off_type"].head()
     
     if filtered_df.empty:
         return m  # Returns base map with background borders if data frame is empty
@@ -56,7 +54,7 @@ def hotspot_maps(data_package, crime_category="Person", radius = HOTSPOT_RADIUS,
 
     locations_list = filtered_df[["lat", "lon", "intensity"]].values.tolist()
 
-    # 3. Determine custom gradients dynamically 
+    # Determine custom gradients dynamically 
     if crime_category == "Person":
         gradient_config = {0.4: "blue", 0.6: "cyan", 0.7: "lime", 0.8: "yellow", 1.0: "red"}
     elif crime_category == "Property":
@@ -64,7 +62,7 @@ def hotspot_maps(data_package, crime_category="Person", radius = HOTSPOT_RADIUS,
     else:  # Society
         gradient_config = {0.4: "green", 0.6: "lime", 0.8: "teal", 1.0: "blue"}
 
-    # 4. Generate and attach the heatmap layer
+    # Generate and attach the heatmap layer
     heatmap_layer = Heatmap(
         locations=locations_list,
         name=crime_category,
@@ -83,9 +81,9 @@ def plot_all_crimes(data_package):
     df = data_package.df
 
     m = leafmap.Map(
-        #center=[df["lat"].mean(), df["lon"].mean()],
         center=STL_MAP_CONFIG[0],
         zoom=STL_MAP_CONFIG[1],
+        height=STL_MAP_CONFIG[2],
         basemap="CartoDB.Positron",
     )
 
@@ -102,7 +100,7 @@ def plot_all_crimes(data_package):
         'Other': icon_other
     }
 
-    # 1. Expand the list comprehension to generate tooltips and popups dynamically
+    # Expand the list comprehension to generate tooltips and popups dynamically
     markers = []
     for _, row in df.iterrows():
         
@@ -125,8 +123,7 @@ def plot_all_crimes(data_package):
         )
         markers.append(marker)
 
-
-    # 2. Bundle into the cluster and add to map
+    # Bundle into the cluster and add to map
     marker_cluster = MarkerCluster(markers=markers, name="All NIBRS Incidents")
     m.add_layer(marker_cluster)
 

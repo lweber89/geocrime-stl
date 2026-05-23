@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-# Group 1: Standard Libraries
+# Standard Libraries
 from dataclasses import dataclass
 from datetime import datetime
 import io
 import os
 import sys
 
-# Group 2: Third-Party Libraries
+# Third-Party Libraries
 import geopandas as gpd
 import pandas as pd
 import requests
@@ -31,7 +31,7 @@ def construct_url(
     Exits cleanly if invalid inputs are provided.
     """
     try:
-        # 1. Establish the default "last month" baseline to handle lag and year rollovers
+        # Establish the default "last month" baseline to handle lag and year rollovers
         now = datetime.now()
         if now.month == 1:
             default_month = 12
@@ -40,7 +40,7 @@ def construct_url(
             default_month = now.month - 1
             default_year = now.year
 
-        # 2. Use default year if none provided, otherwise parse user input
+        # Use default year if none provided, otherwise parse user input
         if year is None:
             year_int = default_year
             year_str = str(year_int)
@@ -48,7 +48,7 @@ def construct_url(
             year_str = str(year).strip()
             year_int = int(year_str)
 
-        # 3. Use default month if none provided, otherwise parse user input
+        # Use default month if none provided, otherwise parse user input
         if month is None:
             month_int = default_month
             month_name = datetime.strptime(str(month_int), "%m").strftime("%B")
@@ -71,7 +71,7 @@ def construct_url(
                 month_int = dt.month
                 month_name = dt.strftime("%B")
 
-        # 4. Calculate the upload folder string (always 1 month ahead of data month)
+        # Calculate the upload folder string (always 1 month ahead of data month)
         folder_int = (month_int % 12) + 1
         folder_month_str = f"{folder_int:02d}"
 
@@ -81,7 +81,7 @@ def construct_url(
         else:
             folder_year_str = year_str
 
-        # 5. Construct and return final values
+        # Construct and return final values
         base_url = "https://slmpd.org/wp-content/uploads"
         url = f"{base_url}/{folder_year_str}/{folder_month_str}/{month_name}{year_str}.csv"
 
@@ -107,7 +107,7 @@ def fetch_and_clean(
         CrimeDataPackage if successful, None if a network or retrieval error
         occurs.
     """
-    # 1. Generate the target URL
+    # Generate the target URL
     url, month_int, year_int = construct_url(month, year)
 
     headers = {"User-Agent": "Mozilla/5.0"}
@@ -116,7 +116,7 @@ def fetch_and_clean(
     print(f"Attempting to fetch data from: {url}")
 
     try:
-        # 3. Use requests first to safely check the server's response
+        # Use requests first to safely check the server's response
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
 
@@ -137,7 +137,7 @@ def fetch_and_clean(
         print(f"❌ An unexpected error occurred while fetching the file: {e}")
         return None
 
-    # 4. Handle the raw CSV save state
+    # Handle the raw CSV save state
     if keep_raw_csv:
         try:
             with open(filename, "wb") as f:
@@ -146,7 +146,7 @@ def fetch_and_clean(
         except IOError as io_err:
             print(f"⚠️ Could not save raw CSV file locally: {io_err}")
 
-    # 5. Load downloaded content safely into an in-memory string buffer
+    # Load downloaded content safely into an in-memory string buffer
     try:
         csv_data = io.StringIO(response.content.decode("utf-8"))
         df = pd.read_csv(csv_data)
@@ -163,18 +163,18 @@ def fetch_and_clean(
         print(f"❌ Error parsing the CSV data into Pandas: {e}")
         return None
 
-    # 6. Process and Parse IncidentDate
+    # Process and Parse IncidentDate
     df["IncidentDate"] = pd.to_datetime(
         df["IncidentDate"], format="%m/%d/%Y", exact=False, errors="coerce"
     )
 
-    # 7. Filter by date alignment
+    # Filter by date alignment
     df_filtered = df[
         (df["IncidentDate"].dt.month == month_int)
         & (df["IncidentDate"].dt.year == year_int)
     ].copy()
 
-    # 8. Build full timestamp safely
+    # Build full timestamp safely
     df_filtered["OccurredFromTime"] = df_filtered["OccurredFromTime"].fillna(
         "00:00"
     )
@@ -232,6 +232,7 @@ def fetch_and_clean(
     # =========================================================================
     # 🔥 FIX: STRIP PREFIXES (G-88, etc.) AND FORCE NEIGHBORHOOD ID TO INT
     # =========================================================================
+    
     df_filtered["nbhd_num"] = (
         df_filtered["nbhd_num"]
         .astype(str)
@@ -286,7 +287,6 @@ def fetch_and_clean(
 
 def clip_df(df: pd.DataFrame) -> pd.DataFrame:
     """Performs an inner spatial join to restrict observations to the formal St.
-
     Louis city boundaries using EPSG:4326 coordinate systems.
     """
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -304,17 +304,23 @@ def clip_df(df: pd.DataFrame) -> pd.DataFrame:
             f"data/stl_boundary.geojson"
         )
 
+    # Build the temporary GeoDataFrame
     gdf = gpd.GeoDataFrame(
         df, geometry=gpd.points_from_xy(df.lon, df.lat), crs="EPSG:4326"
     )
 
     stl_boundary = gpd.read_file(boundary_path).to_crs("EPSG:4326")
+    
+    # Force a copy right away to prevent SettingWithCopy warnings down the line
     gdf = gpd.sjoin(
         gdf, stl_boundary[["geometry"]], how="inner", predicate="within"
-    )
+    ).copy()
 
+    # Clean up the join columns and geometry safely
     if "index_right" in gdf.columns:
         gdf = gdf.drop(columns=["index_right"])
 
-    clipped_df = gdf.drop(columns=["geometry"])
+    # Convert back to a pure Pandas DataFrame cleanly
+    clipped_df = pd.DataFrame(gdf.drop(columns=["geometry"]))
+    
     return clipped_df
