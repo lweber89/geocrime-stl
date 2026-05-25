@@ -1,9 +1,10 @@
 import folium
-import leafmap.foliumap as lmf     # Folium backend
-import leafmap.deck as lmd         # Pydeck backend
+import leafmap.deck as lmd  # Pydeck backend
+import leafmap.foliumap as lmf  # Folium backend
 import pydeck as pdk
+
 from geocrime_stl.config import STL_MAP_CONFIG
-    
+
 HOTSPOT_RADIUS = 25
 HOTSPOT_BLUR = 15
 
@@ -189,7 +190,7 @@ def plot_all_crimes(data_package):
         df,
         x="lon",
         y="lat",
-        popup="popup_text",
+        popup=["popup_text"],
         clustering=True, # Automatically clusters your points!
         icon_names=[icon_mapping.get(t, {'icon': 'gavel'})['icon'] for t in df['off_type']],
         icon_colors=[icon_mapping.get(t, {'color': 'purple'})['color'] for t in df['off_type']],
