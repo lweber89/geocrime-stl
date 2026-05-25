@@ -6,7 +6,7 @@ import sys
 
 # 1. Import the single master orchestrator from your package storefront
 from geocrime_stl import run_pipeline as execute_engine
-from geocrime_stl.extract import ExtractionError
+from geocrime_stl.etl.extract import ExtractionError
 
 # Configure logging to give you a clean, timestamped console output
 logging.basicConfig(
