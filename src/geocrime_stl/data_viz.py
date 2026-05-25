@@ -2,7 +2,7 @@ import folium
 import leafmap.foliumap as lmf     # Folium backend
 import leafmap.deck as lmd         # Pydeck backend
 import pydeck as pdk
-from geocrime_stl.constants import STL_MAP_CONFIG
+from geocrime_stl.config import STL_MAP_CONFIG
     
 HOTSPOT_RADIUS = 25
 HOTSPOT_BLUR = 15
