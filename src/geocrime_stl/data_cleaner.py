@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-# Standard Libraries
-from dataclasses import dataclass
-from datetime import datetime
 import io
 import os
 import sys
+
+# Standard Libraries
+from dataclasses import dataclass
+from datetime import datetime
 
 # Third-Party Libraries
 import geopandas as gpd
 import pandas as pd
 import requests
+
+from geocrime_stl import BASE_URL, COLUMN_RENAMES, COLUMNS_TO_DROP
 
 
 @dataclass
@@ -82,8 +85,7 @@ def construct_url(
             folder_year_str = year_str
 
         # Construct and return final values
-        base_url = "https://slmpd.org/wp-content/uploads"
-        url = f"{base_url}/{folder_year_str}/{folder_month_str}/{month_name}{year_str}.csv"
+        url = f"{BASE_URL}/{folder_year_str}/{folder_month_str}/{month_name}{year_str}.csv"
 
         return url, month_int, year_int
 
@@ -99,14 +101,7 @@ def fetch_and_clean(
     year: str | int | None = None,
     keep_raw_csv: bool = False,
 ) -> CrimeDataPackage | None:
-    """Fetches SLMPD monthly crime CSV, filters data to targeted dates, renames data
 
-    schemas, drops invalid coordinates, and applies neighborhood clipping.
-
-    Returns:
-        CrimeDataPackage if successful, None if a network or retrieval error
-        occurs.
-    """
     # Generate the target URL
     url, month_int, year_int = construct_url(month, year)
 
@@ -186,38 +181,12 @@ def fetch_and_clean(
     )
 
     # Schema Remapping
-    df_filtered = df_filtered.rename(
-        columns={
-            "Latitude": "lat",
-            "Longitude": "lon",
-            "IncidentNum": "inc_#",
-            "NIBRS": "nibrs_code",
-            "NIBRSCategory": "nibrs_cat",
-            "CrimeAgainst": "off_type",
-            "IncidentLocation": "address",
-            "District": "district",
-            "Neighborhood": "nbhd",
-            "NbhdNum": "nbhd_num",
-            "FirearmUsed": "firearm",
-            "IncidentNature": "inc_desc",
-            "Offense": "offense",
-        }
-    )
+    df_filtered = df_filtered.rename(columns=COLUMN_RENAMES)
 
     # Drop unneeded columns
     df_filtered = df_filtered.drop(
-        columns=[
-            "IncidentDate",
-            "OccurredFromTime",
-            "SRS_UCR",
-            "IncidentTopSRS_UCR",
-            "IntersectionOtherLoc",
-            "IncidentSupplemented",
-            "LastSuppDate",
-            "VictimNum",
-            "FelMisdCit",
-        ],
-        errors="ignore",
+        columns=COLUMNS_TO_DROP,
+        errors="ignore"
     )
 
     # Clean and cast your data types safely
