@@ -1,6 +1,6 @@
-import os
 import logging
-import pandas as pd
+import os
+
 import geopandas as gpd
 
 logging.basicConfig(level=logging.INFO)

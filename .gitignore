@@ -218,7 +218,7 @@ __marimo__/
 .streamlit/secrets.toml
 
 #Test Notebooks
-test.ipynb
+*test.ipynb
 historical_data_baseline.ipynb
 tinker.ipynb
 streamlit_concepts.ipynb

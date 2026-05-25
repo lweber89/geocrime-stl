@@ -210,7 +210,6 @@ def fetch_and_clean(
     df_filtered["nbhd_num"] = pd.to_numeric(
         df_filtered["nbhd_num"], errors="coerce"
     ).astype("Int64")
-    # =========================================================================
 
 
     # Normalize classifications
@@ -268,11 +267,11 @@ def clip_df(df: pd.DataFrame) -> pd.DataFrame:
 
     if not os.path.exists(boundary_path):
         raise FileNotFoundError(
-            f"❌ Could not locate 'stl_boundary.geojson' automatically.\n"
-            f"Please verify the file exists at your repository path:\n"
-            f"data/stl_boundary.geojson"
-        )
-
+            "❌ Could not locate 'stl_boundary.geojson' automatically.\n"
+            "Please verify the file exists at your repository path:\n"
+            "data/stl_boundary.geojson"
+    )
+    
     # Build the temporary GeoDataFrame
     gdf = gpd.GeoDataFrame(
         df, geometry=gpd.points_from_xy(df.lon, df.lat), crs="EPSG:4326"
