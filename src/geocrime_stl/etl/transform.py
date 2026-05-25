@@ -6,9 +6,12 @@ from dataclasses import dataclass
 import geopandas as gpd
 import pandas as pd
 
-from geocrime_stl.config import COLUMN_RENAMES, COLUMNS_TO_DROP, FINAL_SCHEMA_COLUMNS
-
-from .config import CITY_BNDY_WGS84
+from geocrime_stl.config import (
+    CITY_BNDY_WGS84,
+    COLUMN_RENAMES,
+    COLUMNS_TO_DROP,
+    FINAL_SCHEMA_COLUMNS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +132,8 @@ def run_pipeline(month: int, year: int) -> CrimeDataPackage:
 
     for a given month and year. Safely catches missing assets gracefully.
     """
-    from geocrime_stl import extract
+    # Change the import to target the module directly
+    from geocrime_stl.etl import extract
     
     # 1. Build the target URL
     url, m_int, y_int = extract.construct_url(month_input=month, year_input=year)
