@@ -225,3 +225,5 @@ streamlit_concepts.ipynb
 
 #Data
 *.parquet
+
+/test_exports/*

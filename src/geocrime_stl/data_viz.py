@@ -1,82 +1,8 @@
-import folium
 import leafmap.deck as lmd  # Pydeck backend
 import leafmap.foliumap as lmf  # Folium backend
 import pydeck as pdk
 
 from geocrime_stl.config import STL_MAP_CONFIG
-
-HOTSPOT_RADIUS = 25
-HOTSPOT_BLUR = 15
-
-def hotspot_maps(data_package, crime_category="Person", radius=HOTSPOT_RADIUS, blur=HOTSPOT_BLUR):
-    """
-    Generates an interactive leafmap (folium backend) object 
-    displaying a specific crime category hotspot, fully compatible with Streamlit.
-    """
-    df = data_package.df
-    
-    # 1. Start with your working map framework
-    m = lmf.Map(
-        center=STL_MAP_CONFIG[0],
-        zoom=STL_MAP_CONFIG[1],
-        height=STL_MAP_CONFIG[2]
-    )
-    
-    # 2. Add raw Folium GeoJson (Indented properly inside the function)
-    folium.GeoJson(
-        "data/stl_neighborhoods.geojson",
-        style_function=lambda x: {
-            "color": "#7a8a99",
-            "weight": 0.7,
-            "opacity": 0.35,
-            "fillOpacity": 0
-        }
-    ).add_to(m)
-
-    # 3. Filter DataFrame safely
-    filtered_df = df[df["off_type"].astype(str).str.lower().str.contains(crime_category.lower(), na=False)].copy()
-    
-    # If empty, apply your working basemap override and exit
-    if filtered_df.empty:
-        m.add_basemap("CartoDB.DarkMatter")
-        return m  
-        
-    # 4. Set up gradients
-    if crime_category == "Person":
-        gradient_config = {0.4: "blue", 0.6: "cyan", 0.7: "lime", 0.8: "yellow", 1.0: "red"}
-    elif crime_category == "Property":
-        gradient_config = {0.4: "purple", 0.6: "magenta", 0.8: "orange", 1.0: "yellow"}
-    else:
-        gradient_config = {0.4: "green", 0.6: "lime", 0.8: "teal", 1.0: "blue"}
-
-    # Hand-jammed numeric column to keep leafmap stable
-    filtered_df["heatmap_weight"] = 1
-
-    # 5. Add the heatmap data (disable auto-zooming)
-    m.add_heatmap(
-        data=filtered_df,
-        latitude="lat",
-        longitude="lon",
-        value="heatmap_weight",
-        radius=radius,       
-        blur=blur,          
-        gradient=gradient_config,
-        fit_bounds=False  
-    )
-    
-    # 6. Your working ultimate basemap override
-    m.add_basemap("CartoDB.DarkMatter")
-    
-    # 7. Zoom window lock down
-    center_lat, center_lon = STL_MAP_CONFIG[0]
-    buffer = 0.09  
-    
-    m.fit_bounds([
-        [center_lat - buffer, center_lon - buffer], # Southwest corner
-        [center_lat + buffer, center_lon + buffer]  # Northeast corner
-    ])
-    
-    return m
 
 
 def hexbin_maps(data_pkg, crime_category="Person"):
