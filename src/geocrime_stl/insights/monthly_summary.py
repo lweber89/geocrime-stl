@@ -93,7 +93,7 @@ def plot_monthly_maps(data_pkg) -> None:
     }
 
     # Initialize the 2x2 Subplots Frame
-    fig, axs = plt.subplots(2, 2, figsize=(14, 16))
+    fig, axs = plt.subplots(2, 2, figsize=(9.5, 16))
     fig.suptitle(f"{month_name} {year} Crime Distribution\nSt. Louis, Missouri", fontsize=18, fontweight='bold', y=0.96)
 
     # 5. Populate Each Quadrant
@@ -146,5 +146,12 @@ def plot_monthly_maps(data_pkg) -> None:
         bbox_to_anchor=(0.5, 0.04)
     )
 
-    plt.subplots_adjust(bottom=0.08, wspace=0.05, hspace=0.1)
+    plt.subplots_adjust(
+    left=0.02,     
+    right=0.98,    
+    top=0.88,      
+    bottom=0.10,   
+    wspace=0.00,   
+    hspace=0.08    
+)
     plt.show()
