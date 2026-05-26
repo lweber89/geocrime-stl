@@ -1,11 +1,10 @@
 import leafmap.deck as lmd  # Pydeck backend
-import leafmap.foliumap as lmf  # Folium backend
 import pydeck as pdk
 
 from geocrime_stl.config import STL_MAP_CONFIG
 
 
-def hexbin_maps(data_pkg, crime_category="Person"):
+def hexbin_3D_maps(data_pkg, crime_category="Person"):
     df = data_pkg.df
 
     # Define the 4 distinct color schemes (Light-to-Dark Sequential Palettes)
@@ -75,52 +74,6 @@ def hexbin_maps(data_pkg, crime_category="Person"):
         initial_view_state=view_state,
         layers=[hex_layer], 
         map_style="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-    )
-
-    return m
-
-def plot_all_crimes(data_package):
-    df = data_package.df
-
-    m = lmf.Map(
-        center=STL_MAP_CONFIG[0],
-        zoom=STL_MAP_CONFIG[1],
-        height=STL_MAP_CONFIG[2],
-        basemap="CartoDB.Positron",
-    )
-
-    # Map the crime types to standard FontAwesome icon names and colors
-    icon_mapping = {
-        'Person': {'icon': 'user', 'color': 'red'},
-        'Property': {'icon': 'home', 'color': 'blue'},
-        'Society': {'icon': 'shield', 'color': 'green'},
-        'Other': {'icon': 'gavel', 'color': 'purple'}
-    }
-
-    # FIX 4: Use leafmap's native add_points_from_xy which natively creates
-    # lightning-fast marker clusters, custom popups, and custom icons.
-    
-    # We create a column for custom HTML text to pass straight into the popups
-    df['popup_text'] = df.apply(lambda row: f"""
-        <div style="font-family: sans-serif; min-width: 200px;">
-            <h4>Incident #{row['inc_#']}</h4>
-            <hr style="border: 0; border-top: 1px solid #ccc; margin: 5px 0;">
-            <b>Offense:</b> {row['offense']}<br>
-            <b>Date/Time:</b> {row['date_time']}<br>
-            <b>Location:</b> {row['address']}
-        </div>
-    """, axis=1)
-
-    # Drop data onto the map using leafmap's optimized marker engine
-    m.add_points_from_xy(
-        df,
-        x="lon",
-        y="lat",
-        popup=["popup_text"],
-        clustering=True, # Automatically clusters your points!
-        icon_names=[icon_mapping.get(t, {'icon': 'gavel'})['icon'] for t in df['off_type']],
-        icon_colors=[icon_mapping.get(t, {'color': 'purple'})['color'] for t in df['off_type']],
-        icon_prefixes=['fa'] * len(df)
     )
 
     return m
