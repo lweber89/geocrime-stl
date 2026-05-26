@@ -75,10 +75,10 @@ def run_monthly_etl(
 if __name__ == "__main__":
     from datetime import datetime
 
-    # 1. Grab the current date right now
+    # Grab the current date right now
     now = datetime.now()
 
-    # 2. Automatically calculate the previous calendar month
+    # Automatically calculate the previous calendar month
     if now.month == 1:
         default_month = 12
         default_year = now.year - 1
@@ -86,5 +86,5 @@ if __name__ == "__main__":
         default_month = now.month - 1
         default_year = now.year
 
-    # 3. Fire off the automated ETL using the dynamic defaults
+    # Fire off the automated ETL using the dynamic defaults
     run_monthly_etl(month=default_month, year=default_year)
