@@ -1,0 +1,150 @@
+import calendar
+
+import geopandas as gpd
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import pandas as pd
+
+import geocrime_stl.config as config
+
+
+def generate_monthly_metrics(df: pd.DataFrame) -> None:
+    """
+    Prints a high-level statistical overview of a single month of cleaned 
+    St. Louis crime data to the console.
+    """
+    print("==================================================")
+    print("📊 ST. LOUIS CRIME DATA SUMMARY REPORT")
+    print("==================================================")
+    print(f"🔹 Total Incident Count: {len(df)}")
+    
+    # 1. Top 5 Crime Categories
+    print("\n🚨 TOP 5 CRIME CATEGORIES:")
+    if 'nibrs_cat' in df.columns:
+        top_crimes = df['nibrs_cat'].value_counts().head(5)
+        for cat, count in top_crimes.items():
+            print(f"  - {cat}: {count} incidents")
+    else:
+        print("  - 'nibrs_cat' column unavailable")
+
+    # 2. Weapon Involvement
+    print("\n🔫 WEAPON INVOLVEMENT:")
+    if 'firearm' in df.columns:
+        firearm_counts = df['firearm'].value_counts()
+        # Checks for common naming conventions the SLMPD uses
+        yes_count = firearm_counts.get('Y', 0) + firearm_counts.get('Yes', 0)
+        pct = (yes_count / len(df)) if len(df) > 0 else 0
+        print(f"  - Firearm Involved: {yes_count} ({pct:.1%})")
+    else:
+        print("  - Firearm data unavailable")
+
+    # 3. Top 3 Neighborhoods
+    print("\n🏘️ TOP 3 MOST ACTIVE NEIGHBORHOODS (BY COUNT):")
+    if 'nbhd' in df.columns:
+        top_nbhds = df['nbhd'].value_counts().head(3)
+        for nbhd, count in top_nbhds.items():
+            print(f"  - {nbhd}: {count} incidents")
+    else:
+        print("  - Neighborhood data unavailable")
+            
+    # 4. District Breakdown
+    print("\n⏰ INCIDENTS BY POLICE DISTRICT:")
+    if 'district' in df.columns:
+        districts = df['district'].value_counts().sort_index()
+        for dist, count in districts.items():
+            print(f"  - District {dist}: {count} incidents")
+    else:
+        print("  - District data unavailable")
+        
+    print("==================================================")
+
+
+def plot_monthly_maps(data_pkg) -> None:
+    """
+    Generates a 2x2 matplotlib quad of maps showing spatial distribution of St. Louis crime by category:
+    - Top Left: All Crimes
+    - Top Right: Crimes Against Person
+    - Bottom Left: Crimes Against Property
+    - Bottom Right: Crimes Against Society
+    """
+    # Method-wide Color Palette Definition
+    PALETTE = {
+        "all": "#6B6E70",       # A clean, balanced slate gray
+        "person": "#2B5C8F",    # A rich, historic slate blue (lifted and slightly grayed)
+        "property": "#912A26",  # A beautiful, muted terracotta/brick red
+        "society": "#3F7A50",   # A classic, muted sage/forest green (toned down from the bright green)
+        "bg_map": "#F2F0EA",    # Your solid Alabaster background
+        "bg_edge": "#D3CFC7"    # Your solid Crisp border
+    }
+    # Unpack CrimeDataPackage
+    df = data_pkg.df
+    month_name = calendar.month_name[data_pkg.month] # Converting to full month name
+    year = data_pkg.year
+
+    # Load the boundary shapefile directly
+    stl_map = gpd.read_file(config.NBHD_BNDY)
+
+    # Define the Quadrant Configurations
+    quad_config = {
+        (0, 0): {"filter": None, "title": "All Incidents", "color": PALETTE["all"]},
+        (0, 1): {"filter": "Person", "title": "Crimes Against Persons", "color": PALETTE["person"]},
+        (1, 0): {"filter": "Property", "title": "Crimes Against Property", "color": PALETTE["property"]},
+        (1, 1): {"filter": "Society", "title": "Crimes Against Society", "color": PALETTE["society"]}  
+    }
+
+    # Initialize the 2x2 Subplots Frame
+    fig, axs = plt.subplots(2, 2, figsize=(14, 16))
+    fig.suptitle(f"{month_name} {year} Crime Distribution\nSt. Louis, Missouri", fontsize=18, fontweight='bold', y=0.96)
+
+    # 5. Populate Each Quadrant
+    for (row, col), cfg in quad_config.items():
+        ax = axs[row, col]
+        
+        stl_map.plot(ax=ax, color=PALETTE["bg_map"], edgecolor=PALETTE["bg_edge"], linewidth=1.0)
+        
+        # Filter dataframe based on configuration
+        if cfg["filter"] is None:
+            filtered_df = df
+        else:
+            filtered_df = df[df["off_type"] == cfg["filter"]]
+            
+        # Plot coordinates if data exists for that quadrant
+        if not filtered_df.empty and 'lon' in filtered_df.columns and 'lat' in filtered_df.columns:
+            points_gdf = gpd.GeoDataFrame(
+                filtered_df, 
+                geometry=gpd.points_from_xy(filtered_df.lon, filtered_df.lat), 
+                crs="EPSG:4326"
+            )
+            
+            # Match alpha to legend (0.7) for consistency. 
+            # Added a tiny line width/edge color trick so overlapping points maintain definition.
+            points_gdf.plot(
+                ax=ax, 
+                color=cfg["color"], 
+                markersize=6, 
+                alpha=0.65,
+                edgecolor='none'
+            )
+
+        # Style the sub-map
+
+        ax.set_title(f"{cfg['title']} (n={len(filtered_df)})", fontsize=12, fontweight='semibold', pad=8)
+        ax.set_axis_off()
+
+    # Build a unified legend using the PALETTE
+    city_patch = mpatches.Patch(facecolor=PALETTE["bg_map"], edgecolor=PALETTE["bg_edge"], label="STL Neighborhood Boundaries")
+    all_patch = mpatches.Patch(color=PALETTE["all"], alpha=0.9, label="All Crimes")
+    person_patch = mpatches.Patch(color=PALETTE["person"], alpha=0.9, label="Person")
+    property_patch = mpatches.Patch(color=PALETTE["property"], alpha=0.9, label="Property")
+    society_patch = mpatches.Patch(color=PALETTE["society"], alpha=0.9, label="Society")
+
+    fig.legend(
+        handles=[city_patch, all_patch, person_patch, property_patch, society_patch],
+        loc="lower center", 
+        ncol=5, 
+        fontsize=11,
+        bbox_to_anchor=(0.5, 0.04)
+    )
+
+    plt.subplots_adjust(bottom=0.08, wspace=0.05, hspace=0.1)
+    plt.show()

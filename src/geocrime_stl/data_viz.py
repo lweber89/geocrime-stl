@@ -5,6 +5,7 @@ from geocrime_stl.config import STL_MAP_CONFIG
 
 
 def hexbin_3D_maps(data_pkg, crime_category="Person"):
+    
     df = data_pkg.df
 
     # Define the 4 distinct color schemes (Light-to-Dark Sequential Palettes)
