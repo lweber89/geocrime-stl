@@ -57,9 +57,6 @@ COLUMNS_TO_DROP = (
     "VictimNum",
     "FelMisdCit",
 )
-
-# 🔥 ADD THIS NEW SECTION HERE:
-# This dictates the strict, final order and selection of columns exported to your GIS map
 FINAL_SCHEMA_COLUMNS = [
     "inc_#",
     "date_time",
