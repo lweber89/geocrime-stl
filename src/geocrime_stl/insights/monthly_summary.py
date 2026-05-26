@@ -69,12 +69,12 @@ def plot_monthly_maps(data_pkg) -> None:
     """
     # Method-wide Color Palette Definition
     PALETTE = {
-        "all": "#6B6E70",       # A clean, balanced slate gray
-        "person": "#2B5C8F",    # A rich, historic slate blue (lifted and slightly grayed)
-        "property": "#912A26",  # A beautiful, muted terracotta/brick red
-        "society": "#3F7A50",   # A classic, muted sage/forest green (toned down from the bright green)
-        "bg_map": "#F2F0EA",    # Your solid Alabaster background
-        "bg_edge": "#D3CFC7"    # Your solid Crisp border
+        "all": "#6B6E70",
+        "person": "#2B5C8F",
+        "property": "#912A26",
+        "society": "#3F7A50", 
+        "bg_map": "#F2F0EA", 
+        "bg_edge": "#D3CFC7" 
     }
     # Unpack CrimeDataPackage
     df = data_pkg.df
