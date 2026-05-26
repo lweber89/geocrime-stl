@@ -6,7 +6,7 @@ from .config import CITY_BNDY, NBHD_BNDY, STL_MAP_CONFIG
 from .etl.transform import run_pipeline
 
 # Expose the monthly summary and plottin methods to the root namespace
-from .insights.monthly_analysis import generate_monthly_metrics, plot_monthly_maps
+from .insights.monthly_summary import generate_monthly_metrics, plot_monthly_maps
 
 # Expose the utilities and exporters cleanly to the root namespace
 from .utils.export import export_to_csv, export_to_geojson, export_to_gpkg
