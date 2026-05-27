@@ -2,9 +2,8 @@ from pathlib import Path
 from typing import NamedTuple
 
 # --- Paths ---
-# .parent takes us to 'geocrime_stl', the second .parent takes us out to 'src'
-# The third .parent takes us to the root project directory where 'data' lives!
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# .parent takes us to 'geocrime_stl' (where 'data' now lives!)
+BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 
 CITY_BNDY = DATA_DIR / "stl_boundary.geojson"
