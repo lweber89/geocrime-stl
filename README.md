@@ -1,1 +1,61 @@
 # geocrime-stl
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
+A Python utility for cleaning and standardizing St. Louis Metropolitan Police Department (SLMPD) crime data for spatial analysis.
+
+## ✨ Features
+
+* **End-to-End ETL:** Fetch, clean, and standardize monthly SLMPD crime data files automatically.
+* **Spatial Formats:** Convert cleaned DataFrames seamlessly into GeoJSON, GeoPackage (GPKG), or CSV.
+* **Analysis Ready:** Access built-in methods for minimal data summarization and visualization.
+
+## 🚀 Quick Start
+
+### Install
+``` bash
+pip install geocrime-stl
+```
+### Fetch/Clean/Visualize Data
+```python
+import geocrime_stl as gc
+
+data_pkg = gc.run_pipeline(4, 2026)
+
+gc.generate_monthly_metrics(data_pkg)
+
+gc.plot_monthly_maps(data_pkg)
+```
+
+## 🛠️ Local Setup (Alternative)
+
+If you want to run the demo notebook locally or explore the source code, you can clone the repository directly:
+
+```bash
+git clone https://github.com/lweber89/geocrime-stl.git
+cd geocrime-stl
+pip install -e .
+```
+
+## 📓 Demo & Tutorial
+To see a step-by-step walkthrough of the entire ETL process, check out the interactive Jupyter notebook included in this package:
+
+👉 **[View the Demo Notebook](./notebooks/demo.ipynb)**
+
+Note: If you have cloned the repository locally, you can open this file using Jupyter Lab or Jupyter Notebook to run the cells yourself.
+
+## 🤝 Contributing & Pull Requests
+Thank you for your interest in the project!
+
+⚠️ Please Note: This is a personal project I developed and maintain in an effort to better understand the implementation of Python in geospatial data engineering / solutions architecture. I am not accepting pull requests or code contributions at this time.
+
+If you find a bug or have an idea, feel free to open an Issue to let me know, or feel free to fork the repository and adapt it for your own personal needs!
+
+## 📜 License
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🔗 Project Links
+GitHub Repository: https://github.com/lweber89/geocrime-stl
+
+PyPI Home: https://pypi.org/project/geocrime-stl/

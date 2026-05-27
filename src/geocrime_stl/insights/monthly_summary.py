@@ -8,27 +8,48 @@ import pandas as pd
 import geocrime_stl.config as config
 
 
-def generate_monthly_metrics(df: pd.DataFrame) -> None:
+def generate_monthly_metrics(data_pkg) -> None:
     """
     Prints a high-level statistical overview of a single month of cleaned 
     St. Louis crime data to the console.
     """
+
+  
+    # Unpack CrimeDataPackage
+    df = data_pkg.df
+    month_name = calendar.month_name[data_pkg.month] # Converting to full month name
+    year = data_pkg.year
+
     print("==================================================")
     print("📊 ST. LOUIS CRIME DATA SUMMARY REPORT")
+    print(f"📅 {month_name} {year}")
     print("==================================================")
     print(f"🔹 Total Incident Count: {len(df)}")
     
-    # 1. Top 5 Crime Categories
+    # Top 5 Crime Categories (City Wide - excluding 90Z)
     print("\n🚨 TOP 5 CRIME CATEGORIES:")
     if 'nibrs_cat' in df.columns:
-        top_crimes = df['nibrs_cat'].value_counts().head(5)
+        top_crimes = df[df["nibrs_code"] != "90Z"]["nibrs_cat"].value_counts().head(5)
         for cat, count in top_crimes.items():
             print(f"  - {cat}: {count} incidents")
     else:
         print("  - 'nibrs_cat' column unavailable")
 
-    # 2. Weapon Involvement
-    print("\n🔫 WEAPON INVOLVEMENT:")
+# District Breakdown
+    print("\n⭐ INCIDENTS BY POLICE DISTRICT:")
+    if 'district' in df.columns:
+        districts = df['district'].value_counts().sort_index()
+        for dist, count in districts.items():
+            # Skip District 0 completely
+            if dist == 0 or dist == '0':  
+                continue
+                
+            print(f"  - District {dist}: {count} incidents")
+    else:
+        print("  - District data unavailable")
+    
+    # Firearm Involvement (City Wide)
+    print("\n🔫 FIREARM INVOLVEMENT:")
     if 'firearm' in df.columns:
         firearm_counts = df['firearm'].value_counts()
         # Checks for common naming conventions the SLMPD uses
@@ -38,24 +59,35 @@ def generate_monthly_metrics(df: pd.DataFrame) -> None:
     else:
         print("  - Firearm data unavailable")
 
-    # 3. Top 3 Neighborhoods
-    print("\n🏘️ TOP 3 MOST ACTIVE NEIGHBORHOODS (BY COUNT):")
+    # Neighborhood Summary
+    print("\n🏘️ NEIGHBORHOOD SUMMARY:")
     if 'nbhd' in df.columns:
-        top_nbhds = df['nbhd'].value_counts().head(3)
-        for nbhd, count in top_nbhds.items():
-            print(f"  - {nbhd}: {count} incidents")
+
+        custom_order = ["Person", "Property", "Society", "Other"]
+
+        top_3_per_offense = (
+            df.groupby("off_type")["nbhd"]
+            .value_counts()
+            .groupby(level=0)
+            .head(3)
+            .reset_index(name="count")
+        ).copy()
+
+        top_3_per_offense["off_type"] = pd.Categorical(
+            top_3_per_offense["off_type"], categories=custom_order, ordered=True
+        )
+
+        top_3_per_offense = top_3_per_offense.sort_values("off_type")
+
+        for off_type, group in top_3_per_offense.groupby("off_type", observed=False):
+            print(f"\nOffense Type: {off_type}")
+            print("-" * 30)
+            for row in group.itertuples():
+                print(f"  * {row.nbhd}: {row.count} incidents")
+
     else:
         print("  - Neighborhood data unavailable")
-            
-    # 4. District Breakdown
-    print("\n⏰ INCIDENTS BY POLICE DISTRICT:")
-    if 'district' in df.columns:
-        districts = df['district'].value_counts().sort_index()
-        for dist, count in districts.items():
-            print(f"  - District {dist}: {count} incidents")
-    else:
-        print("  - District data unavailable")
-        
+                   
     print("==================================================")
 
 
