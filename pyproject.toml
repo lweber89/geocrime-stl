@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "geocrime-stl"
 version = "0.1.0"
-description = "A utility for cleaning St. Louis crime data sets."
+description = "An ETL for fetching/cleaning St. Louis crime data sets."
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [

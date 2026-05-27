@@ -11,6 +11,17 @@ A Python utility for cleaning and standardizing St. Louis Metropolitan Police De
 * **Spatial Formats:** Convert cleaned DataFrames seamlessly into GeoJSON, GeoPackage (GPKG), or CSV.
 * **Analysis Ready:** Access built-in methods for minimal data summarization and visualization.
 
+## 🌐 Data Source & Disclaimer
+
+This utility programmatically fetches publicly available crime data directly from the **[St. Louis Metropolitan Police Department (SLMPD) Stats Page](https://slmpd.org/stats/)**. 
+
+⚠️ **Data Disclaimer & Limitations:**
+* **Availability:** This tool relies entirely on the upstream availability and hosting structure of the SLMPD website. If their servers are down or their URL layout changes, the extraction pipeline may fail.
+* **Data Integrity & Spatial Boundaries:** The data processed is strictly "as-is" from the published monthly files. To ensure high data quality for spatial analysis, this utility applies two strict filtering constraints:
+  1. **Temporal Filtering:** Because the SLMPD frequently updates historical records retroactively, this utility isolates and preserves only the records belonging to the target month.
+  2. **Spatial Clipping:** Records containing invalid, malformed, or erroneous latitude/longitude coordinates that plot completely outside the official St. Louis city boundaries are automatically dropped.
+* **Project Status:** This is an independent, open-source utility. It is not affiliated with, endorsed by, or officially maintained by the SLMPD or the City of St. Louis.
+
 ## 🚀 Quick Start
 
 ### Install
