@@ -19,7 +19,7 @@ from dateutil.relativedelta import relativedelta
 import geocrime_stl as gc
 from geocrime_stl.config import DATA_DIR
 
-# Setup minimal logging to play nice with your custom print statements
+# Setup minimal logging
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s - %(message)s")
 
 
@@ -27,11 +27,11 @@ def run_historical_backfill() -> None:
     # Set the fixed historical starting point (May 2024)
     start_date = datetime(2024, 5, 1)
     
-    # 💡 Dynamic End Date: Calculate the most recently completed month relative to today
+    # Dynamic End Date: Calculate the most recently completed month relative to today
     today = datetime.now()
     end_date = datetime(today.year, today.month, 1) - relativedelta(months=1)
 
-    # Initialize a completely empty DataFrame to hold our cumulative data
+    # Initialize a completely empty DataFrame to hold cumulative data
     baseline_df = pd.DataFrame()
     current_date = start_date
 
@@ -45,7 +45,7 @@ def run_historical_backfill() -> None:
         y_int = current_date.year
 
         print(
-            f"🔄 Fetching, cleaning, & GIS-fencing: {m_int:02d}/{y_int}...",
+            f"🔄 Fetching, cleaning, & geo-fencing: {m_int:02d}/{y_int}...",
             end="",
             flush=True,
         )
@@ -56,7 +56,7 @@ def run_historical_backfill() -> None:
             month_df = package.df
 
             if not month_df.empty:
-                # Safely append rows to our master historical DataFrame
+                # Safely append rows to historical DataFrame
                 baseline_df = pd.concat([baseline_df, month_df], ignore_index=True)
                 print(
                     f"   ✅ Success! Added {len(month_df):,} rows. (Cumulative Total: {len(baseline_df):,})"
@@ -88,10 +88,10 @@ def run_historical_backfill() -> None:
         baseline_df.to_parquet(
             output_path, engine="pyarrow", compression="snappy", index=False
         )
-        print(f"🎉 Master baseline file successfully created at: {output_path}")
+        print(f"🎉 Historical baseline file successfully created at: {output_path}")
     else:
         print(
-            "❌ Script finished but no data was collected. Master baseline file was not created."
+            "❌ Script finished but no data was collected. Historical baseline file was not created."
         )
 
 

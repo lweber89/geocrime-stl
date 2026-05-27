@@ -4,11 +4,11 @@ from __future__ import annotations
 import logging
 import sys
 
-# 1. Import the single master orchestrator from your package storefront
+# Import the single orchestrator
 from geocrime_stl import run_pipeline as execute_engine
 from geocrime_stl.etl.extract import ExtractionError
 
-# Configure logging to give you a clean, timestamped console output
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -17,7 +17,7 @@ logging.basicConfig(
 logger = logging.getLogger("etl_pipeline")
 
 
-# 2. Reduced, strict parameters for your automation script
+# Reduced, strict parameters for automation script
 def run_monthly_etl(
     month: int,
     year: int,

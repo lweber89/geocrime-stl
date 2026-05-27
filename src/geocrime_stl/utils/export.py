@@ -4,8 +4,6 @@ import os
 import geopandas as gpd
 import pandas as pd
 
-# 1. Import the single source of truth from your core pipeline module
-# (Adjust the path 'geocrime_stl.pipeline' to match whatever file holds your run_pipeline function)
 from geocrime_stl.etl.transform import CrimeDataPackage
 
 logger = logging.getLogger(__name__)
