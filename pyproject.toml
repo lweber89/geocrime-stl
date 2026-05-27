@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "geocrime-stl"
-version = "0.1.0"
+version = "0.1.1"
 description = "An ETL for fetching/cleaning St. Louis crime data sets."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -15,9 +15,10 @@ dependencies = [
     "requests>=2.34.2"
 ]
 
+# 2. Fixed package discovery to search recursively from the root folder
 [tool.setuptools.packages.find]
-where = ["src"]
-include = ["geocrime_stl"]
+where = ["."]
+include = ["geocrime_stl*"]  # The asterisk (*) tells it to grab geocrime_stl AND all subfolders
 
 [tool.setuptools.package-data]
 geocrime_stl = ["data/*.geojson"]
