@@ -18,5 +18,9 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools]
+# Explicitly map the distribution name to your underscored package folder
+packages = ["geocrime_stl"]
+
 [tool.setuptools.package-data]
 geocrime_stl = ["data/*.geojson"]
