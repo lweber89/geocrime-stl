@@ -16,6 +16,7 @@ dependencies = [
 ]
 
 [tool.setuptools]
+package-dir = { "" = "src" }
 packages = [
     "geocrime_stl",
     "geocrime_stl.etl",
