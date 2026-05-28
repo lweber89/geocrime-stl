@@ -43,8 +43,5 @@ tempCodeRunnerFile.py
 # Test Notebooks
 *test.ipynb
 
-# Data
-*.parquet
-
 # Exports
 /test_exports/*
