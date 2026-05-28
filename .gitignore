@@ -227,3 +227,5 @@ streamlit_concepts.ipynb
 *.parquet
 
 /test_exports/*
+
+/.vscode/
