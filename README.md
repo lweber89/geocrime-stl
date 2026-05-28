@@ -50,11 +50,10 @@ pip install -e .
 ```
 
 ## 📓 Demo & Tutorial
-To see a step-by-step walkthrough of the entire ETL process, check out the interactive Jupyter notebook included in this package:
+To see a step-by-step walkthrough of the entire ETL process, check out the interactive Jupyter notebook:
 
 👉 **[View the Demo Notebook](https://github.com/lweber89/geocrime-stl/blob/main/notebooks/demo.ipynb)**
 
-Note: If you have cloned the repository locally, you can open this file using Jupyter Lab or Jupyter Notebook to run the cells yourself.
 
 ## 🤝 Contributing & Pull Requests
 Thank you for your interest in the project!
