@@ -26,12 +26,13 @@ logging.basicConfig(level=logging.WARNING, format="%(levelname)s - %(message)s")
 
 def run_historical_backfill() -> None:
     # Set the fixed historical starting point (May 2024)
-    start_date = datetime(2024, 5, 1)
+    start_date = datetime(2024, 5, 1) # noqa: DTZ001
     
     # Dynamic End Date: Calculate the most recently completed month relative to today
-    today = datetime.now()
-    end_date = datetime(today.year, today.month, 1) - relativedelta(months=1)
-
+    today = datetime.now() # noqa: DTZ005
+    
+    end_date = datetime(today.year, today.month, 1) - relativedelta(months=1) # noqa: DTZ001
+    
     # Initialize a completely empty DataFrame to hold cumulative data
     baseline_df = pd.DataFrame()
     current_date = start_date
@@ -68,9 +69,10 @@ def run_historical_backfill() -> None:
                     "   ⚠️ Warning: No records found or asset hasn't been published."
                 )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             # Catch unexpected structural dropouts safely without killing the entire pipeline loop
             print(f"   ❌ Critical failure on this month loop! Error: {e}")
+            sys.exit(1)
 
         # Polite 2-second breathing room for the SLMPD web server
         time.sleep(2)
