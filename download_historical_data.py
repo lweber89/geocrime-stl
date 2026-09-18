@@ -12,6 +12,7 @@ import sys
 import time
 from datetime import datetime
 
+import geopandas as gpd
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
@@ -75,7 +76,7 @@ def run_historical_backfill() -> None:
         time.sleep(2)
         current_date += relativedelta(months=1)
 
-    # Export compiled dataset to Parquet using package's centralized PATH definition
+# Export compiled dataset to GeoParquet using package's centralized PATH definition
     print("\n--- Pipeline Execution Complete ---")
     if not baseline_df.empty:
         # Generate a descriptive filename tracking the actual coverage window
@@ -83,12 +84,20 @@ def run_historical_backfill() -> None:
         output_path = DATA_DIR / filename
 
         print(
-            f"💾 Committing all {len(baseline_df):,} rows to compressed Parquet format..."
+            f"💾 Committing all {len(baseline_df):,} rows to GeoParquet format..."
         )
-        baseline_df.to_parquet(
-            output_path, engine="pyarrow", compression="snappy", index=False
+        
+        # Convert the standard DataFrame to a GeoDataFrame using lat and lon columns
+        gdf = gpd.GeoDataFrame(
+            baseline_df, 
+            geometry=gpd.points_from_xy(baseline_df['lon'], baseline_df['lat']), 
+            crs="EPSG:4326"
         )
-        print(f"🎉 Historical baseline file successfully created at: {output_path}")
+        
+        # Write out to GeoParquet format
+        gdf.to_parquet(output_path, compression="snappy", index=False)
+        
+        print(f"🎉 Historical baseline GeoParquet file successfully created at: {output_path}")
     else:
         print(
             "❌ Script finished but no data was collected. Historical baseline file was not created."
