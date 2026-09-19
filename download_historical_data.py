@@ -11,6 +11,7 @@ import logging
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
@@ -18,7 +19,6 @@ from dateutil.relativedelta import relativedelta
 
 # Import the unified storefront engine and centralized config path
 import geocrime_stl as gc
-from geocrime_stl.config import DATA_DIR
 
 # Setup minimal logging
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s - %(message)s")
@@ -78,12 +78,13 @@ def run_historical_backfill() -> None:
         time.sleep(2)
         current_date += relativedelta(months=1)
 
-# Export compiled dataset to GeoParquet using package's centralized PATH definition
+# Export compiled dataset to GeoParquet
     print("\n--- Pipeline Execution Complete ---")
-    if not baseline_df.empty:
-        # Generate a descriptive filename tracking the actual coverage window
-        filename = f"slmpd_baseline_2024_to_{end_date.strftime('%Y_%m')}.parquet"
-        output_path = DATA_DIR / filename
+    if not baseline_df.empty: 
+        #filename = f"slmpd_baseline_2024_to_{end_date.strftime('%Y_%m')}.parquet"
+        #filename = f"slmpd_crime_data_{today.strftime('%b%d%Y').upper()}.parquet"
+        filename = "slmpd_crime_data_MAY2024_to_present.parquet"
+        #output_path = DATA_DIR / filename
 
         print(
             f"💾 Committing all {len(baseline_df):,} rows to GeoParquet format..."
@@ -95,8 +96,18 @@ def run_historical_backfill() -> None:
             geometry=gpd.points_from_xy(baseline_df['lon'], baseline_df['lat']), 
             crs="EPSG:4326"
         )
+
+        #Set crime_data dir, clean out existing file
+        output_dir = Path("./crime_data")
+        
+        for file in output_dir.iterdir():
+            if file.is_file():
+                file.unlink()
+        
         
         # Write out to GeoParquet format
+        
+        output_path = output_dir / filename
         gdf.to_parquet(output_path, compression="snappy", index=False)
         
         print(f"🎉 Historical baseline GeoParquet file successfully created at: {output_path}")
