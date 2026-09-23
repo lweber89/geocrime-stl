@@ -82,9 +82,8 @@ def run_historical_backfill() -> None:
     print("\n--- Pipeline Execution Complete ---")
     if not baseline_df.empty: 
 
-        filename = "slmpd_crime_data_MAY2024_to_present.parquet"
-
-
+        filename = "slmpd_crime_data.parquet"
+        
         print(
             f"💾 Committing all {len(baseline_df):,} rows to GeoParquet format..."
         )
@@ -111,7 +110,7 @@ def run_historical_backfill() -> None:
 
         # Write out to GeoJSON
 
-        gdf.to_file(output_dir/"slmpd_crime_data_MAY2024_to_present.geojson", driver="GeoJSON")
+        gdf.to_file(output_dir/"slmpd_crime_data.geojson", driver="GeoJSON")
         
         print(f"🎉 Historical baseline files successfully created at: {output_dir}")
     else:
