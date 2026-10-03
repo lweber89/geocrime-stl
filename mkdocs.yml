@@ -80,7 +80,7 @@ nav:
     - Changelog: changelog.md
     - Report Issues: https://github.com/lweber89/geocrime-stl/issues
     - Examples:
-        - examples/map.ipynb
-        - examples/foliumap.ipynb
+        - examples/01_etl_demo.ipynb
+        - examples/02_hotspots.ipynb
     - API Reference:
           - geocrime_stl module: geocrime_stl.md
