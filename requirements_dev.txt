@@ -2,5 +2,5 @@ mkdocs-material
 mkdocs-jupyter
 mkdocstrings
 mkdocstrings-python
-git-revision-date-localized
+mkdocs-git-revision-date-localized-plugin
 codespell
