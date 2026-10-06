@@ -13,7 +13,6 @@ class ExtractionError(Exception):
     """Raised if the target URL cannot be formed or network operations fail."""
     pass
 
-
 def construct_url(
     month_input: str | int | None = None, 
     year_input: str | int | None = None
@@ -66,6 +65,7 @@ def construct_url(
 
 
 def fetch_crime_data_csv(url: str, keep_raw_csv: bool = False) -> bytes:
+    
     """Downloads raw network bytes. Standardized on 'keep_raw_csv' to match project rules."""
     headers = {"User-Agent": "Mozilla/5.0"}
     filename = url.split("/")[-1] or "downloaded_data.csv"
