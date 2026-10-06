@@ -1,3 +1,5 @@
+"""Module for constructing data URLs and fetching crime data CSV files from SLMPD."""
+
 from __future__ import annotations
 
 import logging
@@ -9,15 +11,34 @@ from geocrime_stl.config import BASE_URL
 
 logger = logging.getLogger(__name__)
 
+
 class ExtractionError(Exception):
     """Raised if the target URL cannot be formed or network operations fail."""
+
     pass
+
 
 def construct_url(
     month_input: str | int | None = None, 
     year_input: str | int | None = None
 ) -> tuple[str, int, int]:
-    """Parses flexible date inputs and builds the target SLMPD data asset URL."""
+    """Parses flexible date inputs and builds the target SLMPD data asset URL.
+
+    Args:
+        month_input: The month to target, specified as an integer, string number, 
+            or full/abbreviated month name. Defaults to the previous month.
+        year_input: The year to target, specified as an integer or string. 
+            Defaults to the current year (or previous year if the current month is January).
+
+    Returns:
+        A tuple containing:
+            - url (str): The constructed download URL for the target CSV asset.
+            - month_int (int): The validated numerical month (1-12).
+            - year_int (int): The validated four-digit year.
+
+    Raises:
+        ExtractionError: If the month or year input cannot be parsed or mapped properly.
+    """
     try:
         now = datetime.now()
         if now.month == 1:
@@ -61,16 +82,29 @@ def construct_url(
         return url, month_int, year_int
 
     except Exception as e:
-        raise ExtractionError(f"Invalid month ('{month_input}') or year ('{year_input}') mapping: {e}") from e
+        raise ExtractionError(
+            f"Invalid month ('{month_input}') or year ('{year_input}') mapping: {e}"
+        ) from e
 
 
 def fetch_crime_data_csv(url: str, keep_raw_csv: bool = False) -> bytes:
-    
-    """Downloads raw network bytes. Standardized on 'keep_raw_csv' to match project rules."""
+    """Downloads raw crime data CSV bytes from the specified URL.
+
+    Args:
+        url: The target HTTP URL to fetch data from.
+        keep_raw_csv: If True, saves a copy of the downloaded raw bytes locally 
+            using the filename derived from the URL.
+
+    Returns:
+        bytes: The raw content bytes of the downloaded CSV file.
+
+    Raises:
+        ExtractionError: If an HTTP, network, or unexpected error occurs during download.
+    """
     headers = {"User-Agent": "Mozilla/5.0"}
     filename = url.split("/")[-1] or "downloaded_data.csv"
 
-    logger.info(f"Attempting network download from: {url}")
+    logger.info("Attempting network download from: %s", url)
     try:
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
@@ -86,8 +120,8 @@ def fetch_crime_data_csv(url: str, keep_raw_csv: bool = False) -> bytes:
         try:
             with open(filename, "wb") as f:
                 f.write(raw_bytes)
-            logger.info(f"💾 Raw CSV backup cached locally: {filename}")
+            logger.info("💾 Raw CSV backup cached locally: %s", filename)
         except IOError as io_err:
-            logger.warning(f"⚠️ Could not write raw data local cache: {io_err}")
+            logger.warning("⚠️ Could not write raw data local cache: %s", io_err)
 
     return raw_bytes
