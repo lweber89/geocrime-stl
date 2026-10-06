@@ -1,5 +1,8 @@
+"""Module for processing, cleaning, and spatially clipping raw crime data."""
+
 from __future__ import annotations
 
+import io
 import logging
 from dataclasses import dataclass
 
@@ -18,7 +21,13 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class CrimeDataPackage:
-    """Wrapper that bundles structured monthly crime data with its target temporal metadata."""
+    """Wrapper that bundles structured monthly crime data with its target temporal metadata.
+
+    Attributes:
+        df: The processed pandas DataFrame containing crime records.
+        month: The numerical month (1-12) associated with the dataset.
+        year: The four-digit year associated with the dataset.
+    """
 
     df: pd.DataFrame
     month: int
@@ -28,10 +37,16 @@ class CrimeDataPackage:
 def raw_csv_to_dataframe(csv_bytes: bytes, **kwargs) -> pd.DataFrame:
     """Converts raw byte stream cleanly into an in-memory Pandas DataFrame.
 
-    Accepts optional kwargs to pass directly to pd.read_csv if needed down the road.
-    """
-    import io
+    Args:
+        csv_bytes: The raw byte content of the downloaded CSV file.
+        **kwargs: Additional keyword arguments passed directly to `pd.read_csv`.
 
+    Returns:
+        pd.DataFrame: The loaded DataFrame parsed from the byte stream.
+
+    Raises:
+        ValueError: If the byte stream fails to decode into a valid DataFrame.
+    """
     try:
         return pd.read_csv(io.BytesIO(csv_bytes), **kwargs)
     except Exception as e:
@@ -41,14 +56,25 @@ def raw_csv_to_dataframe(csv_bytes: bytes, **kwargs) -> pd.DataFrame:
 def clean_and_spatial_clip(
     df: pd.DataFrame, month: int, year: int
 ) -> CrimeDataPackage:
-    """Normalizes features, handles type enforcement, and spatially clips observations
+    """Normalizes features, handles type enforcement, and spatially clips observations.
 
-    to St. Louis City limits. Returns a populated CrimeDataPackage wrapper.
+    Normalizes records to St. Louis City limits and returns a populated 
+    CrimeDataPackage wrapper.
+
+    Args:
+        df: The raw pandas DataFrame to be cleaned.
+        month: The target month integer.
+        year: The target year integer.
+
+    Returns:
+        CrimeDataPackage: A package containing the cleaned, clipped DataFrame and metadata.
     """
     # Handle the original empty CSV dataset scenario gracefully
     if df.empty:
         logger.warning(
-            f"⚠️ Ingested DataFrame was empty. Skipping cleaning pipelines for {month}/{year}."
+            "⚠️ Ingested DataFrame was empty. Skipping cleaning pipelines for %d/%d.",
+            month,
+            year,
         )
         return CrimeDataPackage(df=df, month=month, year=year)
 
@@ -95,15 +121,24 @@ def clean_and_spatial_clip(
         clipped_df = clip_df(df)
         return CrimeDataPackage(df=clipped_df, month=month, year=year)
     except Exception as e:
-        logger.warning(f"⚠️ Spatial fencing bypassed due to pipeline engine block: {e}")
+        logger.warning("⚠️ Spatial fencing bypassed due to pipeline engine block: %s", e)
         logger.info("▶️ Flowing original full metropolitan boundary coordinates forward.")
         return CrimeDataPackage(df=df, month=month, year=year)
 
 
 def clip_df(df: pd.DataFrame) -> pd.DataFrame:
-    """Restricts point coordinates to the formal polygon limits of St. Louis City
+    """Restricts point coordinates to the formal polygon limits of St. Louis City.
 
-    using an inner spatial join.
+    Uses an inner spatial join against the city boundary file.
+
+    Args:
+        df: The pandas DataFrame containing latitude and longitude columns.
+
+    Returns:
+        pd.DataFrame: A filtered DataFrame containing only points within city limits.
+
+    Raises:
+        FileNotFoundError: If the city boundary configuration file cannot be found.
     """
     if not CITY_BNDY_WGS84.exists():
         raise FileNotFoundError(
@@ -127,12 +162,17 @@ def clip_df(df: pd.DataFrame) -> pd.DataFrame:
     # Revert back to standard DataFrame structure and throw away spatial metadata
     return pd.DataFrame(gdf.drop(columns=["geometry"])).copy()
 
-def run_pipeline(month: int, year: int) -> CrimeDataPackage:
-    """Runs the entire ingestion, cleaning, and spatial-clipping pipeline 
 
-    for a given month and year. Safely catches missing assets gracefully.
+def run_pipeline(month: int, year: int) -> CrimeDataPackage:
+    """Runs the entire ingestion, cleaning, and spatial-clipping pipeline.
+
+    Args:
+        month: The target month integer to process.
+        year: The target year integer to process.
+
+    Returns:
+        CrimeDataPackage: The resulting packaged dataset containing cleaned data and metadata.
     """
-    # Change the import to target the module directly
     from geocrime_stl.etl import extract
     
     # Build the target URL
@@ -142,13 +182,12 @@ def run_pipeline(month: int, year: int) -> CrimeDataPackage:
     try:
         raw_bytes = extract.fetch_crime_data_csv(url, keep_raw_csv=False)
     except extract.ExtractionError as e:
-        # Catch 404s or network drops gracefully
         logger.warning(
-            f"🛑 Unable to retrieve data for {month}/{year}. "
-            f"The asset might not be published yet. Details: {e}"
+            "🛑 Unable to retrieve data for %d/%d. The asset might not be published yet. Details: %s",
+            month,
+            year,
+            e,
         )
-        # Return an empty dataframe package so the user's notebook doesn't crash
-        import pandas as pd
         return CrimeDataPackage(df=pd.DataFrame(), month=m_int, year=y_int)
     
     # Decode bytes to DataFrame (Only runs if extraction succeeded!)

@@ -1,3 +1,5 @@
+"""Global configuration settings, file paths, and schema definitions for the GeoCrime STL package."""
+
 from pathlib import Path
 from typing import NamedTuple
 
@@ -13,10 +15,20 @@ CITY_BNDY_WGS84 = DATA_DIR / "stl_boundary_wgs84.geojson"
 
 # --- Map Configuration ---
 class MapConfig(NamedTuple):
+    """Configuration container for map rendering defaults.
+
+    Attributes:
+        coords: Center coordinates (latitude, longitude) for the map view.
+        zoom: Initial zoom level.
+        height: CSS height string for map containers.
+        bbox: Bounding box coordinates (ymin, xmin, ymax, xmax).
+    """
+
     coords: tuple[float, float]
     zoom: float
     height: str
     bbox: tuple[float, float, float, float]
+
 
 STL_MAP_CONFIG = MapConfig(
     coords=(38.65428167189044, -90.25320053100587),
@@ -56,6 +68,7 @@ COLUMNS_TO_DROP = (
     "VictimNum",
     "FelMisdCit",
 )
+
 FINAL_SCHEMA_COLUMNS = [
     "inc_#",
     "date_time",

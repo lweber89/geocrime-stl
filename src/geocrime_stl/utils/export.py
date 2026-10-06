@@ -1,3 +1,7 @@
+"""Module for exporting structured crime data packages into various file formats (CSV, GeoJSON, GPKG)."""
+
+from __future__ import annotations
+
 import logging
 import os
 
@@ -10,10 +14,19 @@ logger = logging.getLogger(__name__)
 
 
 def _build_spatial_gdf(df: pd.DataFrame) -> gpd.GeoDataFrame:
-    """
-    Helper to reconstruct the GeoDataFrame geometry from spatial columns.
+    """Reconstructs the GeoDataFrame geometry from spatial columns.
+
     Since the pipeline intentionally drops geometry columns before packaging, 
     this provides a consistent, isolated baseline for GIS-ready exports.
+
+    Args:
+        df: The pandas DataFrame containing 'lon' and 'lat' coordinate columns.
+
+    Returns:
+        gpd.GeoDataFrame: A GeoDataFrame with WGS84 point geometries.
+
+    Raises:
+        ValueError: If the DataFrame lacks required 'lon' or 'lat' columns.
     """
     if "lon" in df.columns and "lat" in df.columns:
         return gpd.GeoDataFrame(
@@ -24,7 +37,15 @@ def _build_spatial_gdf(df: pd.DataFrame) -> gpd.GeoDataFrame:
 
 
 def export_to_csv(data_package: CrimeDataPackage, output_dir: str = ".") -> bool:
-    """Exports the structured dataframe to a standard CSV file."""
+    """Exports the structured dataframe to a standard CSV file.
+
+    Args:
+        data_package: A CrimeDataPackage wrapper containing the target DataFrame and metadata.
+        output_dir: The destination directory for the exported file. Defaults to current directory.
+
+    Returns:
+        bool: True if export succeeds, False otherwise.
+    """
     df = data_package.df
     month = data_package.month
     year = data_package.year
@@ -34,20 +55,28 @@ def export_to_csv(data_package: CrimeDataPackage, output_dir: str = ".") -> bool
     
     try:
         # If geometry somehow sneaked back into the dataframe, drop it safely
-        df_to_export = df.drop(columns=['geometry'], errors='ignore')
+        df_to_export = df.drop(columns=["geometry"], errors="ignore")
         df_to_export.to_csv(full_path, index=False)
-        logger.info(f"CSV successfully written to {full_path}")
+        logger.info("CSV successfully written to %s", full_path)
         return True
     except PermissionError:
-        logger.error(f"Cannot write CSV. Is {full_path} open in Excel?")
+        logger.error("Cannot write CSV. Is %s open in Excel?", full_path)
         return False
     except Exception as e:
-        logger.error(f"Error exporting CSV to {full_path}: {e}")
+        logger.error("Error exporting CSV to %s: %e", full_path, e)
         return False
 
 
 def export_to_geojson(data_package: CrimeDataPackage, output_dir: str = ".") -> bool:
-    """Reconstructs spatial points and exports to a standardized GeoJSON file."""
+    """Reconstructs spatial points and exports to a standardized GeoJSON file.
+
+    Args:
+        data_package: A CrimeDataPackage wrapper containing the target DataFrame and metadata.
+        output_dir: The destination directory for the exported file. Defaults to current directory.
+
+    Returns:
+        bool: True if export succeeds, False otherwise.
+    """
     df = data_package.df
     month = data_package.month
     year = data_package.year
@@ -58,15 +87,23 @@ def export_to_geojson(data_package: CrimeDataPackage, output_dir: str = ".") -> 
     try:
         gdf = _build_spatial_gdf(df)
         gdf.to_file(full_path, driver="GeoJSON")
-        logger.info(f"GeoJSON successfully written to {full_path}")
+        logger.info("GeoJSON successfully written to %s", full_path)
         return True
     except Exception as e:
-        logger.error(f"Error exporting GeoJSON to {full_path}: {e}")
+        logger.error("Error exporting GeoJSON to %s: %e", full_path, e)
         return False
 
 
 def export_to_gpkg(data_package: CrimeDataPackage, output_dir: str = ".") -> bool:
-    """Reconstructs spatial points and exports to a standardized GeoPackage layer."""
+    """Reconstructs spatial points and exports to a standardized GeoPackage layer.
+
+    Args:
+        data_package: A CrimeDataPackage wrapper containing the target DataFrame and metadata.
+        output_dir: The destination directory for the exported file. Defaults to current directory.
+
+    Returns:
+        bool: True if export succeeds, False otherwise.
+    """
     df = data_package.df
     month = data_package.month
     year = data_package.year
@@ -78,11 +115,11 @@ def export_to_gpkg(data_package: CrimeDataPackage, output_dir: str = ".") -> boo
     try:
         gdf = _build_spatial_gdf(df)
         gdf.to_file(full_path, driver="GPKG", layer=layer_name)
-        logger.info(f"GeoPackage successfully written to {full_path} (Layer: {layer_name})")
+        logger.info("GeoPackage successfully written to %s (Layer: %s)", full_path, layer_name)
         return True
     except PermissionError:
-        logger.error(f"Cannot write GPKG. Is {full_path} locked by GIS software?")
+        logger.error("Cannot write GPKG. Is %s locked by GIS software?", full_path)
         return False
     except Exception as e:
-        logger.error(f"Error exporting GeoPackage to {full_path}: {e}")
+        logger.error("Error exporting GeoPackage to %s: %e", full_path, e)
         return False

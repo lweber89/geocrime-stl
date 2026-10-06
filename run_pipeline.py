@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
+"""Automation script for orchestrating the monthly ETL pipeline and saving Parquet outputs."""
+
 from __future__ import annotations
 
 import logging
 import sys
+from datetime import datetime
 
 # Import the single orchestrator
 from geocrime_stl import run_pipeline as execute_engine
+from geocrime_stl.config import DATA_DIR
 from geocrime_stl.etl.extract import ExtractionError
 
 # Configure logging
@@ -17,16 +21,16 @@ logging.basicConfig(
 logger = logging.getLogger("etl_pipeline")
 
 
-# Reduced, strict parameters for automation script
-def run_monthly_etl(
-    month: int,
-    year: int,
-) -> None:
+def run_monthly_etl(month: int, year: int) -> None:
     """Orchestrates the full automated E -> T -> L lifecycle.
-    
+
     Accepts strict integer parameters, runs the engine, and handles file saving.
+
+    Args:
+        month: The numerical month (1-12) to process.
+        year: The four-digit year to process.
     """
-    logger.info(f"🚀 Kicking off automated ETL for period {month}/{year}...")
+    logger.info("🚀 Kicking off automated ETL for period %d/%d...", month, year)
 
     try:
         # =====================================================================
@@ -42,39 +46,40 @@ def run_monthly_etl(
         
         if final_df.empty:
             logger.warning(
-                f"⚠️ Engine finished successfully, but 0 records were parsed for {month}/{year}."
+                "⚠️ Engine finished successfully, but 0 records were parsed for %d/%d.",
+                month,
+                year,
             )
         else:
             # Save out to high-performance Parquet automatically
-            from geocrime_stl.config import DATA_DIR
             output_path = DATA_DIR / f"clean_crime_{year}_{month:02d}.parquet"
             
             final_df.to_parquet(output_path, index=False)
             
             logger.info(
-                f"🎉 Success! Processed and saved {len(final_df)} GIS-ready records "
-                f"to: {output_path}"
+                "🎉 Success! Processed and saved %d GIS-ready records to: %s",
+                len(final_df),
+                output_path,
             )
             
     except ExtractionError as ext_err:
-        logger.error(f"🛑 Pipeline halted during Extraction phase: {ext_err}")
+        logger.error("🛑 Pipeline halted during Extraction phase: %s", ext_err)
         sys.exit(1)
         
     except ValueError as val_err:
-        logger.error(f"🛑 Pipeline halted during DataFrame compilation: {val_err}")
+        logger.error("🛑 Pipeline halted during DataFrame compilation: %s", val_err)
         sys.exit(1)
         
     except Exception as unexpected_err:
         logger.critical(
-            f"💥 Pipeline suffered a critical crash: {unexpected_err}", 
+            "💥 Pipeline suffered a critical crash: %s", 
+            unexpected_err, 
             exc_info=True
         )
         sys.exit(1)
 
 
 if __name__ == "__main__":
-    from datetime import datetime
-
     # Grab the current date right now
     now = datetime.now()
 
