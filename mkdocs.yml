@@ -38,7 +38,6 @@ theme:
 
 plugins:
     - search
-    - mkdocstrings
     #- git-revision-date
     - git-revision-date-localized:
           enable_creation_date: true
@@ -51,6 +50,10 @@ plugins:
           allow_errors: false
           ignore: ["conf.py"]
           execute_ignore: ["*ignore.ipynb"]
+    - mkdocstrings:
+        handlers:
+            python:
+                paths: [src]
 
 markdown_extensions:
     - admonition

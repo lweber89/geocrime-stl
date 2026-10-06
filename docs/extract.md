@@ -1,3 +1,4 @@
 # extract module
 
-::: geocrime-stl.extract
+::: geocrime_stl.etl.extract
+    handler: python
