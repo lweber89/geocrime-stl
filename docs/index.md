@@ -54,7 +54,7 @@ To see a step-by-step walkthrough of the entire ETL process, check out the inter
 
 👉 **[View the Demo Notebook](https://github.com/lweber89/geocrime-stl/blob/main/docs/examples/01_etl_demo.ipynb)**
 
-## 📓 Data Explorer
+## 🌐 Data Explorer
 To explore the St. Louis crime data via GeoLibre, vist the project below:
 
 👉 **[View the GeoLibre Project](https://share.geolibre.app/lweber89/st-louis-crime-data-explorer)**
@@ -70,8 +70,10 @@ If you find a bug or have an idea, feel free to open an Issue to let me know, or
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🔗 Project Links
-GitHub Repository: https://github.com/lweber89/geocrime-stl
 
-GeoLibre Project:  https://share.geolibre.app/lweber89/st-louis-crime-data-explorer
+👉 **[GitHub Repository](https://github.com/lweber89/geocrime-stl)**
 
-PyPI Home: https://pypi.org/project/geocrime-stl/
+👉 **[PyPI Home](https://pypi.org/project/geocrime-stl/)**
+
+👉 **[GeoLibre Project](https://share.geolibre.app/lweber89/st-louis-crime-data-explorer)**
+
