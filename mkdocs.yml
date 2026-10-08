@@ -90,3 +90,5 @@ nav:
           - transform module: transform.md
           - monthly summary:  monthly_summary.md
           - export: export.md
+    - Crime Data Explorer:  https://share.geolibre.app/lweber89/st-louis-crime-data-explorer
+    
