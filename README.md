@@ -1,71 +1,43 @@
 # geocrime-stl
 
+[![Documentation Status](https://img.shields.io/badge/docs-mkdocs-blue.svg)](https://lweber89.github.io/geocrime-stl/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
 A Python utility for cleaning and standardizing St. Louis Metropolitan Police Department (SLMPD) crime data for spatial analysis.
 
-## ✨ Features
+> 📖 **Full documentation, guides, and details have moved to the [geocrime-stl Documentation Site](https://lweber89.github.io/geocrime-stl/).**
 
-* **End-to-End ETL:** Fetch, clean, and standardize monthly SLMPD crime data files automatically.
-* **Spatial Formats:** Convert cleaned DataFrames seamlessly into GeoJSON, GeoPackage (GPKG), or CSV.
-* **Analysis Ready:** Access built-in methods for minimal data summarization and visualization.
-
-## 🌐 Data Source & Disclaimer
-
-This utility programmatically fetches publicly available crime data directly from the **[St. Louis Metropolitan Police Department (SLMPD) Stats Page](https://slmpd.org/stats/)**. 
-
-⚠️ **Data Disclaimer & Limitations:**
-* **Availability:** This tool relies entirely on the upstream availability and hosting structure of the SLMPD website. If their servers are down or their URL layout changes, the extraction pipeline may fail.
-* **Data Integrity & Spatial Boundaries:** The data processed is strictly "as-is" from the published monthly files. To ensure high data quality for spatial analysis, this utility applies two strict filtering constraints:
-  1. **Temporal Filtering:** Because the SLMPD frequently updates historical records retroactively, this utility isolates and preserves only the records belonging to the target month.
-  2. **Spatial Clipping:** Records containing invalid, malformed, or erroneous latitude/longitude coordinates that plot completely outside the official St. Louis city boundaries are automatically dropped.
-* **Project Status:** This is an independent, open-source utility. It is not affiliated with, endorsed by, or officially maintained by the SLMPD or the City of St. Louis.
+---
 
 ## 🚀 Quick Start
 
 ### Install
-``` bash
-pip install geocrime-stl
-```
-### Fetch/Clean/Visualize Data
-```python
-import geocrime_stl as gc
 
-data_pkg = gc.run_pipeline(4, 2026)
+    pip install geocrime-stl
 
-gc.generate_monthly_metrics(data_pkg)
+### Usage
 
-gc.plot_monthly_maps(data_pkg)
-```
+    import geocrime_stl as gc
 
-## 🛠️ Local Setup (Alternative)
+    data_pkg = gc.run_pipeline(mm, yyyy)
+    gc.generate_monthly_metrics(data_pkg)
+    gc.plot_monthly_maps(data_pkg)
 
-If you want to run the demo notebook locally or explore the source code, you can clone the repository directly:
+---
 
-```bash
-git clone https://github.com/lweber89/geocrime-stl.git
-cd geocrime-stl
-pip install -e .
-```
+### ⚠️ Important Note & Disclaimer
+This independent open-source utility fetches data directly from the SLMPD Stats Page. It is not affiliated with or endorsed by the SLMPD or the City of St. Louis.
 
-## 📓 Demo & Tutorial
-To see a step-by-step walkthrough of the entire ETL process, check out the interactive Jupyter notebook:
+### 🤝 Contributions
+I am not accepting pull requests at this time, but feel free to open an Issue or fork the repository for your own needs.
 
-👉 **[View the Demo Notebook](https://github.com/lweber89/geocrime-stl/blob/main/notebooks/demo.ipynb)**
+### 📚 Additional Resources
 
+To explore the data collected to date, please visit the [St. Louis Crime Data Explorer (GeoLibre)](https://share.geolibre.app/lweber89/st-louis-crime-data-explorer)
 
-## 🤝 Contributing & Pull Requests
-Thank you for your interest in the project!
+For complete data disclaimers, ETL architecture, and local setup guides, please visit the [Documentation Site](https://lweber89.github.io/geocrime-stl/).
 
-⚠️ Please Note: This is a personal project I developed and maintain in an effort to better understand the implementation of Python in geospatial data engineering / solutions architecture. I am not accepting pull requests or code contributions at this time.
+Contributions: I am not accepting pull requests at this time, but feel free to open an Issue or fork the repository for your own needs.
 
-If you find a bug or have an idea, feel free to open an Issue to let me know, or feel free to fork the repository and adapt it for your own personal needs!
-
-## 📜 License
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🔗 Project Links
-GitHub Repository: https://github.com/lweber89/geocrime-stl
-
-PyPI Home: https://pypi.org/project/geocrime-stl/
+For complete data disclaimers, ETL architecture, and local setup guides, please visit the Documentation Site.
