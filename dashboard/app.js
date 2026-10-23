@@ -3,7 +3,7 @@
 
   const TYPES = ["Person", "Property", "Society", "Other"];   // worst first: drives colour priority on the map
   const PAGE = 100;
-  const HEAT_AFTER_DAYS = 183;                                // date spans longer than ~6 months open as a heat map
+  const HEAT_AFTER_MONTHS = 6;                                // periods longer than 6 calendar months open as a heat map
   const HEAT = { 0.2: "#ffe08a", 0.45: "#fdae61", 0.7: "#f46d43", 0.9: "#d73027", 1.0: "#7f0000" };
   const $ = (id) => document.getElementById(id);
   const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -15,11 +15,11 @@
 
   let D, filtered = [], sortKey = "t", sortDir = -1, page = 0, open = new Set();
   let map, pointLayer, heatLayer, layerChoice = "auto";   // "auto" picks by date span; the buttons override it
-  let defaultRange = "all", longSpan = false;
+  let defaultRange = "all", longSpan = false, bounds = null, priorInfo = null;
   const incCount = new Map();
 
   // ------------------------------------------------------------ filters
-  const FIELDS = ["q", "range", "from", "to", "cat", "nbhd"];
+  const FIELDS = ["q", "range", "month", "cat", "nbhd"];
 
   // ---- date ranges: calendar months, because the City publishes whole months (no "last 7 days")
   const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -28,36 +28,32 @@
   const monEnd = (key) => new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)), 0, 23, 59, 59);
   const fmtDay = (d) => d.toLocaleDateString("en-US", DATE);
 
-  // Returns { from, to } as Dates (always real dates: "all" uses the first and last month in the data).
+  const monKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const monthsIn = (from, to) => (to.getFullYear() - from.getFullYear()) * 12 + to.getMonth() - from.getMonth() + 1;
+
+  // The chosen period as { from, to } Dates. A picked month wins over the preset menu.
   function rangeBounds(f) {
     const keys = D.months.map((x) => x.m), last = keys.at(-1), first = keys[0];
     const back = (n) => keys[Math.max(0, keys.length - n)];
-    const v = f.range;
-    if (v === "custom") {
-      return { from: f.from ? new Date(f.from + "T00:00") : monStart(first), to: f.to ? new Date(f.to + "T23:59:59") : monEnd(last) };
-    }
+    const v = f.month ? "m:" + f.month : f.range;
     if (v.startsWith("m:")) return { from: monStart(v.slice(2)), to: monEnd(v.slice(2)) };
     if (v === "last3") return { from: monStart(back(3)), to: monEnd(last) };
-    if (v === "last12") return { from: monStart(back(12)), to: monEnd(last) };
+    if (v === "last6") return { from: monStart(back(6)), to: monEnd(last) };
     if (v === "ytd") { const jan = last.slice(0, 4) + "-01"; return { from: monStart(jan < first ? first : jan), to: monEnd(last) }; }
-    return { from: monStart(first), to: monEnd(last) };                       // "all"
+    return { from: monStart(last), to: monEnd(last) };
   }
 
   function buildRangeOptions() {
-    const keys = D.months.map((x) => x.m), last = keys.at(-1), first = keys[0];
-    const back = (n) => keys[Math.max(0, keys.length - n)];
-    const span = (a, b) => (a === b ? monLabel(a) : `${monLabel(a)} – ${monLabel(b)}`);
-    const jan = last.slice(0, 4) + "-01";
-    const opt = (v, t) => `<option value="${v}">${esc(t)}</option>`;
+    const keys = D.months.map((x) => x.m), last = keys.at(-1);
+    const opt = (v, t, extra = "") => `<option value="${v}"${extra}>${esc(t)}</option>`;
     defaultRange = "m:" + last;
     $("range").innerHTML =
-      opt("m:" + last, `${monLabel(last)} (latest month)`)
-      + opt("last3", `Last 3 months (${span(back(3), last)})`)
-      + opt("last12", `Last 12 months (${span(back(12), last)})`)
-      + opt("ytd", `Year to date (${span(jan < first ? first : jan, last)})`)
-      + opt("all", `All dates (${span(first, last)})`)
-      + `<optgroup label="A single month">${[...keys].reverse().map((k) => opt("m:" + k, monLabel(k))).join("")}</optgroup>`
-      + opt("custom", "Custom dates…");
+      opt("m:" + last, `Latest month (${monLabel(last)})`)
+      + opt("last3", "Last 3 months")
+      + opt("last6", "Last 6 months")
+      + opt("ytd", "Year to date")
+      + opt("month", "Single month", " hidden");               // shown only while a month is picked
+    $("month").innerHTML = opt("", "Or pick a month…") + [...keys].reverse().map((k) => opt(k, monLabel(k))).join("");
     $("range").value = defaultRange;
   }
 
@@ -71,7 +67,7 @@
 
   function writeHash(f) {
     const p = new URLSearchParams();
-    for (const k of FIELDS) if (f[k] && !(k === "range" && f[k] === defaultRange)) p.set(k, f[k]);
+    for (const k of FIELDS) if (f[k] && !(k === "range" && (f[k] === defaultRange || f[k] === "month"))) p.set(k, f[k]);
     if (f.fa) p.set("fa", "1");
     if (f.hide.length) p.set("hide", f.hide.join(","));
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
@@ -80,15 +76,15 @@
   function readHash() {
     const p = new URLSearchParams(location.hash.slice(1));
     for (const k of FIELDS) if (p.has(k)) $(k).value = p.get(k);
-    if (!$("range").value) $("range").value = defaultRange;      // an old or unknown range in the link
+    if (!$("month").value) $("month").value = "";                // unknown month in the link
+    $("range").value = $("month").value ? "month" : ($("range").value || defaultRange);   // old or unknown ranges fall back
     $("fa").checked = p.get("fa") === "1";
     const hide = (p.get("hide") || "").split(",");
     TYPES.forEach((t) => ($("t-" + t).checked = !hide.includes(t)));
-    $("customRange").hidden = $("range").value !== "custom";
   }
 
   function resetControls() {
-    for (const k of ["q", "from", "to", "cat", "nbhd"]) $(k).value = "";
+    for (const k of ["q", "month", "cat", "nbhd"]) $(k).value = "";
     $("fa").checked = false;
     TYPES.forEach((t) => ($("t-" + t).checked = true));
     $("range").value = defaultRange;
@@ -98,25 +94,40 @@
   function apply() {
     const f = readFilters();
     writeHash(f);
-    $("customRange").hidden = f.range !== "custom";
-    const { from, to } = rangeBounds(f);
-    longSpan = (to - from) / 86400000 > HEAT_AFTER_DAYS;
-    $("rangeNote").textContent = `${fmtDay(from)} – ${fmtDay(to)}`;
+    bounds = rangeBounds(f);
+    const { from, to } = bounds;
+    const n = monthsIn(from, to);
+    longSpan = n > HEAT_AFTER_MONTHS;
     const terms = f.q.trim().toUpperCase().split(/\s+/).filter(Boolean);
-    filtered = D.records.filter((a) => {
-      if (a.date < from || a.date > to) return false;
+    const matches = (a) => {
       if (f.hide.includes(a.type)) return false;
       if (f.cat && a.cat !== f.cat) return false;
       if (f.nbhd && a.nbhd !== f.nbhd) return false;
       if (f.fa && !a.firearm) return false;
-      if (terms.length && !terms.every((t) => a.text.includes(t))) return false;
-      return true;
-    });
+      return !terms.length || terms.every((t) => a.text.includes(t));
+    };
+    filtered = D.records.filter((a) => a.date >= from && a.date <= to && matches(a));
+
+    // the same number of months immediately before, with the same filters (null if the data does not go back that far)
+    const pFrom = new Date(from.getFullYear(), from.getMonth() - n, 1), pTo = new Date(from.getTime() - 1);
+    priorInfo = pFrom < monStart(D.months[0].m) ? null : {
+      count: D.records.filter((a) => a.date >= pFrom && a.date <= pTo && matches(a)).length,
+      label: n === 1 ? monLabel(monKey(pFrom)) : `the previous ${n} months`,
+    };
     page = 0;
+    closePanel();
     renderAll();
   }
 
   // ------------------------------------------------------------ tiles
+  function changeTile(n) {
+    if (!priorInfo) return ["–", "change vs. the previous period (not enough history)"];
+    const p = priorInfo.count;
+    if (!p) return ["–", `change vs. ${priorInfo.label} (none reported)`];
+    const pc = Math.round((100 * (n - p)) / p);
+    return [pc === 0 ? "No change" : (pc > 0 ? "+" : "−") + Math.abs(pc) + "%", `vs. ${priorInfo.label} (${p.toLocaleString()} offenses)`, pc === 0 ? "sm" : ""];
+  }
+
   function renderTiles() {
     const n = filtered.length;
     const pct = (x) => (n ? Math.round((100 * x) / n) + "%" : "–");
@@ -129,7 +140,7 @@
       [pct(filtered.filter((a) => a.type === "Person").length), "crimes against persons"],
       [pct(filtered.filter((a) => a.firearm).length), "involved a firearm"],
       [top ? top[0] : "–", top ? `most common category (${top[1].toLocaleString()})` : "most common category", "sm"],
-      [pct(filtered.filter((a) => a.lat != null).length), "shown on map"],
+      changeTile(n),
     ];
     $("tiles").innerHTML = t.map(([v, l, c]) => `<div class="tile"><div class="v ${c || ""}">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join("");
   }
@@ -152,13 +163,33 @@
       + `<div class="muted" style="margin-top:4px">Larger ring = more offenses at that spot</div>`;
   }
 
-  function popupHtml(list) {
+  // ---- details panel: opens when a dot is clicked
+  function openPanel(list) {
     list = [...list].sort((a, b) => b.date - a.date);
-    const head = `<strong>${esc(list[0].loc)}</strong><div class="muted">${list.length} offense${list.length > 1 ? "s" : ""}</div>`;
-    const items = list.slice(0, 25).map((a) => `<div class="pop-item">
-      <span class="sev"><i style="background:${typeColor(a.type)}"></i>${esc(a.cat)}</span> · ${esc(fmtDate(a))}<br>
-      <span class="muted">${esc(title(a.off))}</span><br><a href="#" data-id="${esc(a.id)}" class="poplink">Details</a></div>`).join("");
-    return head + items + (list.length > 25 ? `<div class="muted">+${list.length - 25} more, see table</div>` : "");
+    const first = list[0];
+    const shown = list.slice(0, 100);
+    $("pTitle").textContent = first.loc || "Unknown location";
+    $("pSub").textContent = `${list.length} offense${list.length > 1 ? "s" : ""} in ${bounds ? monLabel(monKey(bounds.from)) + (monthsIn(bounds.from, bounds.to) > 1 ? " – " + monLabel(monKey(bounds.to)) : "") : "this period"}`;
+    $("pBody").innerHTML = shown.map((a) => {
+      const n = incCount.get(a.inc) || 1;
+      return `<div class="pitem">
+        <div class="sev"><i style="background:${typeColor(a.type)}"></i><strong>${esc(a.cat)}</strong>${flags(a)}</div>
+        <div>${esc(title(a.off))}</div>
+        <div class="muted">${esc(fmtDate(a))}${a.est ? " (exact time not recorded)" : ""} · ${esc(a.nbhd)}${a.district && a.district !== "0" ? " · District " + esc(a.district) : ""}</div>
+        <div class="muted">Incident #${esc(a.inc)}${n > 1 ? ` · ${n} offenses in this incident (<a href="#" class="inc" data-inc="${esc(a.inc)}" data-month="${esc(a.t.slice(0, 7))}">show all</a>)` : ""}</div>
+      </div>`;
+    }).join("") + (list.length > shown.length ? `<p class="muted">Showing the newest ${shown.length} of ${list.length}. Use the list or download for the rest.</p>` : "")
+      + (first.addr ? `<p><a href="#" class="addr" data-addr="${esc(first.addr)}">Show only this address</a></p>` : "");
+    $("panel").hidden = false;
+    $("panel").scrollTop = 0;
+    map.invalidateSize();
+    if (first.lat != null) map.panTo([first.lat, first.lon]);
+  }
+
+  function closePanel() {
+    if (!$("panel") || $("panel").hidden) return;
+    $("panel").hidden = true;
+    map && map.invalidateSize();
   }
 
   function renderMap() {
@@ -168,9 +199,12 @@
     const auto = layerChoice === "auto";
     const heat = layerChoice === "heat" || (auto && longSpan);
     document.querySelectorAll(".seg button[data-layer]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.layer === (heat ? "heat" : "points")));
+    const unmapped = filtered.length - pts.length;
+    $("rangeNote").textContent = `${fmtDay(bounds.from)} – ${fmtDay(bounds.to)} · ${filtered.length.toLocaleString()} offenses${unmapped ? ` (${unmapped} not mapped)` : ""}`;
     $("mapnote").textContent = auto && longSpan
-      ? `Showing a heat map because the dates cover more than 6 months (${pts.length.toLocaleString()} offenses). Choose "Locations" to see individual spots, or pick a shorter period.`
-      : !heat && longSpan ? `Showing individual locations for ${pts.length.toLocaleString()} offenses. This long a period can be slow to draw.` : "";
+      ? `Showing a heat map because the dates cover more than 6 months . Choose "Locations" to see individual spots, or pick a shorter period.`
+      : !heat && longSpan ? `Showing individual locations for a long period. It can be slow to draw.` : "";
+    $("mapnote").hidden = !$("mapnote").textContent;
     if (heat) {
       heatLayer = L.heatLayer(pts.map((a) => [a.lat, a.lon]), { radius: 14, blur: 18, maxZoom: 15, gradient: HEAT }).addTo(map);
       return;
@@ -190,16 +224,37 @@
       L.circleMarker([a.lat, a.lon], {
         radius: 5 + Math.min(10, 2.2 * Math.sqrt(g.list.length - 1)), color: surface, weight: 2,
         fillColor: typeColor(g.worst), fillOpacity: 0.9,
-      }).bindPopup(() => popupHtml(g.list), { maxWidth: 320 }).addTo(pointLayer);
+      }).on("click", () => openPanel(g.list)).addTo(pointLayer);
     }
   }
 
   function focusRecord(id) {
     const a = D.byId.get(id);
     if (!a || a.lat == null) return;
+    const key = a.lat.toFixed(4) + "," + a.lon.toFixed(4);
     map.setView([a.lat, a.lon], 17);
     $("map").scrollIntoView({ behavior: "smooth", block: "center" });
-    L.popup({ maxWidth: 320 }).setLatLng([a.lat, a.lon]).setContent(popupHtml([a])).openOn(map);
+    openPanel(filtered.filter((x) => x.lat != null && x.lat.toFixed(4) + "," + x.lon.toFixed(4) === key));
+  }
+
+  // Show every offense of one incident, in the month it happened.
+  function showIncident(inc, month) {
+    resetControls();
+    $("q").value = inc;
+    $("month").value = D.months.some((x) => x.m === month) ? month : "";
+    $("range").value = $("month").value ? "month" : defaultRange;
+    apply();
+  }
+
+  function downloadCsv() {
+    const q = (v) => { v = String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const rows = [...filtered].sort((a, b) => b.date - a.date).map((a) =>
+      [a.t.replace("T", " "), a.est ? "yes" : "", a.addr, a.nbhd, a.district, a.type, a.cat, a.off, a.firearm ? "yes" : "", a.inc, a.lat ?? "", a.lon ?? ""].map(q).join(","));
+    const csv = ["when,time_not_recorded,address,neighborhood,police_district,crime_against,nibrs_category,offense,firearm,incident,lat,lon", ...rows].join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: `stl-crime-${monKey(bounds.from)}-to-${monKey(bounds.to)}.csv` });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   // ------------------------------------------------------------ table
@@ -216,7 +271,7 @@
         <li>Category: ${esc(a.cat)} (${esc(a.type)})</li><li>Neighborhood: ${esc(a.nbhd)}</li>
         <li>Police district: ${esc(a.district || "unknown")}</li></ul></div></div>
       <p class="muted" style="margin:8px 0 0">Incident #${esc(a.inc)} · ${n} offense${n > 1 ? "s" : ""} in this incident${
-        n > 1 ? ` (<a href="#" class="inc" data-inc="${esc(a.inc)}">show all</a>)` : ""}${
+        n > 1 ? ` (<a href="#" class="inc" data-inc="${esc(a.inc)}" data-month="${esc(a.t.slice(0, 7))}">show all</a>)` : ""}${
         a.est ? " · exact time not recorded" : ""}${
         a.lat != null ? ` · <a href="#" class="zoom" data-id="${esc(a.id)}">Show on map</a>` : " · location could not be mapped"}</p>`;
   }
@@ -255,8 +310,10 @@
   function wire() {
     let t;
     $("q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(apply, 200); });
-    $("range").addEventListener("change", () => { layerChoice = "auto"; });   // a new period gets the default layer again
-    for (const id of ["range", "from", "to", "cat", "nbhd", "fa", ...TYPES.map((x) => "t-" + x)]) $(id).addEventListener("change", apply);
+    // the preset menu and the month picker steer the same setting; registered before apply so they run first
+    $("range").addEventListener("change", () => { $("month").value = ""; layerChoice = "auto"; });
+    $("month").addEventListener("change", () => { $("range").value = $("month").value ? "month" : defaultRange; layerChoice = "auto"; });
+    for (const id of ["range", "month", "cat", "nbhd", "fa", ...TYPES.map((x) => "t-" + x)]) $(id).addEventListener("change", apply);
     $("reset").addEventListener("click", () => { resetControls(); apply(); });
     $("prev").addEventListener("click", () => { page--; renderTable(); });
     $("next").addEventListener("click", () => { page++; renderTable(); });
@@ -270,24 +327,28 @@
       const z = e.target.closest("a.zoom");
       if (z) { e.preventDefault(); focusRecord(z.dataset.id); return; }
       const inc = e.target.closest("a.inc");
-      if (inc) { e.preventDefault(); resetControls(); $("q").value = inc.dataset.inc; $("range").value = "all"; apply(); return; }
+      if (inc) { e.preventDefault(); showIncident(inc.dataset.inc, inc.dataset.month); return; }
       const tr = e.target.closest("tr.row");
       if (!tr) return;
       open.has(tr.dataset.id) ? open.delete(tr.dataset.id) : open.add(tr.dataset.id);
       renderTable();
     });
-    $("map").addEventListener("click", (e) => {
-      const l = e.target.closest("a.poplink");
-      if (!l) return;
-      e.preventDefault();
-      const id = l.dataset.id;
-      open.add(id);
-      sortKey = "t"; sortDir = -1;
-      const idx = [...filtered].sort((a, b) => b.date - a.date).findIndex((a) => a.id === id);
-      page = Math.max(0, Math.floor(idx / PAGE));
-      renderTable();
-      document.querySelector(`tr.row[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    $("pClose").addEventListener("click", closePanel);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePanel(); });
+    $("panel").addEventListener("click", (e) => {
+      const inc = e.target.closest("a.inc");
+      if (inc) { e.preventDefault(); showIncident(inc.dataset.inc, inc.dataset.month); return; }
+      const ad = e.target.closest("a.addr");
+      if (ad) { e.preventDefault(); $("q").value = ad.dataset.addr; apply(); }
     });
+    $("listBtn").addEventListener("click", () => {
+      const sec = $("listwrap"), show = sec.hidden;
+      sec.hidden = !show;
+      $("listBtn").setAttribute("aria-expanded", String(show));
+      $("listBtn").textContent = show ? "Hide list" : "List";
+      if (show) sec.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    $("csvBtn").addEventListener("click", downloadCsv);
   }
 
   async function main() {
