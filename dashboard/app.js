@@ -3,6 +3,8 @@
 
   const TYPES = ["Person", "Property", "Society", "Other"];   // worst first: drives colour priority on the map
   const PAGE = 100;
+  const CITY_SQ_MILES = 62.11, METERS_PER_MILE = 1609.344;
+  const RADIUS_LABEL = { 0.25: "¼ mile", 0.5: "½ mile", 1: "1 mile" };
   const CITY_BOUNDS = [[38.532, -90.32], [38.774, -90.166]];
   const CITY_MAX_MONTHS = 6;                                  // whole-city views are limited to 6 months of dots; a ward or neighborhood can show any period
   const HEAT = { 0.2: "#ffe08a", 0.45: "#fdae61", 0.7: "#f46d43", 0.9: "#d73027", 1.0: "#7f0000" };
@@ -18,10 +20,11 @@
   let map, pointLayer, heatLayer, layerChoice = "auto";   // "auto" picks by date span; the buttons override it
   let defaultRange = "all", cityLimited = false, bounds = null, priorInfo = null;
   let wardLayer, outlineLayer, wardCounts = new Map(), wardFeatures = new Map(), nbhdFeatures = new Map(), wardNbhds = new Map();
+  let addrLayer, center = null, curMatches = null;          // center: the searched address and radius, or null
   const incCount = new Map();
 
   // ------------------------------------------------------------ filters
-  const FIELDS = ["q", "range", "month", "ward", "cat", "nbhd"];
+  const FIELDS = ["q", "range", "month", "ward", "nbhd", "pt", "lbl", "radius", "cat"];   // pt = "lat,lon" of a searched address
 
   // ---- date ranges: calendar months, because the City publishes whole months (no "last 7 days")
   const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -73,7 +76,7 @@
 
   function writeHash(f) {
     const p = new URLSearchParams();
-    for (const k of FIELDS) if (f[k] && !(k === "range" && (f[k] === defaultRange || f[k] === "month"))) p.set(k, f[k]);
+    for (const k of FIELDS) if (f[k] && !(k === "range" && (f[k] === defaultRange || f[k] === "month")) && !(k === "radius" && f[k] === "1")) p.set(k, f[k]);
     if (f.fa) p.set("fa", "1");
     if (f.hide.length) p.set("hide", f.hide.join(","));
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
@@ -82,6 +85,8 @@
   function readHash() {
     const p = new URLSearchParams(location.hash.slice(1));
     for (const k of FIELDS) if (p.has(k)) $(k).value = p.get(k);
+    if (!$("radius").value) $("radius").value = "1";
+    $("address").value = $("pt").value ? $("lbl").value : "";
     if (!$("month").value) $("month").value = "";                // unknown month in the link
     $("range").value = $("month").value ? "month" : ($("range").value || defaultRange);   // old or unknown ranges fall back
     $("fa").checked = p.get("fa") === "1";
@@ -90,7 +95,9 @@
   }
 
   function resetControls() {
-    for (const k of ["q", "month", "ward", "cat", "nbhd"]) $(k).value = "";
+    for (const k of ["q", "month", "ward", "cat", "nbhd", "pt", "lbl", "address"]) $(k).value = "";
+    $("radius").value = "1";
+    setAddrMsg("");
     $("fa").checked = false;
     TYPES.forEach((t) => ($("t-" + t).checked = true));
     $("range").value = defaultRange;
@@ -102,7 +109,12 @@
   function apply() {
     let f = readFilters();
     // Whole-city views are limited to 6 months; longer periods need a ward, neighborhood or address search.
-    const citywide = !f.ward && !f.nbhd && !f.q.trim();
+    center = null;
+    if (f.pt) {
+      const [la, lo] = f.pt.split(",").map(Number);
+      if (Number.isFinite(la) && Number.isFinite(lo)) center = { lat: la, lon: lo, m2: (Number(f.radius) * METERS_PER_MILE) ** 2, kx: 111320 * Math.cos((la * Math.PI) / 180) };
+    }
+    const citywide = !f.ward && !f.nbhd && !center && !f.q.trim();
     cityLimited = false;
     if (citywide && !f.month && monthsOf(f.range) > CITY_MAX_MONTHS) { $("range").value = "last6"; f = readFilters(); cityLimited = true; }
     for (const o of $("range").options) o.disabled = o.value !== "month" && citywide && monthsOf(o.value) > CITY_MAX_MONTHS;
@@ -112,7 +124,9 @@
     const { from, to } = bounds;
     const n = monthsIn(from, to);
     const terms = f.q.trim().toUpperCase().split(/\s+/).filter(Boolean);
-    const matches = (a, withWard = true) => {
+    const near = (a) => a.lat != null && ((a.lat - center.lat) * 110540) ** 2 + ((a.lon - center.lon) * center.kx) ** 2 <= center.m2;
+    const matches = (a, withWard = true, withArea = true) => {
+      if (withArea && center && !near(a)) return false;
       if (withWard && f.ward && a.ward !== f.ward) return false;
       if (f.hide.includes(a.type)) return false;
       if (f.cat && a.cat !== f.cat) return false;
@@ -120,6 +134,7 @@
       if (f.fa && !a.firearm) return false;
       return !terms.length || terms.every((t) => a.text.includes(t));
     };
+    curMatches = matches;
     filtered = D.records.filter((a) => a.date >= from && a.date <= to && matches(a));
     // counts for the ward map ignore the ward filter, so every ward stays on the map when one is selected
     wardCounts = new Map();
@@ -132,8 +147,10 @@
       label: n === 1 ? monLabel(monKey(pFrom)) : `the previous ${n} months`,
     };
     page = 0;
-    closePanel();
+    $("addrClear").hidden = !center;
+    $("reportBtn").hidden = !center;
     renderAll();
+    if (center) openReport(); else closePanel();
   }
 
   // ------------------------------------------------------------ tiles
@@ -147,6 +164,7 @@
 
   // offenses per 1,000 residents (2020 census), for the selected neighborhood or ward, or the whole city
   function rateTile(n) {
+    if (center) return null;                                   // no population for a circle
     const w = $("ward").value, nb = $("nbhd").value;
     let pop = 0, where = "whole city";
     if (nb && nbhdFeatures.has(nb)) { pop = nbhdFeatures.get(nb).properties.pop; where = nb; }
@@ -210,11 +228,114 @@
         <div class="muted">Incident #${esc(a.inc)}${n > 1 ? ` · ${n} offenses in this incident (<a href="#" class="inc" data-inc="${esc(a.inc)}" data-month="${esc(a.t.slice(0, 7))}">show all</a>)` : ""}</div>
       </div>`;
     }).join("") + (list.length > shown.length ? `<p class="muted">Showing the newest ${shown.length} of ${list.length}. Use the list or download for the rest.</p>` : "")
-      + (first.addr ? `<p><a href="#" class="addr" data-addr="${esc(first.addr)}">Show only this address</a></p>` : "");
+      + (first.addr ? `<p><a href="#" class="addr" data-addr="${esc(first.addr)}">Show only this address</a></p>` : "")
+      + (center ? `<p><a href="#" class="back">← Back to the area report</a></p>` : "");
     $("panel").hidden = false;
     $("panel").scrollTop = 0;
     map.invalidateSize();
     if (first.lat != null) map.panTo([first.lat, first.lon]);
+  }
+
+  // ---- the address report: a summary of the circle around a searched address
+  const periodText = () => (monthsIn(bounds.from, bounds.to) === 1 ? monLabel(monKey(bounds.from)) : `${monLabel(monKey(bounds.from))} – ${monLabel(monKey(bounds.to))}`);
+
+  function trendSvg(monthly) {
+    const keys = [...monthly.keys()], vals = [...monthly.values()];
+    const W = 320, H = 92, base = 18, top = 6, bw = W / keys.length, max = Math.max(1, ...vals);
+    const lo = monKey(bounds.from), hi = monKey(bounds.to);
+    const bars = keys.map((k, i) => {
+      const h = Math.max(vals[i] ? 1.5 : 0, (vals[i] / max) * (H - base - top));
+      return `<rect class="bar${k >= lo && k <= hi ? " on" : ""}" x="${(i * bw + 0.5).toFixed(1)}" y="${(H - base - h).toFixed(1)}" width="${(bw - 1).toFixed(1)}" height="${h.toFixed(1)}"><title>${monLabel(k)}: ${vals[i].toLocaleString()} offenses</title></rect>`;
+    }).join("");
+    return `<svg class="trend" viewBox="0 0 ${W} ${H}" role="img" aria-label="Offenses per month near this address">${bars}
+      <text x="0" y="${H - 4}" class="ax">${monLabel(keys[0])}</text><text x="${W}" y="${H - 4}" text-anchor="end" class="ax">${monLabel(keys.at(-1))}</text></svg>`;
+  }
+
+  function openReport() {
+    if (!center) return;
+    const miles = Number(readFilters().radius), n = filtered.length, within = RADIUS_LABEL[miles] || miles + " mile";
+    const maxType = Math.max(1, ...TYPES.map((t) => filtered.filter((a) => a.type === t).length));
+    const typeRows = TYPES.map((t) => {
+      const c = filtered.filter((a) => a.type === t).length;
+      return `<div class="rep-row"><span class="rep-name"><i style="background:${typeColor(t)}"></i>${esc(t)}</span><span class="rep-bar"><b style="width:${(100 * c / maxType).toFixed(1)}%;background:${typeColor(t)}"></b></span><span class="rep-n">${c.toLocaleString()}</span></div>`;
+    }).join("");
+    const cats = new Map();
+    filtered.forEach((a) => cats.set(a.cat, (cats.get(a.cat) || 0) + 1));
+    const top = [...cats].sort((x, y) => y[1] - x[1]).slice(0, 5)
+      .map(([c, k]) => `<li>${esc(c)} <span class="muted">${k.toLocaleString()}</span></li>`).join("");
+
+    const monthly = new Map(D.months.map((x) => [x.m, 0]));       // every month, whatever period is chosen
+    for (const a of D.records) if (curMatches(a)) { const m = a.t.slice(0, 7); monthly.set(m, (monthly.get(m) || 0) + 1); }
+    const peak = [...monthly].sort((x, y) => y[1] - x[1])[0];
+
+    const cityCount = D.records.filter((a) => a.date >= bounds.from && a.date <= bounds.to && curMatches(a, true, false)).length;
+    const here = n / (Math.PI * miles * miles), cityDensity = cityCount / CITY_SQ_MILES;
+    const fmt = (x) => (x >= 100 ? Math.round(x) : Math.round(x * 10) / 10).toLocaleString();
+    const ch = changeTile(n);
+
+    $("pTitle").textContent = $("lbl").value || "Your address";
+    $("pSub").textContent = `Within ${within} · ${periodText()}`;
+    $("pBody").innerHTML = `<div class="rep">
+      <div class="rep-big">${n.toLocaleString()}</div>
+      <div class="muted">reported offenses within ${esc(within)} (${esc(periodText())})</div>
+      <p class="rep-change"><strong>${esc(ch[0])}</strong> <span class="muted">${esc(ch[1])}</span></p>
+      <h3>By type</h3>${typeRows}
+      <h3>Most common</h3><ol class="rep-top">${top || '<li class="muted">None reported</li>'}</ol>
+      <h3>Month by month</h3>${trendSvg(monthly)}
+      <p class="muted small">Offenses per month within ${esc(within)}, all ${D.months.length} months. Darker bars are the period you chose.${peak && peak[1] ? ` Busiest month: ${monLabel(peak[0])} (${peak[1].toLocaleString()}).` : ""}</p>
+      <h3>For context</h3>
+      <p class="small">About <strong>${fmt(here)}</strong> offenses per square mile here, compared with <strong>${fmt(cityDensity)}</strong> across the whole city in the same period. A circle near the city limit includes land outside the city, which lowers the local figure.</p>
+      <p class="muted small">These are reported offenses, not a measure of how safe a place is. Stores, hospitals and other busy places produce many reports. Click a dot on the map for the details.</p>
+    </div>`;
+    $("panel").hidden = false;
+    $("panel").scrollTop = 0;
+    map.invalidateSize();
+  }
+
+  // ---- address search
+  function setAddrMsg(text) { $("addrMsg").textContent = text; }
+
+  function inRing(ring, x, y) {
+    let c = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i], [xj, yj] = ring[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+    }
+    return c;
+  }
+
+  // true if the point is inside the City of St. Louis (the real outline, not a box)
+  function pointInCity(lat, lon) {
+    const g = D.city && D.city.geometry;
+    if (!g) return GEO.inCity(lat, lon);
+    const polys = g.type === "Polygon" ? [g.coordinates] : g.coordinates;
+    return polys.some((p) => inRing(p[0], lon, lat) && !p.slice(1).some((h) => inRing(h, lon, lat)));
+  }
+
+  function clearAddress() { for (const k of ["pt", "lbl", "address"]) $(k).value = ""; setAddrMsg(""); }
+
+  async function searchAddress(e) {
+    e.preventDefault();
+    const text = $("address").value.trim();
+    if (!text) { setAddrMsg("Type a street address, for example 1200 Market St."); return; }
+    setAddrMsg("Looking up that address…");
+    const r = await GEO.find(text, { contains: pointInCity });
+    if (r.status === "ok") {
+      $("pt").value = `${r.lat.toFixed(5)},${r.lon.toFixed(5)}`;
+      $("lbl").value = r.label;
+      $("address").value = r.label;
+      $("ward").value = ""; $("nbhd").value = "";
+      layerChoice = "auto";
+      apply();
+      zoomToScope();
+      setAddrMsg(`Showing reports within ${RADIUS_LABEL[Number($("radius").value)]} of ${r.label}. Address found by ${r.source}.`);
+    } else if (r.status === "outside") {
+      setAddrMsg("That address is outside the City of St. Louis. This map only has reports from the city police department.");
+    } else if (r.status === "error") {
+      setAddrMsg("The address lookup services did not respond. Check your connection and try again in a moment.");
+    } else {
+      setAddrMsg("We could not find that address. Try the street number and street name, like 1200 Market St.");
+    }
   }
 
   function closePanel() {
@@ -275,6 +396,7 @@
 
   // Zoom to the chosen neighborhood or ward, or back out to the whole city.
   function zoomToScope() {
+    if (center) { map.fitBounds(L.circle([center.lat, center.lon], { radius: Math.sqrt(center.m2) }).getBounds(), { padding: [20, 20] }); return; }
     const ft = nbhdFeatures.get($("nbhd").value) || wardFeatures.get($("ward").value);
     map.fitBounds(ft ? L.geoJSON(ft).getBounds() : CITY_BOUNDS, { padding: [20, 20] });
   }
@@ -292,7 +414,19 @@
       + `<div class="muted" style="margin-top:4px">Larger ring = more offenses at that spot</div>`;
   }
 
-  function renderMap() {
+  // the searched address: a ring showing the radius, and a dot on the address itself
+  function renderAddress() {
+    if (addrLayer) { map.removeLayer(addrLayer); addrLayer = null; }
+    if (!center) return;
+    addrLayer = L.layerGroup([
+      L.circle([center.lat, center.lon], { radius: Math.sqrt(center.m2), color: css("--outline"), weight: 2.5, fillColor: css("--outline"), fillOpacity: 0.06, interactive: false }),
+      L.circleMarker([center.lat, center.lon], { radius: 7, color: css("--surface"), weight: 3, fillColor: css("--ink"), fillOpacity: 1, interactive: false }),
+    ]).addTo(map);
+  }
+
+  function renderMap() { renderLayers(); renderAddress(); }
+
+  function renderLayers() {
     pointLayer.clearLayers();
     if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
     if (wardLayer) { map.removeLayer(wardLayer); wardLayer = null; }
@@ -420,9 +554,9 @@
     $("month").addEventListener("change", () => { $("range").value = $("month").value ? "month" : defaultRange; layerChoice = "auto"; });
     // the ward and neighborhood menus choose one area: picking one clears the other, then zoom to it.
     // These must be registered BEFORE the apply listeners below so the filter sees only one area.
-    $("ward").addEventListener("change", () => { if ($("ward").value) $("nbhd").value = ""; zoomToScope(); });
-    $("nbhd").addEventListener("change", () => { if ($("nbhd").value) $("ward").value = ""; zoomToScope(); });
-    for (const id of ["range", "month", "ward", "cat", "nbhd", "fa", ...TYPES.map((x) => "t-" + x)]) $(id).addEventListener("change", apply);
+    $("ward").addEventListener("change", () => { if ($("ward").value) { $("nbhd").value = ""; clearAddress(); } zoomToScope(); });
+    $("nbhd").addEventListener("change", () => { if ($("nbhd").value) { $("ward").value = ""; clearAddress(); } zoomToScope(); });
+    for (const id of ["range", "month", "ward", "cat", "nbhd", "radius", "fa", ...TYPES.map((x) => "t-" + x)]) $(id).addEventListener("change", apply);
     $("reset").addEventListener("click", () => { resetControls(); apply(); zoomToScope(); });
     $("prev").addEventListener("click", () => { page--; renderTable(); });
     $("next").addEventListener("click", () => { page++; renderTable(); });
@@ -442,11 +576,16 @@
       open.has(tr.dataset.id) ? open.delete(tr.dataset.id) : open.add(tr.dataset.id);
       renderTable();
     });
+    $("radius").addEventListener("change", () => { if (center) zoomToScope(); });   // runs after apply, so the new radius is in use
+    $("addrForm").addEventListener("submit", searchAddress);
+    $("addrClear").addEventListener("click", () => { clearAddress(); apply(); zoomToScope(); });
+    $("reportBtn").addEventListener("click", openReport);
     $("pClose").addEventListener("click", closePanel);
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePanel(); });
     $("panel").addEventListener("click", (e) => {
       const inc = e.target.closest("a.inc");
       if (inc) { e.preventDefault(); showIncident(inc.dataset.inc, inc.dataset.month); return; }
+      if (e.target.closest("a.back")) { e.preventDefault(); openReport(); return; }
       const ad = e.target.closest("a.addr");
       if (ad) { e.preventDefault(); $("q").value = ad.dataset.addr; apply(); }
     });

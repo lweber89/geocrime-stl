@@ -70,3 +70,28 @@
   .mapbadge { top: auto; bottom: 10px; left: 10px; transform: none; text-align: left; max-width: calc(100% - 20px); }
   .mapnote { bottom: 48px; max-width: calc(100% - 20px); }
 }
+
+/* ---- address search bar and the report panel ---- */
+.addrbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; max-width: 1400px; margin: 0 auto; padding: 4px 16px 6px; }
+.addrbar input[type="search"] { flex: 1 1 320px; min-width: 0; font: inherit; padding: 9px 12px; border: 1px solid var(--axis); border-radius: 8px;
+                                background: var(--surface); color: var(--ink); }
+.addrbar select { font: inherit; padding: 9px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.btn.primary { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
+.addrmsg { max-width: 1400px; margin: 0 auto; padding: 0 16px 8px; min-height: 1.45em; font-size: 12.5px; }
+
+.rep-big { font-size: 34px; font-weight: 600; line-height: 1.1; padding-top: 10px; }
+.rep h3 { margin: 16px 0 4px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
+.rep .small { font-size: 12.5px; margin: 4px 0; }
+.rep-change { margin: 6px 0 0; }
+.rep-row { display: grid; grid-template-columns: 92px 1fr 52px; gap: 8px; align-items: center; padding: 3px 0; }
+.rep-name { display: flex; align-items: center; gap: 6px; }
+.rep-name i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.rep-bar { background: var(--grid); border-radius: 4px; height: 10px; overflow: hidden; }
+.rep-bar b { display: block; height: 100%; border-radius: 4px; }
+.rep-n { text-align: right; font-variant-numeric: tabular-nums; }
+.rep-top { margin: 0; padding-left: 18px; }
+.rep-top li { padding: 1px 0; }
+.trend { width: 100%; height: auto; display: block; }
+.trend .bar { fill: var(--axis); opacity: .55; }
+.trend .bar.on { fill: var(--accent); opacity: 1; }
+.trend .ax { font-size: 9px; fill: var(--ink-2); }

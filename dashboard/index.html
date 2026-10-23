@@ -28,8 +28,20 @@
   and hospitals, appear more often. Times are often rounded to the hour as reported.
 </details>
 
+<form class="addrbar" id="addrForm" role="search" aria-label="Crime near an address">
+  <input type="search" id="address" placeholder="Enter a St. Louis address, e.g. 1200 Market St" aria-label="Street address" autocomplete="street-address">
+  <select id="radius" aria-label="Distance from the address">
+    <option value="0.25">¼ mile</option><option value="0.5">½ mile</option><option value="1" selected>1 mile</option>
+  </select>
+  <button class="btn primary" type="submit">See crime near this address</button>
+  <button class="btn ghost" type="button" id="reportBtn" hidden>Show report</button>
+  <button class="btn ghost" type="button" id="addrClear" hidden>Clear address</button>
+  <input type="hidden" id="pt"><input type="hidden" id="lbl">
+</form>
+<div class="addrmsg muted" id="addrMsg" role="status" aria-live="polite"></div>
+
 <section class="filters" aria-label="Filters">
-  <input type="search" id="q" placeholder="Search address, offense, incident #" aria-label="Search">
+  <input type="search" id="q" placeholder="Filter by street, offense or incident #" aria-label="Search">
   <select id="range" aria-label="Time period"></select>
   <select id="month" aria-label="Pick a single month"></select>
   <select id="ward" aria-label="Ward"><option value="">Any ward</option></select>
@@ -97,11 +109,13 @@
   an "incident" is one police report, which can contain several offenses. Offenses are grouped by the NIBRS
   "crimes against" classification. Locations are the addresses in the data, usually block-level, and a few
   records without a usable location are left off the map. Neighborhoods come from the City's data.</p>
+  <p>Address search: the address you type is sent to the City of St. Louis, OpenStreetMap and U.S. Census Bureau geocoding services to find its location. This site does not store it.</p>
   <p>Dashboard layout adapted from a crash-map project by Reddit user u/autosoap, used with permission.</p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="geocode.js"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>
 </body>
