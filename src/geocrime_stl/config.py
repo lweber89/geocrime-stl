@@ -31,7 +31,6 @@ def _resolve_data_dir() -> Path:
 
 
 DATA_DIR = _resolve_data_dir()
-RAW_DIR = DATA_DIR / "raw"              # monthly CSVs as published by SLMPD
 PROCESSED_DIR = DATA_DIR / "processed"  # master dataset and GIS products (parquet, geojson, gpkg)
 WEB_DIR = DATA_DIR / "web"              # manifest.json + YYYY-MM.json feed for the dashboard
 
