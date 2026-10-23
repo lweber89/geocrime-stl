@@ -28,6 +28,23 @@ def load_master(path: Path | str | None = None) -> pd.DataFrame:
     return df.drop(columns=["geometry"], errors="ignore")
 
 
+def ensure_wards(df: pd.DataFrame) -> pd.DataFrame:
+    """Add the ``ward`` column if it is missing or incomplete (older master files have none).
+
+    Needs GeoPandas. Rows that already have a ward are re-assigned too; the result is the same
+    because the ward comes from the coordinates and the boundary file.
+    """
+    if df.empty:
+        return df
+    has_coords = df["lat"].notna() & df["lon"].notna() if {"lat", "lon"} <= set(df.columns) else None
+    if "ward" in df.columns and has_coords is not None and not (df["ward"].isna() & has_coords).any():
+        return df
+    from geocrime_stl.utils.wards import assign_wards  # noqa: PLC0415
+
+    logger.info("Assigning wards to %d rows", len(df))
+    return assign_wards(df)
+
+
 def merge_month(master: pd.DataFrame, month_df: pd.DataFrame, month: int, year: int) -> pd.DataFrame:
     """Replace one month of the master dataset with freshly processed rows.
 

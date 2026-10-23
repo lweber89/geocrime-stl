@@ -16,6 +16,8 @@ from geocrime_stl.config import (
     FINAL_SCHEMA_COLUMNS,
 )
 
+from geocrime_stl.utils.wards import assign_wards
+
 logger = logging.getLogger(__name__)
 
 
@@ -119,11 +121,18 @@ def clean_and_spatial_clip(
     # Spatial Boundary Clipping Execution
     try:
         clipped_df = clip_df(df)
-        return CrimeDataPackage(df=clipped_df, month=month, year=year)
     except Exception as e:
         logger.warning("⚠️ Spatial fencing bypassed due to pipeline engine block: %s", e)
         logger.info("▶️ Flowing original full metropolitan boundary coordinates forward.")
         return CrimeDataPackage(df=df, month=month, year=year)
+
+    # Ward comes from the coordinates (neighborhoods are split across wards). If this step fails the
+    # month is still kept; the missing column is filled in later from the master dataset.
+    try:
+        clipped_df = assign_wards(clipped_df)
+    except Exception as e:
+        logger.warning("⚠️ Ward assignment skipped: %s", e)
+    return CrimeDataPackage(df=clipped_df, month=month, year=year)
 
 
 def clip_df(df: pd.DataFrame) -> pd.DataFrame:

@@ -11,7 +11,7 @@ from datetime import datetime
 from geocrime_stl import run_pipeline as execute_engine
 from geocrime_stl.config import MASTER_PARQUET, PROCESSED_DIR
 from geocrime_stl.etl.extract import ExtractionError
-from geocrime_stl.utils.dataset import load_master, merge_month, save_master
+from geocrime_stl.utils.dataset import ensure_wards, load_master, merge_month, save_master
 from geocrime_stl.utils.web_export import WebExportError, build_web_feed
 
 # Configure logging
@@ -67,6 +67,7 @@ def run_monthly_etl(month: int, year: int) -> None:
                     f"No master dataset at {MASTER_PARQUET}. "
                     "Run download_historical_data.py once to build the baseline first."
                 )
+            master = ensure_wards(master)  # older master files have no ward column yet
             master = merge_month(master, final_df, month=month, year=year)
 
             # 3. Rebuild the dashboard's monthly JSON feed. This validates the data first, so a bad

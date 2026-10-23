@@ -13,9 +13,12 @@ written to a temporary folder, so a bad run can never leave a half-written or tr
 File format, one row per offense::
 
     {"m": "2026-09",
-     "d": {"type": [...], "cat": [...], "off": [...], "nbhd": [...]},
+     "d": {"type": [...], "cat": [...], "off": [...], "nbhd": [...], "ward": ["1", ..., "14"]},
      "r": [[inc, "YYYY-MM-DDTHH:MM", lat, lon, address,
-            typeIdx, catIdx, offenseIdx, nbhdIdx, district, firearm(0/1), estTime(0/1)], ...]}
+            typeIdx, catIdx, offenseIdx, nbhdIdx, district, firearm(0/1), estTime(0/1),
+            wardIdx (-1 = no ward)], ...]}
+
+It also writes ``wards.geojson`` (the 14 ward outlines with their 2020 census population) for maps.
 
 Run from the command line to rebuild from the master dataset::
 
@@ -36,14 +39,14 @@ from pathlib import Path
 
 import pandas as pd
 
-from geocrime_stl.config import STL_MAP_CONFIG, WEB_DIR
-from geocrime_stl.utils.dataset import load_master
+from geocrime_stl.config import STL_MAP_CONFIG, WARDS_BNDY, WEB_DIR
+from geocrime_stl.utils.dataset import ensure_wards, load_master
 
 logger = logging.getLogger(__name__)
 
 __all__ = ["WebExportError", "build_web_feed"]
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Columns the feed needs. nibrs_code, inc_desc and nbhd_num are not used by the dashboard.
 REQUIRED_COLUMNS = (
@@ -134,6 +137,8 @@ def _prepare(df: pd.DataFrame) -> pd.DataFrame:
         "nbhd": _text(df["nbhd"], "Unknown"),
         "district": _text(df["district"]),
         "firearm": _text(df["firearm"]).str.lower().isin(["yes", "y", "true", "1"]).astype(int),
+        # ward comes from the coordinates; older master files may not have it yet (-> no ward)
+        "ward": pd.to_numeric(df["ward"], errors="coerce") if "ward" in df.columns else float("nan"),
     })
     d = d[d["t"].notna()].copy()
 
@@ -150,7 +155,7 @@ def _prepare(df: pd.DataFrame) -> pd.DataFrame:
     if unassigned.any():
         logger.info("%d rows in unassigned district(s) exported without coordinates", int(unassigned.sum()))
         d.loc[unassigned, "nbhd"] = "Unknown"
-    d.loc[outside | unassigned, ["lat", "lon"]] = float("nan")
+    d.loc[outside | unassigned, ["lat", "lon", "ward"]] = float("nan")
 
     d["lat"], d["lon"], moved = _snap_to_address_mode(d["addr"], d["lat"], d["lon"])
     logger.info("%d rows snapped to their address's most common point", moved)
@@ -204,21 +209,41 @@ def _encode(series: pd.Series) -> tuple[list[str], list[int]]:
     return values, series.map(index).tolist()
 
 
-def _month_file(month: str, g: pd.DataFrame) -> dict:
+def _month_file(month: str, g: pd.DataFrame, wards: list[str]) -> dict:
     dicts, codes = {}, {}
     for key in ("type", "cat", "off", "nbhd"):
         dicts[key], codes[key] = _encode(g[key])
+    dicts["ward"] = wards                       # the same list in every file, in numeric order
+    widx = {w: i for i, w in enumerate(wards)}
+    ward_codes = [widx.get(str(int(w)), -1) if pd.notna(w) else -1 for w in g["ward"]]
     lat = [None if pd.isna(x) else round(float(x), 5) for x in g["lat"]]
     lon = [None if pd.isna(x) else round(float(x), 5) for x in g["lon"]]
     rows = [
-        [inc, t.strftime("%Y-%m-%dT%H:%M"), la, lo, ad, ty, ca, of, nb, di, fa, es]
-        for inc, t, la, lo, ad, ty, ca, of, nb, di, fa, es in zip(
+        [inc, t.strftime("%Y-%m-%dT%H:%M"), la, lo, ad, ty, ca, of, nb, di, fa, es, wd]
+        for inc, t, la, lo, ad, ty, ca, of, nb, di, fa, es, wd in zip(
             g["inc"], g["t"], lat, lon, g["addr"],
             codes["type"], codes["cat"], codes["off"], codes["nbhd"],
-            g["district"], g["firearm"], g["est"],
+            g["district"], g["firearm"], g["est"], ward_codes,
         )
     ]
     return {"m": month, "d": dicts, "r": rows}
+
+
+def _write_wards(path: Path) -> list[str]:
+    """Write a slim copy of the ward outlines (number + population) and return the ward numbers."""
+    src = json.loads(WARDS_BNDY.read_text(encoding="utf-8"))
+
+    def rnd(c):
+        return [round(c[0], 5), round(c[1], 5)] if isinstance(c[0], (int, float)) else [rnd(x) for x in c]
+
+    feats = [
+        {"type": "Feature",
+         "properties": {"ward": int(f["properties"]["WARD"]), "pop": int(f["properties"].get("TOT_POP") or 0)},
+         "geometry": {"type": f["geometry"]["type"], "coordinates": rnd(f["geometry"]["coordinates"])}}
+        for f in sorted(src["features"], key=lambda f: int(f["properties"]["WARD"]))
+    ]
+    path.write_text(json.dumps({"type": "FeatureCollection", "features": feats}, separators=(",", ":")), encoding="utf-8")
+    return [str(f["properties"]["ward"]) for f in feats]
 
 
 def build_web_feed(
@@ -246,6 +271,10 @@ def build_web_feed(
         df = load_master()
         if df.empty:
             raise WebExportError("Master dataset not found or empty. Run download_historical_data.py first.")
+        try:
+            df = ensure_wards(df)
+        except Exception as err:  # e.g. GeoPandas not installed: build the feed without wards
+            logger.warning("Wards could not be assigned (%s); the feed will have no ward data", err)
 
     d = _prepare(df)
     counts = d.groupby("month").size().to_dict()
@@ -257,9 +286,10 @@ def build_web_feed(
         shutil.rmtree(tmp)
     tmp.mkdir(parents=True)
     try:
+        wards = _write_wards(tmp / "wards.geojson")
         for month, g in d.groupby("month", sort=True):
             with open(tmp / f"{month}.json", "w", encoding="utf-8") as f:
-                json.dump(_month_file(month, g), f, separators=(",", ":"))
+                json.dump(_month_file(month, g, wards), f, separators=(",", ":"))
         months = sorted(counts)
         manifest = {
             "schema": SCHEMA_VERSION,
@@ -270,6 +300,7 @@ def build_web_feed(
             "rows": int(len(d)),
             "incidents": int(d["inc"].nunique()),
             "unmapped": int(d["lat"].isna().sum()),
+            "noWard": int(d["ward"].isna().sum()),
             "months": [{"m": m, "n": int(counts[m])} for m in months],
         }
         (tmp / "manifest.json").write_text(json.dumps(manifest, separators=(",", ":")), encoding="utf-8")

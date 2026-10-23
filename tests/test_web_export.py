@@ -30,6 +30,36 @@ def make_df(months=("2026-01", "2026-02", "2026-03", "2026-04", "2026-05"), per_
     return df
 
 
+class WardTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.out = Path(self._tmp.name) / "web"
+
+    def test_ward_codes_and_outlines(self):
+        df = make_df(months=("2026-01",), per_month=4)
+        df["ward"] = pd.array([3, 14, None, 3], dtype="Int64")
+        manifest = build_web_feed(df, self.out, force=True)
+        f = json.loads((self.out / "2026-01.json").read_text(encoding="utf-8"))
+        wards = f["d"]["ward"]
+        self.assertEqual(wards, [str(n) for n in range(1, 15)], "same 14 wards, in numeric order, in every file")
+        labels = [wards[r[12]] if r[12] >= 0 else None for r in f["r"]]
+        self.assertEqual(labels, ["3", "14", None, "3"])
+        self.assertEqual(manifest["noWard"], 1)
+        outlines = json.loads((self.out / "wards.geojson").read_text(encoding="utf-8"))
+        self.assertEqual(len(outlines["features"]), 14)
+        self.assertTrue(all(ft["properties"]["pop"] > 0 for ft in outlines["features"]))
+        self.assertEqual(sum(ft["properties"]["pop"] for ft in outlines["features"]), 301578)
+
+    def test_unassigned_district_rows_get_no_ward(self):
+        df = make_df(months=("2026-01",), per_month=3)
+        df["ward"] = 5
+        df["district"] = "0"
+        build_web_feed(df, self.out, force=True)
+        f = json.loads((self.out / "2026-01.json").read_text(encoding="utf-8"))
+        self.assertTrue(all(r[12] == -1 for r in f["r"]))
+
+
 class WebExportTests(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
@@ -52,10 +82,11 @@ class WebExportTests(unittest.TestCase):
     def test_row_layout_matches_the_dashboard_loader(self):
         build_web_feed(make_df(months=("2026-01",), per_month=3), self.out)
         f = self.load_month("2026-01")
-        self.assertEqual(set(f["d"]), {"type", "cat", "off", "nbhd"})
+        self.assertEqual(set(f["d"]), {"type", "cat", "off", "nbhd", "ward"})
         row = f["r"][0]
-        self.assertEqual(len(row), 12)
-        inc, t, lat, lon, addr, ty, ca, of, nb, district, firearm, est = row
+        self.assertEqual(len(row), 13)
+        inc, t, lat, lon, addr, ty, ca, of, nb, district, firearm, est, ward = row
+        self.assertEqual(ward, -1, "no ward column in the input -> no ward")
         self.assertEqual(f["d"]["type"][ty], "Property")
         self.assertEqual(f["d"]["nbhd"][nb], "Downtown")
         self.assertRegex(t, r"^2026-01-\d\d T\d\d:\d\d$".replace(" ", ""))

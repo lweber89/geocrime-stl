@@ -19,3 +19,5 @@ Rebuild just the dashboard feed from the master dataset:
 
 `dashboard/` (the website) never contains data. `scripts/serve.py` serves `data/web` at `/data/`
 for local testing, and the deploy step copies `data/web` next to the site.
+
+`data/web/` also holds `wards.geojson`: the 14 ward outlines (2023 boundaries) with 2020 census population, used for ward maps and per-resident rates. Each offense carries a `ward` assigned from its coordinates, because neighborhoods are split across wards.

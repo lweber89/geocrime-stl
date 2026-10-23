@@ -15,6 +15,7 @@
  *   cat       NIBRS category (53 values)
  *   off       specific offense text
  *   nbhd, district
+ *   ward      "1"-"14" (City wards, 2023 boundaries) or null
  *   firearm   boolean
  *   text      uppercase search blob
  */
@@ -33,11 +34,12 @@
   function normalize(file) {
     const { m, d, r } = file;
     return r.map((row, i) => {
-      const [inc, t, lat, lon, addr, ty, ca, of, nb, district, fa, est] = row;
+      const [inc, t, lat, lon, addr, ty, ca, of, nb, district, fa, est, wd] = row;
       const a = {
         id: `${m}-${i}`, inc, t, lat, lon, addr,
         type: d.type[ty], cat: d.cat[ca], off: d.off[of], nbhd: d.nbhd[nb],
         district, firearm: fa === 1,
+        ward: wd >= 0 ? d.ward[wd] : null,        // "1"-"14", or null when the point has no ward
         est: est === 1,                      // time probably a placeholder (00:00 / 12:00)
       };
       a.date = new Date(t);                 // "YYYY-MM-DDTHH:MM" parses as local time
