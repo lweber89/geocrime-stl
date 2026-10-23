@@ -39,7 +39,7 @@ MASTER_PARQUET = PROCESSED_DIR / "slmpd_crime_data.parquet"
 MASTER_GEOJSON = PROCESSED_DIR / "slmpd_crime_data.geojson"
 
 CITY_BNDY = RESOURCES_DIR / "stl_boundary.geojson"
-NBHD_BNDY = RESOURCES_DIR / "stl_neighborhoods.geojson"
+NBHD_BNDY = RESOURCES_DIR / "stl_neighborhoods.geojson"  # neighborhood_id, neighborhood_name, total_population (2020 census)
 CITY_BNDY_WGS84 = RESOURCES_DIR / "stl_boundary_wgs84.geojson"
 WARDS_BNDY = RESOURCES_DIR / "stl_wards.geojson"  # 14 wards in effect since 2023; WARD number + TOT_POP (2020 census)
 

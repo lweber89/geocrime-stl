@@ -51,6 +51,14 @@ class WardTests(unittest.TestCase):
         self.assertTrue(all(ft["properties"]["pop"] > 0 for ft in outlines["features"]))
         self.assertEqual(sum(ft["properties"]["pop"] for ft in outlines["features"]), 301578)
 
+    def test_neighborhood_outlines_use_the_names_in_the_data(self):
+        build_web_feed(make_df(months=("2026-01",), per_month=3), self.out, force=True)
+        shapes = json.loads((self.out / "neighborhoods.geojson").read_text(encoding="utf-8"))
+        self.assertEqual(len(shapes["features"]), 88, "89 neighborhoods in the City file, one has no outline")
+        by_id = {f["properties"]["id"]: f["properties"] for f in shapes["features"]}
+        self.assertEqual(by_id[35]["name"], "Downtown", "test data says neighborhood 35 is 'Downtown'")
+        self.assertEqual(sum(p["pop"] for p in by_id.values()), 301562, "301,578 city total minus 16 residents of the outline-less placeholder")
+
     def test_unassigned_district_rows_get_no_ward(self):
         df = make_df(months=("2026-01",), per_month=3)
         df["ward"] = 5

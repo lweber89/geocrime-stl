@@ -10,6 +10,7 @@
   --type-property: #2a78d6;
   --type-society:  #6b46b0;
   --type-other:    #9a978f;
+  --outline:       #3b78c2;     /* subtle blue area outlines (wards, neighborhoods) */
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -18,6 +19,7 @@
     --type-property: #5aa2f0;
     --type-society:  #b896f2;
     --type-other:    #8a8883;
+    --outline:       #7db2ee;
   }
 }
 :root[data-theme="dark"] {
@@ -26,6 +28,7 @@
   --type-property: #5aa2f0;
   --type-society:  #b896f2;
   --type-other:    #8a8883;
+  --outline:       #7db2ee;
 }
 
 /* offense-type filter chips */
@@ -57,12 +60,13 @@
 /* overlays on the map: the period and count (top left), and the "why heat map" note (bottom left) */
 .mapbadge, .mapnote { position: absolute; left: 10px; z-index: 500; background: var(--surface); color: var(--ink-2);
                       border: 1px solid var(--border); border-radius: 8px; font-size: 12.5px; padding: 5px 10px; max-width: calc(100% - 150px); }
-.mapbadge { top: 10px; font-weight: 600; color: var(--ink); }
+.mapbadge { top: 10px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 360px); font-weight: 600; color: var(--ink); text-align: center; }
 .mapnote { bottom: 22px; }
 .mapnote[hidden] { display: none; }
 
 @media (max-width: 760px) {
   .stage { height: max(460px, calc(100svh - 200px)); padding: 0 8px; }
   .panel { position: absolute; left: 8px; right: 8px; bottom: 0; width: auto; height: 58%; z-index: 800; box-shadow: 0 -4px 16px rgba(0,0,0,.25); }
-  .mapnote { bottom: 10px; max-width: calc(100% - 20px); }
+  .mapbadge { top: auto; bottom: 10px; left: 10px; transform: none; text-align: left; max-width: calc(100% - 20px); }
+  .mapnote { bottom: 48px; max-width: calc(100% - 20px); }
 }

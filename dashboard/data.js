@@ -60,6 +60,11 @@
     let wards = null;                                    // ward outlines + population (absent in older feeds)
     try { wards = await getJSON("data/wards.geojson?v=" + manifest.built); } catch (e) { /* optional */ }
 
+    let city = null;                                     // city limit outline (optional)
+    try { city = await getJSON("data/city.geojson?v=" + manifest.built); } catch (e) { /* optional */ }
+    let nbhdShapes = null;                               // neighborhood outlines + population (optional)
+    try { nbhdShapes = await getJSON("data/neighborhoods.geojson?v=" + manifest.built); } catch (e) { /* optional */ }
+
     const byId = new Map(records.map((a) => [a.id, a]));
     const maxDate = records.reduce((m, a) => (a.date > m ? a.date : m), new Date(0));
 
@@ -71,7 +76,7 @@
     for (const t of Object.keys(cats)) cats[t] = [...cats[t]].sort((x, y) => counts.get(y) - counts.get(x));
 
     return {
-      records, byId, maxDate, wards,
+      records, byId, maxDate, wards, nbhdShapes, city,
       through: manifest.through,
       completeThrough: manifest.completeThrough,
       months: manifest.months,

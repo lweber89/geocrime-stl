@@ -18,7 +18,8 @@ File format, one row per offense::
             typeIdx, catIdx, offenseIdx, nbhdIdx, district, firearm(0/1), estTime(0/1),
             wardIdx (-1 = no ward)], ...]}
 
-It also writes ``wards.geojson`` (the 14 ward outlines with their 2020 census population) for maps.
+It also writes ``city.geojson``, ``wards.geojson`` and ``neighborhoods.geojson`` (outlines with 2020 census population)
+for maps.
 
 Run from the command line to rebuild from the master dataset::
 
@@ -39,7 +40,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from geocrime_stl.config import STL_MAP_CONFIG, WARDS_BNDY, WEB_DIR
+from geocrime_stl.config import CITY_BNDY_WGS84, NBHD_BNDY, STL_MAP_CONFIG, WARDS_BNDY, WEB_DIR
 from geocrime_stl.utils.dataset import ensure_wards, load_master
 
 logger = logging.getLogger(__name__)
@@ -139,6 +140,7 @@ def _prepare(df: pd.DataFrame) -> pd.DataFrame:
         "firearm": _text(df["firearm"]).str.lower().isin(["yes", "y", "true", "1"]).astype(int),
         # ward comes from the coordinates; older master files may not have it yet (-> no ward)
         "ward": pd.to_numeric(df["ward"], errors="coerce") if "ward" in df.columns else float("nan"),
+        "nbhd_num": pd.to_numeric(df["nbhd_num"], errors="coerce") if "nbhd_num" in df.columns else float("nan"),
     })
     d = d[d["t"].notna()].copy()
 
@@ -246,6 +248,49 @@ def _write_wards(path: Path) -> list[str]:
     return [str(f["properties"]["ward"]) for f in feats]
 
 
+def _write_city(path: Path) -> None:
+    """Write the city limit as a bare geometry (used for the outline on every map view)."""
+    src = json.loads(CITY_BNDY_WGS84.read_text(encoding="utf-8"))
+
+    def rnd(c):
+        return [round(c[0], 5), round(c[1], 5)] if isinstance(c[0], (int, float)) else [rnd(x) for x in c]
+
+    geom = src["features"][0]["geometry"]
+    out = {"type": "Feature", "properties": {}, "geometry": {"type": geom["type"], "coordinates": rnd(geom["coordinates"])}}
+    path.write_text(json.dumps(out, separators=(",", ":")), encoding="utf-8")
+
+
+def _write_neighborhoods(path: Path, d: pd.DataFrame) -> int:
+    """Write slim neighborhood outlines with population. Returns how many features were written.
+
+    Outlines are matched to the crime data by neighborhood number (the City's own IDs), and take the
+    name used in the crime data so the dashboard's neighborhood menu and the map agree.
+    """
+    if not NBHD_BNDY.exists() or d["nbhd_num"].isna().all():
+        return 0
+    known = d[d["nbhd_num"].notna() & (d["nbhd"] != "Unknown")]
+    names = known.groupby("nbhd_num")["nbhd"].agg(lambda s: s.value_counts().index[0])
+    src = json.loads(NBHD_BNDY.read_text(encoding="utf-8"))
+
+    def rnd(c):
+        return [round(c[0], 5), round(c[1], 5)] if isinstance(c[0], (int, float)) else [rnd(x) for x in c]
+
+    feats = []
+    for f in src["features"]:
+        if not f.get("geometry"):          # the City's file has a placeholder neighborhood with no outline
+            continue
+        p = f["properties"]
+        feats.append({
+            "type": "Feature",
+            "properties": {"id": int(p["neighborhood_id"]), "name": names.get(p["neighborhood_id"], p["neighborhood_name"]),
+                           "pop": int(p.get("total_population") or 0)},
+            "geometry": {"type": f["geometry"]["type"], "coordinates": rnd(f["geometry"]["coordinates"])},
+        })
+    feats.sort(key=lambda f: f["properties"]["name"])
+    path.write_text(json.dumps({"type": "FeatureCollection", "features": feats}, separators=(",", ":")), encoding="utf-8")
+    return len(feats)
+
+
 def build_web_feed(
     df: pd.DataFrame | None = None,
     out_dir: Path | str | None = None,
@@ -287,6 +332,8 @@ def build_web_feed(
     tmp.mkdir(parents=True)
     try:
         wards = _write_wards(tmp / "wards.geojson")
+        _write_neighborhoods(tmp / "neighborhoods.geojson", d)
+        _write_city(tmp / "city.geojson")
         for month, g in d.groupby("month", sort=True):
             with open(tmp / f"{month}.json", "w", encoding="utf-8") as f:
                 json.dump(_month_file(month, g, wards), f, separators=(",", ":"))
