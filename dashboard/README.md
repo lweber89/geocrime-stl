@@ -18,12 +18,27 @@ It contains **no data**. It reads the feed in `../data/web` (see `../data/README
 | `crime.css` | Colours (offense-type palette) and the few crime-specific rules |
 | `favicon.svg` | Site icon |
 
+## Publishing and monthly updates
+
+The site is published with GitHub Pages from `.github/workflows/docs.yml`: the package docs at the root and this
+dashboard at `/dashboard/`, with its data feed rebuilt from the master dataset (`data/processed/*.parquet`) at deploy time.
+`data/web/` is therefore not committed.
+
+`.github/workflows/monthly-update.yml` adds each new month. It runs daily from the 10th to the 25th, stops quietly
+if the police have not posted last month yet, commits the updated master parquet to `main` and redeploys. If the month never arrives by the 25th the run fails, so GitHub emails the repository owner.
+It can also be started by hand from the Actions tab.
+
 ## Credits
 
 This dashboard started from a crash-map dashboard by Reddit user **u/autosoap**, who gave permission
 to reuse and adapt it. The layout and base stylesheet come from that project. Credit wording will be
 updated once the author says how he would like to be credited.
 
-## Not included yet
+## Pages
 
-- `hotspots.html` and `charts.html`, which the page navigation links to, are still to be written.
+`index.html` (map), `charts.html`, `hotspots.html` (hexagons and rankings) and `methodology.html`. Offense category, firearm and period are shared between pages through the page link. The list of masked (location-withheld) offense categories lives in `src/geocrime_stl/utils/web_export.py`.
+
+## Ideas for later
+
+- Flag missing times in the pipeline instead of filling midnight.
+- A seasonal version of the day/night boundaries in the time-of-day chart.
