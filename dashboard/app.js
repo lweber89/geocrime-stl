@@ -108,6 +108,14 @@
     layerChoice = "auto";
   }
 
+  // "All Other Offenses" is the police catch-all, so it would top every ranking and say nothing. It is left out of "most common"
+  // lists (unless it is all there is), and still counted everywhere else.
+  const CATCH_ALL = "All Other Offenses";
+  const rankCategories = (counts) => {
+    const all = [...counts.entries()], named = all.filter(([c]) => c !== CATCH_ALL);
+    return (named.length ? named : all).sort((a, b) => b[1] - a[1]);
+  };
+
   const monthsOf = (range) => { const b = rangeBounds({ range, month: "" }); return monthsIn(b.from, b.to); };
 
   function apply() {
@@ -197,7 +205,7 @@
     const pct = (x) => (n ? Math.round((100 * x) / n) + "%" : "–");
     const counts = new Map();
     filtered.forEach((a) => counts.set(a.cat, (counts.get(a.cat) || 0) + 1));
-    const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+    const top = rankCategories(counts)[0];
     const t = [
       [n.toLocaleString(), "offenses"],
       [CRIME.incidents(filtered).toLocaleString(), "incidents (one can include several offenses)"],
@@ -282,8 +290,10 @@
     }).join("");
     const cats = new Map();
     filtered.forEach((a) => cats.set(a.cat, (cats.get(a.cat) || 0) + 1));
-    const top = [...cats].sort((x, y) => y[1] - x[1]).slice(0, 5)
+    const top = rankCategories(cats).slice(0, 5)
       .map(([c, k]) => `<li>${esc(c)} <span class="muted">${k.toLocaleString()}</span></li>`).join("");
+    const catchAll = cats.get(CATCH_ALL) || 0, catchNote = catchAll && cats.size > 1
+      ? `<p class="muted small">Not ranked: ${catchAll.toLocaleString()} offenses in "${CATCH_ALL}", the police catch-all category. They are included in every total.</p>` : "";
 
     const monthly = new Map(D.months.map((x) => [x.m, 0]));       // every month, whatever period is chosen
     for (const a of D.records) if (curMatches(a)) { const m = a.t.slice(0, 7); monthly.set(m, (monthly.get(m) || 0) + 1); }
@@ -305,7 +315,7 @@
       ${where}
       <p class="rep-change"><strong>${esc(ch[0])}</strong> <span class="muted">${esc(ch[1])}</span></p>
       <h3>By type</h3>${typeRows}
-      <h3>Most common</h3><ol class="rep-top">${top || '<li class="muted">None reported</li>'}</ol>
+      <h3>Most common</h3><ol class="rep-top">${top || '<li class="muted">None reported</li>'}</ol>${catchNote}
       <h3>Month by month</h3>${trendSvg(monthly)}
       <p class="muted small">Offenses per month within ${esc(within)}, latest ${Math.min(TREND_MONTHS, D.months.length)} months. Darker bars are the period you chose.${peak && peak[1] ? ` Busiest month: ${monLabel(peak[0])} (${peak[1].toLocaleString()}).` : ""}</p>
       <h3>For context</h3>

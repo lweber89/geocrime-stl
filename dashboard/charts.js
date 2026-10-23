@@ -10,6 +10,7 @@
 
   const $ = (id) => document.getElementById(id);
   const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const CATCH_ALL = "All Other Offenses";
   const TYPES = ["Person", "Property", "Society", "Other"];
   const typeColor = (t) => css("--type-" + t.toLowerCase());
   const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -244,7 +245,11 @@
   function drawCategories(inPeriod) {
     const box = $("c-cats"), cats = new Map();
     for (const a of inPeriod) { const c = cats.get(a.cat) || { n: 0, type: a.type }; c.n++; cats.set(a.cat, c); }
-    const top = [...cats].sort((x, y) => y[1].n - x[1].n).slice(0, 10), max = top.length ? top[0][1].n : 1;
+    // the police catch-all would top the list without saying anything, so it is left out of the ranking (and noted below)
+    const named = [...cats].filter(([c]) => c !== CATCH_ALL), pool = named.length ? named : [...cats];
+    const top = pool.sort((x, y) => y[1].n - x[1].n).slice(0, 10), max = top.length ? top[0][1].n : 1;
+    const left = named.length && cats.get(CATCH_ALL) ? cats.get(CATCH_ALL).n : 0;
+    $("n-cats").textContent = left ? `Not ranked: ${num(left)} offenses (${Math.round((100 * left) / inPeriod.length)}%) in "${CATCH_ALL}", the police catch-all category. They are included in every total.` : "";
     box.replaceChildren();
     if (!top.length) { box.textContent = "No offenses reported."; }
     top.forEach(([name, c]) => {
