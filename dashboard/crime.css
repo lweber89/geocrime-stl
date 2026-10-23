@@ -1,0 +1,211 @@
+/* crime.css: loaded AFTER style.css. Overrides the colour tokens and adds the few rules
+   the crime map needs, so the original style.css never has to be edited.
+
+   Offense-type colours follow common crime-mapping practice:
+   red = against persons, blue = property, purple = society, gray = other/catch-all.
+   The hex values were checked with the dataviz palette validator (colour-blind separation and contrast)
+   in light and dark. Gray is deliberately neutral for the catch-all bucket. The types are always named in a
+   legend or label, never shown by colour alone. */
+
+:root {
+  --accent: #26313f;           /* UI accent is now a neutral slate so data colours are the only saturated colours */
+  --type-person:   #c4302b;
+  --type-property: #2a78d6;
+  --type-society:  #7a3b9e;
+  --type-other:    #7d7a72;
+  --outline:       #3b78c2;     /* subtle blue area outlines (wards, neighborhoods) */
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --accent: #4b5d73;
+    --type-person:   #e8604f;
+    --type-property: #5198e8;
+    --type-society:  #a05fcf;
+    --type-other:    #918e88;
+    --outline:       #7db2ee;
+  }
+}
+:root[data-theme="dark"] {
+  --accent: #4b5d73;
+  --type-person:   #e8604f;
+  --type-property: #5198e8;
+  --type-society:  #a05fcf;
+  --type-other:    #918e88;
+  --outline:       #7db2ee;
+}
+
+/* offense-type filter chips */
+.chipgroup { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.chip .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
+
+/* a tile whose value is text (most common category), not a number */
+.tile .v.sm { font-size: 15px; line-height: 1.3; padding: 4px 0; font-weight: 600; }
+
+/* ---- full-height map with a details panel beside it ---- */
+.notice summary { cursor: pointer; }
+.notice summary::-webkit-details-marker { display: none; }
+.stage { display: flex; gap: 10px; max-width: 1400px; margin: 0 auto; padding: 0 16px; position: relative;
+         height: max(460px, calc(100svh - 270px)); }
+.stage .mapwrap { flex: 1; min-width: 0; height: 100%; }
+.stage #map { height: 100%; min-height: 0; }
+.panel { flex: none; width: 360px; height: 100%; display: flex; flex-direction: column; background: var(--surface);
+         border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.panel[hidden] { display: none; }
+.panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 12px 14px;
+              border-bottom: 1px solid var(--border); }
+.panel-head h2 { margin: 0; font-size: 16px; line-height: 1.3; }
+.panel-body { overflow-y: auto; padding: 4px 14px 14px; }
+.pitem { padding: 10px 0; border-bottom: 1px solid var(--grid); }
+.pitem:last-child { border-bottom: 0; }
+.pitem .sev { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pitem .sev i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
+
+/* overlays on the map: the period and count (top left), and the "why heat map" note (bottom left) */
+.mapbadge, .mapnote { position: absolute; left: 10px; z-index: 500; background: var(--surface); color: var(--ink-2);
+                      border: 1px solid var(--border); border-radius: 8px; font-size: 12.5px; padding: 5px 10px; max-width: calc(100% - 150px); }
+.mapbadge { top: 10px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 360px); font-weight: 600; color: var(--ink); text-align: center; }
+.mapnote { bottom: 22px; }
+.mapnote[hidden] { display: none; }
+
+@media (max-width: 760px) {
+  .stage { height: max(460px, calc(100svh - 200px)); padding: 0 8px; }
+  .panel { position: absolute; left: 8px; right: 8px; bottom: 0; width: auto; height: 58%; z-index: 800; box-shadow: 0 -4px 16px rgba(0,0,0,.25); }
+  .mapbadge { top: auto; bottom: 10px; left: 10px; transform: none; text-align: left; max-width: calc(100% - 20px); }
+  .mapnote { bottom: 48px; max-width: calc(100% - 20px); }
+}
+
+/* ---- address search bar and the report panel ---- */
+.addrbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; max-width: 1400px; margin: 0 auto; padding: 4px 16px 6px; }
+.addrbar input[type="search"] { flex: 1 1 320px; min-width: 0; font: inherit; padding: 9px 12px; border: 1px solid var(--axis); border-radius: 8px;
+                                background: var(--surface); color: var(--ink); }
+.addrbar select { font: inherit; padding: 9px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.btn.primary { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
+.addrmsg { max-width: 1400px; margin: 0 auto; padding: 0 16px 8px; min-height: 1.45em; font-size: 12.5px; }
+
+.rep-big { font-size: 34px; font-weight: 600; line-height: 1.1; padding-top: 10px; }
+.rep h3 { margin: 16px 0 4px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
+.rep .small { font-size: 12.5px; margin: 4px 0; }
+.rep-change { margin: 6px 0 0; }
+.rep-row { display: grid; grid-template-columns: 92px 1fr 52px; gap: 8px; align-items: center; padding: 3px 0; }
+.rep-name { display: flex; align-items: center; gap: 6px; }
+.rep-name i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.rep-bar { background: var(--grid); border-radius: 4px; height: 10px; overflow: hidden; }
+.rep-bar b { display: block; height: 100%; border-radius: 4px; }
+.rep-n { text-align: right; font-variant-numeric: tabular-nums; }
+.rep-top { margin: 0; padding-left: 18px; }
+.rep-top li { padding: 1px 0; }
+.trend { width: 100%; height: auto; display: block; }
+.trend .bar { fill: var(--axis); opacity: .55; }
+.trend .bar.on { fill: var(--accent); opacity: 1; }
+.trend .ax { font-size: 9px; fill: var(--ink-2); }
+.trend .tick { stroke: var(--axis); stroke-width: 1; }
+
+/* the draggable pin, and the crosshair while placing one */
+.pin span { display: block; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); border: 3px solid var(--surface);
+            box-shadow: 0 0 0 1px var(--ink), 0 2px 6px rgba(0,0,0,.4); cursor: grab; }
+.leaflet-container.pinning, .leaflet-container.pinning .leaflet-interactive { cursor: crosshair; }
+.btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ---- charts page ---- */
+/* time of day: meaning-based colours (night dark, dawn orange, day yellow, dusk blue). Checked with the palette validator:
+   colour-blind and normal-vision separation pass; the lightness/chroma bands and the yellow's contrast are the cost of
+   intuitive day/night colours, so every bar is also named by the legend, the tooltip and the data table. */
+:root { --series: #26313f; --series-soft: #6f7f96; --tod-night: #1f2937; --tod-dawn: #e8833a; --tod-day: #f2c230; --tod-dusk: #3f6fd1; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --series: #9fb3cc; --series-soft: #9fb3cc; --tod-night: #7a889e; --tod-dusk: #5f8fe8; } }
+:root[data-theme="dark"] { --series: #9fb3cc; --series-soft: #9fb3cc; --tod-night: #7a889e; --tod-dusk: #5f8fe8; }
+#c-hours .col { stroke: var(--ink-2); stroke-opacity: .35; stroke-width: 1; }
+.chartpage { max-width: 1400px; margin: 0 auto; padding: 0 16px 24px; }
+.areatitle { font-size: 20px; margin: 10px 0; }
+.areatitle .muted { font-size: 14px; font-weight: 400; margin-left: 6px; }
+.empty { padding: 12px; color: var(--ink-2); }
+.addrchip { gap: 8px; }
+.addrchip .btn { padding: 2px 8px; }
+.chartgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.chartcard { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; min-width: 0; }
+.chartcard.wide { grid-column: 1 / -1; }
+.chartcard h3 { margin: 0; font-size: 15px; }
+.chartcard figcaption p { margin: 2px 0 8px; font-size: 12.5px; }
+.lgrow { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 6px; font-size: 12.5px; color: var(--ink-2); }
+.lg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+.lg.line i { height: 3px; border-radius: 2px; vertical-align: middle; }
+.plot { width: 100%; }
+.plot svg { display: block; max-width: 100%; }
+.plot .grid { stroke: var(--grid); stroke-width: 1; }
+.plot .axis { stroke: var(--axis); stroke-width: 1; }
+.plot .ax { font-size: 10.5px; fill: var(--ink-2); }
+.plot .ax-strong { font-size: 11px; fill: var(--ink); font-weight: 600; }
+.plot .col { fill: var(--series); }
+.plot .dot { stroke: var(--surface); }
+.plot .cross { stroke: var(--axis); stroke-width: 1; }
+.plot .hit:focus { outline: none; stroke: var(--ink); stroke-width: 1.5; }
+.cats { display: flex; flex-direction: column; gap: 4px; }
+.cat-row { display: grid; grid-template-columns: minmax(90px, 40%) 1fr 48px; gap: 8px; align-items: center; font-size: 12.5px; padding: 2px 0; }
+.cat-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-track { height: 14px; background: transparent; }
+.cat-track b { display: block; height: 100%; border-radius: 0 4px 4px 0; }
+.cat-n { text-align: right; font-variant-numeric: tabular-nums; }
+.tview { margin-top: 8px; font-size: 12.5px; }
+.tview summary { cursor: pointer; color: var(--ink-2); }
+.tview table { border-collapse: collapse; margin-top: 6px; width: 100%; }
+.tview th, .tview td { text-align: right; padding: 3px 8px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+.tview th:first-child, .tview td:first-child { text-align: left; }
+.tooltip { position: fixed; z-index: 2000; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--axis);
+           border-radius: 8px; padding: 8px 10px; font-size: 12.5px; box-shadow: 0 4px 14px rgba(0,0,0,.2); min-width: 150px; }
+.tooltip[hidden] { display: none; }
+.tip-head { font-weight: 600; margin-bottom: 4px; }
+.tip-row { display: flex; align-items: center; gap: 6px; padding: 1px 0; }
+.tip-key { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.tip-name { flex: 1; color: var(--ink-2); }
+.addrchip[hidden] { display: none; }
+
+/* ---- hotspots page ---- */
+.tabs { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+.tabs button { flex: 1 1 auto; font: inherit; font-size: 13px; background: transparent; color: var(--ink-2); border: 0; border-bottom: 3px solid transparent;
+               padding: 10px 8px; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
+.panel-body h3 { margin: 12px 0 2px; font-size: 14px; }
+.panel-body .small { font-size: 12.5px; margin: 2px 0 6px; }
+.hlist { list-style: none; margin: 4px 0 8px; padding: 0; }
+.hrow { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; padding: 8px 0; border-bottom: 1px solid var(--grid); align-items: baseline; }
+.hrow:last-child { border-bottom: 0; }
+.hname { font: inherit; text-align: left; background: none; border: 0; padding: 0; color: var(--ink); cursor: pointer; }
+button.hname:hover { text-decoration: underline; }
+.rank { display: inline-block; min-width: 1.6em; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.hval { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.hval small { display: block; font-weight: 400; color: var(--ink-2); font-size: 11.5px; }
+.hgo, .hmain { grid-column: 1 / -1; font-size: 12.5px; padding-left: 1.6em; }
+table.hot { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.hot th, table.hot td { padding: 5px 4px; border-bottom: 1px solid var(--grid); text-align: left; }
+table.hot .r { text-align: right; font-variant-numeric: tabular-nums; }
+table.hot th button { font: inherit; font-weight: 600; background: none; border: 0; color: var(--ink-2); cursor: pointer; padding: 0; }
+table.hot th button[aria-pressed="true"] { color: var(--ink); }
+.hotpage .mapnote { max-width: calc(100% - 40px); }
+@media (max-width: 760px) {
+  .hotpage .stage { height: auto; flex-direction: column; }
+  .hotpage .stage .mapwrap { flex: none; height: 62svh; }
+  .hotpage .panel { position: static; width: auto; height: auto; box-shadow: none; }
+  .hotpage .panel-body { overflow: visible; }
+}
+
+/* ---- methodology page ---- */
+.doc { max-width: 820px; margin: 0 auto; padding: 0 16px 28px; line-height: 1.55; }
+.doc .toc { font-size: 13px; color: var(--ink-2); margin: 6px 0 14px; }
+.doc h2 { font-size: 19px; margin: 26px 0 6px; }
+.doc ul { padding-left: 20px; }
+.doc li { margin: 5px 0; }
+.doc dt { font-weight: 600; margin-top: 10px; }
+.doc dd { margin: 2px 0 0 0; }
+.doc ul.plain { columns: 2; column-gap: 24px; }
+.doc .tablewrap { overflow-x: auto; }
+.doc table.dict { border-collapse: collapse; width: 100%; font-size: 14px; }
+.doc table.dict th, .doc table.dict td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+.doc code { font-size: 13px; }
+@media (max-width: 560px) { .doc ul.plain { columns: 1; } }
+
+/* the period and total sit at the top of the legend (top right) on wide screens, so nothing overlaps the layer buttons;
+   on phones the legend is hidden and the small badge at the bottom of the map is used instead */
+.legnote { font-weight: 600; color: var(--ink); max-width: 240px; margin-bottom: 6px; }
+.legnote:empty { display: none; }
+@media (min-width: 761px) { .mapbadge { display: none; } }
+#legend { display: block; }
+.legnote { display: block; }

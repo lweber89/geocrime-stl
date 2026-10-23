@@ -1,0 +1,106 @@
+# Adds each new month of SLMPD crime data and republishes the site.
+#
+# SLMPD posts a month around the 5th of the next one. This runs every day from the 10th to the 25th (about 9 am Central):
+#   - if the master dataset already has last month, it does nothing;
+#   - if the police have not posted it yet, it ends quietly and tries again tomorrow;
+#   - on the 25th an unsuccessful run fails on purpose, so GitHub emails you that the data never arrived;
+#   - any other failure (bad data, a failed plausibility check) fails right away, and nothing is published.
+# On success it commits the updated master parquet to main and redeploys the site.
+# You can also run it by hand from the Actions tab (it works on the previous calendar month).
+name: monthly-update
+
+on:
+    schedule:
+        - cron: "17 14 10-25 * *"
+    workflow_dispatch:
+
+concurrency:
+    group: monthly-update
+    cancel-in-progress: false
+
+jobs:
+    update:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        outputs:
+            changed: ${{ steps.commit.outputs.changed }}
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  ref: main
+
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
+
+            - name: Install the package
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -e .
+
+            - name: Is last month already in the master dataset?
+              id: have
+              run: |
+                  python - <<'PY' >> "$GITHUB_OUTPUT"
+                  from datetime import datetime, timezone
+                  from geocrime_stl.utils.dataset import load_master
+                  now = datetime.now(timezone.utc)
+                  y, m = (now.year - 1, 12) if now.month == 1 else (now.year, now.month - 1)
+                  df = load_master()
+                  t = df["date_time"] if "date_time" in df.columns else None
+                  have = False
+                  if t is not None and len(df):
+                      import pandas as pd
+                      t = pd.to_datetime(t, errors="coerce")
+                      have = bool(((t.dt.year == y) & (t.dt.month == m)).any())
+                  print(f"have={'true' if have else 'false'}")
+                  print(f"label={y}-{m:02d}")
+                  PY
+
+            - name: Download, clean and merge the month
+              id: run
+              if: steps.have.outputs.have != 'true'
+              env:
+                  GEOCRIME_WRITE_GEOJSON: "0"
+              run: |
+                  set +e
+                  python run_pipeline.py 2>&1 | tee pipeline.log
+                  rc=${PIPESTATUS[0]}
+                  set -e
+                  day=$(date -u +%d)
+                  if [ "$rc" -ne 0 ]; then
+                      if grep -q "Extraction phase" pipeline.log && [ "$((10#$day))" -lt 25 ]; then
+                          echo "::notice::${{ steps.have.outputs.label }} is not published yet. Trying again tomorrow."
+                          echo "ready=false" >> "$GITHUB_OUTPUT"
+                          exit 0
+                      fi
+                      echo "::error::Monthly update failed (see the log above)."
+                      exit "$rc"
+                  fi
+                  echo "ready=true" >> "$GITHUB_OUTPUT"
+
+            - name: Commit the updated master dataset
+              id: commit
+              run: |
+                  echo "changed=false" >> "$GITHUB_OUTPUT"
+                  if [ "${{ steps.run.outputs.ready }}" != "true" ]; then exit 0; fi
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git add data/processed/slmpd_crime_data.parquet
+                  if git diff --cached --quiet; then
+                      echo "::notice::The master dataset did not change."
+                      exit 0
+                  fi
+                  git commit -m "Add ${{ steps.have.outputs.label }} crime data"
+                  git push origin HEAD:main
+                  echo "changed=true" >> "$GITHUB_OUTPUT"
+
+    deploy:
+        needs: update
+        if: needs.update.outputs.changed == 'true'
+        permissions:
+            contents: read
+            pages: write
+            id-token: write
+        uses: ./.github/workflows/docs.yml

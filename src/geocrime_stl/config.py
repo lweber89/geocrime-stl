@@ -1,16 +1,47 @@
 """Global configuration settings, file paths, and schema definitions for the GeoCrime STL package."""
 
+import os
 from pathlib import Path
 from typing import NamedTuple
 
 # --- Paths ---
-# .parent takes us to 'geocrime_stl' (where 'data' now lives!)
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
+# Two different kinds of "data" live in this project, and they are kept apart on purpose:
+#
+#   RESOURCES_DIR  boundary files that SHIP INSIDE the package (src/geocrime_stl/data).
+#   DATA_DIR       data the pipeline GENERATES (<repo>/data): raw CSVs, GIS products, web feed.
+PACKAGE_DIR = Path(__file__).resolve().parent
+BASE_DIR = PACKAGE_DIR  # kept so existing imports of BASE_DIR keep working
+RESOURCES_DIR = PACKAGE_DIR / "data"
 
-CITY_BNDY = DATA_DIR / "stl_boundary.geojson"
-NBHD_BNDY = DATA_DIR / "stl_neighborhoods.geojson"
-CITY_BNDY_WGS84 = DATA_DIR / "stl_boundary_wgs84.geojson"
+
+def _resolve_data_dir() -> Path:
+    """Locate the folder for generated data.
+
+    Order: the GEOCRIME_DATA_DIR environment variable; else <repo root>/data when running from a
+    source checkout (so it does not matter which folder a script is launched from); else ./data
+    under the current working directory (e.g. when installed from PyPI).
+    """
+    override = os.environ.get("GEOCRIME_DATA_DIR")
+    if override:
+        return Path(override).expanduser().resolve()
+    repo_root = PACKAGE_DIR.parents[1]  # src/geocrime_stl -> src -> repo root
+    if (repo_root / "pyproject.toml").is_file() and (repo_root / "src").is_dir():
+        return repo_root / "data"
+    return Path.cwd() / "data"
+
+
+DATA_DIR = _resolve_data_dir()
+RAW_DIR = DATA_DIR / "raw"              # monthly CSVs as published by SLMPD
+PROCESSED_DIR = DATA_DIR / "processed"  # master dataset and GIS products (parquet, geojson, gpkg)
+WEB_DIR = DATA_DIR / "web"              # manifest.json + YYYY-MM.json feed for the dashboard
+
+MASTER_PARQUET = PROCESSED_DIR / "slmpd_crime_data.parquet"
+MASTER_GEOJSON = PROCESSED_DIR / "slmpd_crime_data.geojson"
+
+CITY_BNDY = RESOURCES_DIR / "stl_boundary.geojson"
+NBHD_BNDY = RESOURCES_DIR / "stl_neighborhoods.geojson"  # neighborhood_id, neighborhood_name, total_population (2020 census)
+CITY_BNDY_WGS84 = RESOURCES_DIR / "stl_boundary_wgs84.geojson"
+WARDS_BNDY = RESOURCES_DIR / "stl_wards.geojson"  # 14 wards in effect since 2023; WARD number + TOT_POP (2020 census)
 
 
 # --- Map Configuration ---
@@ -82,6 +113,7 @@ FINAL_SCHEMA_COLUMNS = [
     "nbhd",
     "nbhd_num",
     "district",
+    "ward",
     "lat",
     "lon",
 ]
