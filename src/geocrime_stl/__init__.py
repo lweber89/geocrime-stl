@@ -10,7 +10,6 @@ from .insights.monthly_summary import generate_monthly_metrics, plot_monthly_map
 
 # Expose the utilities and exporters cleanly to the root namespace
 from .utils.export import export_to_csv, export_to_geojson, export_to_gpkg
-from .utils.web_export import build_web_feed
 
 __all__ = [
     "CITY_BNDY",
@@ -24,3 +23,13 @@ __all__ = [
     "plot_monthly_maps",
     "generate_monthly_metrics"
 ]
+
+
+def __getattr__(name: str):
+    """Load ``build_web_feed`` on first use. Importing it eagerly makes
+    ``python -m geocrime_stl.utils.web_export`` warn that the module was already imported."""
+    if name == "build_web_feed":
+        from .utils.web_export import build_web_feed  # noqa: PLC0415
+
+        return build_web_feed
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
