@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>St. Louis Crime Hotspots</title>
+<meta name="description" content="Where reported offenses cluster in St. Louis: a hexagon map, ranked neighborhoods and wards, and the busiest blocks.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="crime.css">
+</head>
+<body class="hotpage">
+<header class="top">
+  <div>
+    <h1>St. Louis Crime Hotspots</h1>
+    <p class="sub" id="sub">Loading…</p>
+  </div>
+  <div class="top-actions">
+    <nav class="pagenav" aria-label="Pages"><a href="./" data-nav="map">Crime map</a><a href="hotspots.html" aria-current="page">Hotspots</a><a href="charts.html" data-nav="charts">Charts</a></nav>
+  </div>
+</header>
+
+<details class="notice">
+  <summary><strong>A hotspot is where offenses were reported, not where danger is.</strong> <span class="muted">More</span></summary>
+  Busy places such as shopping areas, downtown and hospitals appear more often because many people pass through and
+  report there. Counts are not adjusted for how many people live or visit. Sensitive offenses are counted, but their exact
+  location is withheld, so they never appear as a street in the Blocks list. See the methodology page for details.
+</details>
+
+<section class="filters" aria-label="Filters">
+  <select id="cat" aria-label="Offense category"><option value="">All offense types</option></select>
+  <label class="chip"><input type="checkbox" id="fa"> Firearm</label>
+  <select id="per" aria-label="Time period">
+    <option value="p3">Last 3 months</option><option value="p6">Last 6 months</option>
+    <option value="p12" selected>Last 12 months</option><option value="p24">Last 24 months</option><option value="all">All dates</option>
+  </select>
+  <button class="btn ghost" id="reset" type="button">Reset</button>
+</section>
+
+<div class="stage">
+  <section class="mapwrap">
+    <div id="map" role="region" aria-label="Hexagon map of offenses"></div>
+    <div class="mapbadge" id="rangeNote" aria-live="polite"></div>
+    <div class="maptools">
+      <div class="seg" role="group" aria-label="What the colors show">
+        <button type="button" data-mode="count" aria-pressed="true">Most offenses</button>
+        <button type="button" data-mode="change" aria-pressed="false">Rising or falling</button>
+        <button type="button" data-mode="chronic" aria-pressed="false">Busy month after month</button>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="mapnote" id="mapnote"></div>
+  </section>
+  <aside class="panel" id="panel" aria-label="Rankings">
+    <div class="tabs" role="tablist" aria-label="Rank by">
+      <button role="tab" data-tab="hex" aria-selected="true">Hot spots</button>
+      <button role="tab" data-tab="nbhd" aria-selected="false">Neighborhoods</button>
+      <button role="tab" data-tab="ward" aria-selected="false">Wards</button>
+      <button role="tab" data-tab="block" aria-selected="false">Blocks</button>
+    </div>
+    <div class="panel-body" id="list" role="tabpanel"></div>
+  </aside>
+</div>
+
+
+<footer>
+  Source: City of St. Louis (SLMPD) monthly crime data. Rates use 2020 census populations. Dashboard design adapted from a project by Reddit user u/autosoap.
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="data.js"></script>
+<script src="hotspots-core.js"></script>
+<script src="hotspots.js"></script>
+</body>
+</html>
