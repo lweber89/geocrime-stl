@@ -4,3 +4,5 @@ mkdocstrings
 mkdocstrings-python
 mkdocs-git-revision-date-localized-plugin
 codespell
+leafmap
+ipywidgets
