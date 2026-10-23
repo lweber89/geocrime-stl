@@ -90,6 +90,7 @@
     for (const k of FIELDS) if (p.has(k)) $(k).value = p.get(k);
     if (!$("radius").value) $("radius").value = DEFAULT_RADIUS;
     $("address").value = $("pt").value ? $("lbl").value : "";
+    if ($("pt").value) { $("ward").value = ""; $("nbhd").value = ""; }   // a spot and a ward/neighborhood never go together (old links might)
     if (!$("month").value) $("month").value = "";                // unknown month in the link
     $("range").value = $("month").value ? "month" : ($("range").value || defaultRange);   // old or unknown ranges fall back
     $("fa").checked = p.get("fa") === "1";
@@ -116,6 +117,11 @@
     if (f.pt) {
       const [la, lo] = f.pt.split(",").map(Number);
       if (Number.isFinite(la) && Number.isFinite(lo)) center = { lat: la, lon: lo, m2: (Number(f.radius) * METERS_PER_MILE) ** 2, kx: 111320 * Math.cos((la * Math.PI) / 180) };
+    }
+    // around a single spot the ward and neighborhood menus are locked; "Clear address" is the way back to them
+    for (const id of ["ward", "nbhd"]) {
+      $(id).disabled = !!center;
+      $(id).title = center ? "Clear the address or pin to choose a ward or neighborhood." : "";
     }
     const citywide = !f.ward && !f.nbhd && !center && !f.q.trim();
     cityLimited = false;
