@@ -12,14 +12,15 @@ import logging
 import sys
 import time
 from datetime import datetime
-from pathlib import Path
 
-import geopandas as gpd
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
 # Import the unified storefront engine and centralized config path
 import geocrime_stl as gc
+from geocrime_stl.config import MASTER_GEOJSON, MASTER_PARQUET
+from geocrime_stl.utils.dataset import save_master
+from geocrime_stl.utils.web_export import WebExportError, build_web_feed
 
 # Setup minimal logging
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s - %(message)s")
@@ -28,7 +29,7 @@ logging.basicConfig(level=logging.WARNING, format="%(levelname)s - %(message)s")
 def run_historical_backfill() -> None:
     """Executes the historical backfill loop, compiles all monthly crime packages,
 
-    and outputs consolidated GeoParquet and GeoJSON files for public streaming.
+    and outputs the master GeoParquet/GeoJSON files plus the dashboard's monthly JSON feed.
     """
     # Set the fixed historical starting point (May 2024)
     start_date = datetime(2024, 5, 1)  # noqa: DTZ001
@@ -85,35 +86,24 @@ def run_historical_backfill() -> None:
     # Export compiled dataset to GeoParquet and GeoJSON
     print("\n--- Pipeline Execution Complete ---")
     if not baseline_df.empty:
-        filename = "slmpd_crime_data.parquet"
-        
         print(
             f"💾 Committing all {len(baseline_df):,} rows to GeoParquet and GeoJSON formats..."
         )
-        
-        # Convert the standard DataFrame to a GeoDataFrame using lat and lon columns
-        gdf = gpd.GeoDataFrame(
-            baseline_df, 
-            geometry=gpd.points_from_xy(baseline_df["lon"], baseline_df["lat"]), 
-            crs="EPSG:4326"
-        )
 
-        # Ensure the output directory exists, then clean out old files safely
-        output_dir = Path("./crime_data")
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        for file in output_dir.iterdir():
-            if file.is_file():
-                file.unlink()
-        
-        # Write out to GeoParquet format
-        output_path = output_dir / filename
-        gdf.to_parquet(output_path, compression="snappy", index=False)
+        # Build the dashboard feed first: it validates the data, so a bad backfill is caught
+        # before any existing master files are overwritten.
+        try:
+            manifest = build_web_feed(baseline_df)
+        except WebExportError as err:
+            print(f"❌ Dashboard feed was not built, and no files were changed: {err}")
+            sys.exit(1)
 
-        # Write out to GeoJSON format
-        gdf.to_file(output_dir / "slmpd_crime_data.geojson", driver="GeoJSON")
-        
-        print(f"🎉 Historical baseline files successfully created at: {output_dir}")
+        # Overwrites the two master files in place; nothing else in the folder is touched.
+        save_master(baseline_df)
+
+        print(f"🎉 Master dataset written: {MASTER_PARQUET.parent}")
+        print(f"   {MASTER_PARQUET.name}, {MASTER_GEOJSON.name}")
+        print(f"🌐 Dashboard feed: {len(manifest['months'])} months through {manifest['through']}")
     else:
         print(
             "❌ Script finished but no data was collected. Historical baseline files were not created."

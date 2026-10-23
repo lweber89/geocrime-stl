@@ -9,8 +9,10 @@ from datetime import datetime
 
 # Import the single orchestrator
 from geocrime_stl import run_pipeline as execute_engine
-from geocrime_stl.config import DATA_DIR
+from geocrime_stl.config import MASTER_PARQUET, PROCESSED_DIR
 from geocrime_stl.etl.extract import ExtractionError
+from geocrime_stl.utils.dataset import load_master, merge_month, save_master
+from geocrime_stl.utils.web_export import WebExportError, build_web_feed
 
 # Configure logging
 logging.basicConfig(
@@ -51,17 +53,40 @@ def run_monthly_etl(month: int, year: int) -> None:
                 year,
             )
         else:
-            # Save out to high-performance Parquet automatically
-            output_path = DATA_DIR / f"clean_crime_{year}_{month:02d}.parquet"
-            
+            # 1. Keep this month's cleaned rows as a standalone Parquet file (an archive of the run)
+            monthly_dir = PROCESSED_DIR / "monthly"
+            monthly_dir.mkdir(parents=True, exist_ok=True)
+            output_path = monthly_dir / f"clean_crime_{year}_{month:02d}.parquet"
             final_df.to_parquet(output_path, index=False)
-            
+            logger.info("Saved %d records for %d/%d to: %s", len(final_df), month, year, output_path)
+
+            # 2. Merge the month into the master dataset (replacing that month if it was already there)
+            master = load_master()
+            if master.empty:
+                raise ValueError(
+                    f"No master dataset at {MASTER_PARQUET}. "
+                    "Run download_historical_data.py once to build the baseline first."
+                )
+            master = merge_month(master, final_df, month=month, year=year)
+
+            # 3. Rebuild the dashboard's monthly JSON feed. This validates the data first, so a bad
+            #    month raises here, before it is written into the master dataset.
+            manifest = build_web_feed(master)
+
+            # 4. Save the master dataset (GeoParquet + GeoJSON for GIS users)
+            save_master(master)
+
             logger.info(
-                "🎉 Success! Processed and saved %d GIS-ready records to: %s",
-                len(final_df),
-                output_path,
+                "🎉 Success! Master dataset now has %d rows; dashboard feed covers %d months through %s.",
+                len(master),
+                len(manifest["months"]),
+                manifest["through"],
             )
-            
+
+    except WebExportError as web_err:
+        logger.error("🛑 Pipeline halted while building the dashboard feed (nothing was published): %s", web_err)
+        sys.exit(1)
+
     except ExtractionError as ext_err:
         logger.error("🛑 Pipeline halted during Extraction phase: %s", ext_err)
         sys.exit(1)
