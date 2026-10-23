@@ -418,6 +418,10 @@
     // the preset menu and the month picker steer the same setting; registered before apply so they run first
     $("range").addEventListener("change", () => { $("month").value = ""; layerChoice = "auto"; });
     $("month").addEventListener("change", () => { $("range").value = $("month").value ? "month" : defaultRange; layerChoice = "auto"; });
+    // the ward and neighborhood menus choose one area: picking one clears the other, then zoom to it.
+    // These must be registered BEFORE the apply listeners below so the filter sees only one area.
+    $("ward").addEventListener("change", () => { if ($("ward").value) $("nbhd").value = ""; zoomToScope(); });
+    $("nbhd").addEventListener("change", () => { if ($("nbhd").value) $("ward").value = ""; zoomToScope(); });
     for (const id of ["range", "month", "ward", "cat", "nbhd", "fa", ...TYPES.map((x) => "t-" + x)]) $(id).addEventListener("change", apply);
     $("reset").addEventListener("click", () => { resetControls(); apply(); zoomToScope(); });
     $("prev").addEventListener("click", () => { page--; renderTable(); });
@@ -438,9 +442,6 @@
       open.has(tr.dataset.id) ? open.delete(tr.dataset.id) : open.add(tr.dataset.id);
       renderTable();
     });
-    // the ward and neighborhood menus choose one area: picking one clears the other, then zoom to it
-    $("ward").addEventListener("change", () => { if ($("ward").value) $("nbhd").value = ""; zoomToScope(); });
-    $("nbhd").addEventListener("change", () => { if ($("nbhd").value) $("ward").value = ""; zoomToScope(); });
     $("pClose").addEventListener("click", closePanel);
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePanel(); });
     $("panel").addEventListener("click", (e) => {
