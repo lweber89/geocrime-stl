@@ -107,9 +107,13 @@
 .btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
 
 /* ---- charts page ---- */
-:root { --series: #26313f; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --series: #9fb3cc; } }
-:root[data-theme="dark"] { --series: #9fb3cc; }
+/* time of day: meaning-based colours (night dark, dawn orange, day yellow, dusk blue). Checked with the palette validator:
+   colour-blind and normal-vision separation pass; the lightness/chroma bands and the yellow's contrast are the cost of
+   intuitive day/night colours, so every bar is also named by the legend, the tooltip and the data table. */
+:root { --series: #26313f; --series-soft: #6f7f96; --tod-night: #1f2937; --tod-dawn: #e8833a; --tod-day: #f2c230; --tod-dusk: #3f6fd1; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --series: #9fb3cc; --series-soft: #9fb3cc; --tod-night: #7a889e; --tod-dusk: #5f8fe8; } }
+:root[data-theme="dark"] { --series: #9fb3cc; --series-soft: #9fb3cc; --tod-night: #7a889e; --tod-dusk: #5f8fe8; }
+#c-hours .col { stroke: var(--ink-2); stroke-opacity: .35; stroke-width: 1; }
 .chartpage { max-width: 1400px; margin: 0 auto; padding: 0 16px 24px; }
 .areatitle { font-size: 20px; margin: 10px 0; }
 .areatitle .muted { font-size: 14px; font-weight: 400; margin-left: 6px; }

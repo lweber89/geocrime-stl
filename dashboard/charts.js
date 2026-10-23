@@ -87,7 +87,7 @@
   }
 
   function periodBounds() {
-    const keys = D.months.map((x) => x.m), n = { p3: 3, p6: 6, p12: 12, all: keys.length }[period] || 12;
+    const keys = D.months.map((x) => x.m), n = { p3: 3, p6: 6, p12: 12, p24: 24, all: keys.length }[period] || 12;
     const used = Math.min(n, keys.length);
     return { from: monStart(keys[keys.length - used]), to: monEnd(keys.at(-1)), n: used };
   }
@@ -158,15 +158,14 @@
 
   // ------------------------------------------------------------ chart 1: offenses per month, stacked by type
   function drawMonthly() {
-    const box = $("c-monthly"), W = Math.max(280, box.clientWidth), H = 290, m = { l: 40, r: 6, t: 8, b: 26 };
-    const keys = D.months.map((x) => x.m), idx = new Map(keys.map((k, i) => [k, i]));
+    const box = $("c-monthly"), W = Math.max(280, box.clientWidth), H = 300, m = { l: 40, r: 6, t: 8, b: 36 };
+    const all = D.months.map((x) => x.m), keys = all.slice(-periodBounds().n), idx = new Map(keys.map((k, i) => [k, i]));   // the months of the chosen period
     const rows = keys.map(() => ({ Person: 0, Property: 0, Society: 0, Other: 0, total: 0 }));
     for (const a of scoped) { const i = idx.get(a.t.slice(0, 7)); if (i != null) { rows[i][a.type]++; rows[i].total++; } }
     const max = niceMax(Math.max(1, ...rows.map((r) => r.total)));
     const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img", "aria-label": `Offenses per month, stacked by type, ${monLabel(keys[0])} to ${monLabel(keys.at(-1))}` });
     yAxis(svg, m, W, H, max);
     const slot = (W - m.l - m.r) / keys.length, bw = Math.min(24, slot - 3), scale = (H - m.t - m.b) / max, base = H - m.b;
-    let labeled = 0;
     keys.forEach((k, i) => {
       const x = m.l + i * slot + (slot - bw) / 2, r = rows[i];
       const top = TYPES.map((t) => r[t] > 0).lastIndexOf(true);
@@ -180,9 +179,10 @@
         svg.appendChild(seg);
         cum += h;
       });
-      const mon = Number(k.slice(5, 7));
-      if (mon === 1 || (mon === 7 && W >= 520)) {
-        svg.appendChild(text(labeled++ === 0 || mon === 1 ? `${MON[mon - 1]} ${k.slice(0, 4)}` : MON[mon - 1], { x: x + bw / 2, y: H - 8, "text-anchor": "middle", class: "ax" }));
+      const mon = Number(k.slice(5, 7)), step = Math.ceil(30 / slot);        // label every month if there is room, else every 2nd, 3rd...
+      if (i % step === 0 || mon === 1 && step < 4) {
+        svg.appendChild(text(MON[mon - 1], { x: x + bw / 2, y: H - 20, "text-anchor": "middle", class: "ax" }));
+        if (mon === 1 || i === 0) svg.appendChild(text(k.slice(0, 4), { x: x + bw / 2, y: H - 7, "text-anchor": "middle", class: "ax-strong" }));
       }
       const hit = el("rect", { x: m.l + i * slot, y: m.t, width: slot, height: H - m.t - m.b, fill: "transparent", tabindex: 0, class: "hit",
         "aria-label": `${monLabel(k)}: ${num(r.total)} offenses` });
@@ -203,7 +203,7 @@
   // ------------------------------------------------------------ chart 2: year over year, one line per year
   function drawYoY() {
     const box = $("c-yoy"), W = Math.max(280, box.clientWidth), H = 250, m = { l: 40, r: 40, t: 10, b: 26 };
-    const keys = new Set(D.months.map((x) => x.m)), years = [...new Set(D.months.map((x) => x.m.slice(0, 4)))];
+    const keys = new Set(D.months.map((x) => x.m)), years = [...new Set(D.months.map((x) => x.m.slice(0, 4)))].slice(-5);          // at most the latest five years, so the lines stay readable
     const val = new Map();
     for (const a of scoped) { const k = a.t.slice(0, 7); val.set(k, (val.get(k) || 0) + 1); }
     const series = years.map((y) => Array.from({ length: 12 }, (_, i) => { const k = `${y}-${String(i + 1).padStart(2, "0")}`; return keys.has(k) ? val.get(k) || 0 : null; }));
@@ -265,8 +265,13 @@
     fillTable($("t-cats"), ["Category", "Type", "Offenses"], top.map(([name, c]) => [name, c.type, num(c.n)]));
   }
 
+  // Part of the day, from the clock hour. St. Louis sunrise and sunset move through the year, so these are approximate.
+  const PARTS = [["Night", "8 pm – 5 am"], ["Dawn", "5 – 7 am"], ["Day", "7 am – 5 pm"], ["Dusk", "5 – 8 pm"]];
+  const partOf = (h) => (h >= 20 || h < 5 ? 0 : h < 7 ? 1 : h < 17 ? 2 : 3);
+  const partColor = (i) => css("--tod-" + PARTS[i][0].toLowerCase());
+
   // ------------------------------------------------------------ charts 4 and 5: simple columns (hour of day, day of week)
-  function columnChart(box, { values, labels, labelAt, title, tipTitle }) {
+  function columnChart(box, { values, labels, labelAt, title, tipTitle, fill, tipExtra }) {
     const W = Math.max(280, box.clientWidth), H = 190, m = { l: 40, r: 6, t: 8, b: 26 };
     const max = niceMax(Math.max(1, ...values)), slot = (W - m.l - m.r) / values.length, bw = Math.min(24, slot - 3), scale = (H - m.t - m.b) / max;
     const total = values.reduce((a, b) => a + b, 0);
@@ -274,11 +279,11 @@
     yAxis(svg, m, W, H, max, 4);
     values.forEach((v, i) => {
       const x = m.l + i * slot + (slot - bw) / 2, h = v * scale;
-      if (v) svg.appendChild(el("path", { d: roundedTop(x, H - m.b - h, bw, h, 4), class: "col" }));
+      if (v) svg.appendChild(el("path", { d: roundedTop(x, H - m.b - h, bw, h, 4), class: "col", ...(fill ? { style: `fill:${fill(i)}` } : {}) }));
       if (labelAt(i)) svg.appendChild(text(labels[i], { x: x + bw / 2, y: H - 8, "text-anchor": "middle", class: "ax" }));
       const hit = el("rect", { x: m.l + i * slot, y: m.t, width: slot, height: H - m.t - m.b, fill: "transparent", tabindex: 0, class: "hit", "aria-label": `${tipTitle(i)}: ${num(v)} offenses` });
       const show = (e) => showTip(e.type === "focus" ? { clientX: hit.getBoundingClientRect().left + slot / 2, clientY: hit.getBoundingClientRect().top + 30 } : e, (t) => {
-        tipHead(t, tipTitle(i)); tipRow(t, null, "Offenses", num(v)); tipRow(t, null, "Share", total ? Math.round((100 * v) / total) + "%" : "–");
+        tipHead(t, tipTitle(i)); if (tipExtra) tipExtra(t, i); tipRow(t, null, "Offenses", num(v)); tipRow(t, null, "Share", total ? Math.round((100 * v) / total) + "%" : "–");
       });
       hit.addEventListener("pointermove", show); hit.addEventListener("focus", show);
       hit.addEventListener("pointerleave", hideTip); hit.addEventListener("blur", hideTip);
@@ -292,10 +297,12 @@
     known.forEach((a) => { hours[a.date.getHours()]++; });
     inPeriod.forEach((a) => { days[a.date.getDay()]++; });
     columnChart($("c-hours"), { values: hours, labels: HOURS, labelAt: (i) => i % (document.documentElement.clientWidth < 520 ? 6 : 3) === 0,
-      title: "Offenses by hour of day", tipTitle: (i) => `${HOURS[i]} to ${HOURS[(i + 1) % 24]}` });
+      title: "Offenses by hour of day, colored by part of the day", tipTitle: (i) => `${HOURS[i]} to ${HOURS[(i + 1) % 24]}`,
+      fill: (i) => partColor(partOf(i)), tipExtra: (t, i) => { const p = partOf(i); tipRow(t, partColor(p), PARTS[p][0], PARTS[p][1]); } });
+    legend($("lg-hours"), PARTS.map(([n, r], i) => [partColor(i), `${n} (${r})`]));
     $("n-hours").textContent = `Left out: ${num(inPeriod.length - known.length)} offenses (${inPeriod.length ? Math.round((100 * (inPeriod.length - known.length)) / inPeriod.length) : 0}%) whose exact time was not recorded, which the City's data often shows as exactly midnight or noon.`;
-    columnChart($("c-days"), { values: days, labels: DAYS.map((d) => d.slice(0, 3)), labelAt: () => true, title: "Offenses by day of week", tipTitle: (i) => DAYS[i] });
-    fillTable($("t-hours"), ["Hour", "Offenses"], hours.map((v, i) => [`${HOURS[i]} to ${HOURS[(i + 1) % 24]}`, num(v)]));
+    columnChart($("c-days"), { values: days, labels: DAYS.map((d) => d.slice(0, 3)), labelAt: () => true, title: "Offenses by day of week", tipTitle: (i) => DAYS[i], fill: () => css("--series-soft") });
+    fillTable($("t-hours"), ["Hour", "Part of day", "Offenses"], hours.map((v, i) => [`${HOURS[i]} to ${HOURS[(i + 1) % 24]}`, PARTS[partOf(i)][0], num(v)]));
     fillTable($("t-days"), ["Day", "Offenses"], days.map((v, i) => [DAYS[i], num(v)]));
   }
 
@@ -313,7 +320,7 @@
       : [(n >= prior ? "+" : "−") + Math.abs(Math.round((100 * (n - prior)) / prior)) + "%", `vs. the previous ${pb.n} months (${num(prior)})`];
     const tiles = [
       [num(n), `reported offenses, ${pb.n === D.months.length && period === "all" ? "all dates" : `last ${pb.n} months`}`],
-      pop ? [(Math.round((10000 * n) / pop) / 10).toLocaleString(), `per 1,000 residents (${num(pop)}, 2020 census)`] : null,
+      pop ? [(Math.round((10000 * n) / pop) / 10).toLocaleString(), `per 1,000 residents in this period (${num(pop)} people, 2020 census)`] : null,
       change,
       [pct(inPeriod.filter((a) => a.type === "Person").length), "crimes against persons"],
       [pct(inPeriod.filter((a) => a.firearm).length), "involved a firearm"],
@@ -332,6 +339,7 @@
     scoped = D.records.filter(areaMatcher());
     const pb = periodBounds(), inPeriod = scoped.filter((a) => a.date >= pb.from && a.date <= pb.to);
     $("areaTitle").textContent = describeArea();
+    $("cap-monthly").textContent = `By type of offense, ${monLabel(D.months.slice(-pb.n)[0].m)} – ${monLabel(D.months.at(-1).m)} (follows the period menu).`;
     $("periodText").textContent = `${monLabel(monKey(pb.from))} – ${monLabel(monKey(pb.to))}`;
     $("addrChip").hidden = !area.pt;
     drawTiles(inPeriod, pb);

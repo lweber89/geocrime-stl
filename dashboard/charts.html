@@ -34,7 +34,7 @@
   <label class="chip"><input type="checkbox" id="fa"> Firearm</label>
   <select id="per" aria-label="Period for the totals and breakdowns">
     <option value="p3">Last 3 months</option><option value="p6">Last 6 months</option>
-    <option value="p12" selected>Last 12 months</option><option value="all">All dates</option>
+    <option value="p12" selected>Last 12 months</option><option value="p24">Last 24 months</option><option value="all">All dates</option>
   </select>
   <button class="btn ghost" id="reset" type="button">Reset</button>
 </section>
@@ -45,20 +45,6 @@
   <p class="empty" id="empty" hidden>No offenses match these choices.</p>
 
   <div class="chartgrid">
-    <figure class="chartcard wide">
-      <figcaption><h3>Offenses per month</h3><p class="muted">All months, by type of offense.</p></figcaption>
-      <div class="lgrow" id="lg-monthly"></div>
-      <div class="plot" id="c-monthly"></div>
-      <details class="tview" id="t-monthly"><summary>Show data table</summary><table></table></details>
-    </figure>
-
-    <figure class="chartcard wide">
-      <figcaption><h3>Year over year</h3><p class="muted">Each line is a year; compare the same month across years.</p></figcaption>
-      <div class="lgrow" id="lg-yoy"></div>
-      <div class="plot" id="c-yoy"></div>
-      <details class="tview" id="t-yoy"><summary>Show data table</summary><table></table></details>
-    </figure>
-
     <figure class="chartcard">
       <figcaption><h3>Most common offenses</h3><p class="muted">Top 10 in the chosen period.</p></figcaption>
       <div class="lgrow" id="lg-cats"></div>
@@ -68,6 +54,7 @@
 
     <figure class="chartcard">
       <figcaption><h3>Time of day</h3><p class="muted">Hour the offense was reported to have happened.</p></figcaption>
+      <div class="lgrow" id="lg-hours"></div>
       <div class="plot" id="c-hours"></div>
       <p class="small muted" id="n-hours"></p>
       <details class="tview" id="t-hours"><summary>Show data table</summary><table></table></details>
@@ -78,6 +65,20 @@
       <div class="plot" id="c-days"></div>
       <details class="tview" id="t-days"><summary>Show data table</summary><table></table></details>
     </figure>
+    <figure class="chartcard wide">
+      <figcaption><h3>Offenses per month</h3><p class="muted" id="cap-monthly">By type of offense, for the chosen period.</p></figcaption>
+      <div class="lgrow" id="lg-monthly"></div>
+      <div class="plot" id="c-monthly"></div>
+      <details class="tview" id="t-monthly"><summary>Show data table</summary><table></table></details>
+    </figure>
+
+    <figure class="chartcard wide">
+      <figcaption><h3>Year over year</h3><p class="muted">Each line is a year (latest five); compare the same month across years.</p></figcaption>
+      <div class="lgrow" id="lg-yoy"></div>
+      <div class="plot" id="c-yoy"></div>
+      <details class="tview" id="t-yoy"><summary>Show data table</summary><table></table></details>
+    </figure>
+
   </div>
 </main>
 
