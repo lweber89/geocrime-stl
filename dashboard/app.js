@@ -3,6 +3,7 @@
 
   const TYPES = ["Person", "Property", "Society", "Other"];   // worst first: drives colour priority on the map
   const PAGE = 100;
+  const CITY_BOUNDS = [[38.532, -90.32], [38.774, -90.166]];
   const HEAT_AFTER_MONTHS = 6;                                // periods longer than 6 calendar months open as a heat map
   const HEAT = { 0.2: "#ffe08a", 0.45: "#fdae61", 0.7: "#f46d43", 0.9: "#d73027", 1.0: "#7f0000" };
   const $ = (id) => document.getElementById(id);
@@ -16,10 +17,11 @@
   let D, filtered = [], sortKey = "t", sortDir = -1, page = 0, open = new Set();
   let map, pointLayer, heatLayer, layerChoice = "auto";   // "auto" picks by date span; the buttons override it
   let defaultRange = "all", longSpan = false, bounds = null, priorInfo = null;
+  let wardLayer, wardCounts = new Map(), wardFeatures = new Map();
   const incCount = new Map();
 
   // ------------------------------------------------------------ filters
-  const FIELDS = ["q", "range", "month", "cat", "nbhd"];
+  const FIELDS = ["q", "range", "month", "ward", "cat", "nbhd"];
 
   // ---- date ranges: calendar months, because the City publishes whole months (no "last 7 days")
   const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -84,7 +86,7 @@
   }
 
   function resetControls() {
-    for (const k of ["q", "month", "cat", "nbhd"]) $(k).value = "";
+    for (const k of ["q", "month", "ward", "cat", "nbhd"]) $(k).value = "";
     $("fa").checked = false;
     TYPES.forEach((t) => ($("t-" + t).checked = true));
     $("range").value = defaultRange;
@@ -99,7 +101,8 @@
     const n = monthsIn(from, to);
     longSpan = n > HEAT_AFTER_MONTHS;
     const terms = f.q.trim().toUpperCase().split(/\s+/).filter(Boolean);
-    const matches = (a) => {
+    const matches = (a, withWard = true) => {
+      if (withWard && f.ward && a.ward !== f.ward) return false;
       if (f.hide.includes(a.type)) return false;
       if (f.cat && a.cat !== f.cat) return false;
       if (f.nbhd && a.nbhd !== f.nbhd) return false;
@@ -107,6 +110,9 @@
       return !terms.length || terms.every((t) => a.text.includes(t));
     };
     filtered = D.records.filter((a) => a.date >= from && a.date <= to && matches(a));
+    // counts for the ward map ignore the ward filter, so every ward stays on the map when one is selected
+    wardCounts = new Map();
+    for (const a of D.records) if (a.ward && a.date >= from && a.date <= to && matches(a, false)) wardCounts.set(a.ward, (wardCounts.get(a.ward) || 0) + 1);
 
     // the same number of months immediately before, with the same filters (null if the data does not go back that far)
     const pFrom = new Date(from.getFullYear(), from.getMonth() - n, 1), pTo = new Date(from.getTime() - 1);
@@ -128,6 +134,14 @@
     return [pc === 0 ? "No change" : (pc > 0 ? "+" : "−") + Math.abs(pc) + "%", `vs. ${priorInfo.label} (${p.toLocaleString()} offenses)`, pc === 0 ? "sm" : ""];
   }
 
+  // offenses per 1,000 residents (2020 census), for the selected ward or the whole city
+  function rateTile(n) {
+    if (!D.wards) return null;
+    const w = $("ward").value;
+    const pop = [...wardFeatures.values()].filter((f) => !w || String(f.properties.ward) === w).reduce((s, f) => s + f.properties.pop, 0);
+    return pop ? [(Math.round((10 * 1000 * n) / pop) / 10).toLocaleString(), `offenses per 1,000 residents in this period (${w ? "Ward " + w : "whole city"}, 2020 census)`] : null;
+  }
+
   function renderTiles() {
     const n = filtered.length;
     const pct = (x) => (n ? Math.round((100 * x) / n) + "%" : "–");
@@ -141,13 +155,14 @@
       [pct(filtered.filter((a) => a.firearm).length), "involved a firearm"],
       [top ? top[0] : "–", top ? `most common category (${top[1].toLocaleString()})` : "most common category", "sm"],
       changeTile(n),
+      rateTile(n),
     ];
-    $("tiles").innerHTML = t.map(([v, l, c]) => `<div class="tile"><div class="v ${c || ""}">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join("");
+    $("tiles").innerHTML = t.filter(Boolean).map(([v, l, c]) => `<div class="tile"><div class="v ${c || ""}">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join("");
   }
 
   // ------------------------------------------------------------ map
   function initMap() {
-    map = L.map("map", { preferCanvas: true, zoomSnap: 0.25 }).fitBounds([[38.532, -90.32], [38.774, -90.166]]);
+    map = L.map("map", { preferCanvas: true, zoomSnap: 0.25 }).fitBounds(CITY_BOUNDS);
     const dark = matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light"
               || document.documentElement.dataset.theme === "dark";
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -159,8 +174,7 @@
       layerChoice = b.dataset.layer;
       renderMap();
     }));
-    $("legend").innerHTML = TYPES.map((t) => `<div><i style="background:${typeColor(t)};width:12px;height:12px"></i>${esc(t)}</div>`).join("")
-      + `<div class="muted" style="margin-top:4px">Larger ring = more offenses at that spot</div>`;
+    legendForDots();
   }
 
   // ---- details panel: opens when a dot is clicked
@@ -175,7 +189,7 @@
       return `<div class="pitem">
         <div class="sev"><i style="background:${typeColor(a.type)}"></i><strong>${esc(a.cat)}</strong>${flags(a)}</div>
         <div>${esc(title(a.off))}</div>
-        <div class="muted">${esc(fmtDate(a))}${a.est ? " (exact time not recorded)" : ""} · ${esc(a.nbhd)}${a.district && a.district !== "0" ? " · District " + esc(a.district) : ""}</div>
+        <div class="muted">${esc(fmtDate(a))}${a.est ? " (exact time not recorded)" : ""} · ${esc(a.nbhd)}${a.ward ? " · Ward " + esc(a.ward) : ""}${a.district && a.district !== "0" ? " · District " + esc(a.district) : ""}</div>
         <div class="muted">Incident #${esc(a.inc)}${n > 1 ? ` · ${n} offenses in this incident (<a href="#" class="inc" data-inc="${esc(a.inc)}" data-month="${esc(a.t.slice(0, 7))}">show all</a>)` : ""}</div>
       </div>`;
     }).join("") + (list.length > shown.length ? `<p class="muted">Showing the newest ${shown.length} of ${list.length}. Use the list or download for the rest.</p>` : "")
@@ -192,19 +206,70 @@
     map && map.invalidateSize();
   }
 
+  // ---- ward map: each ward shaded by offenses per 1,000 residents, in five equal-sized groups of wards
+  const WARD_COLORS = ["#fff1d6", "#fdd49e", "#fc8d59", "#d7301f", "#7f0000"];
+
+  function wardRate(w) {
+    const f = wardFeatures.get(w);
+    return f && f.properties.pop ? ((wardCounts.get(w) || 0) / f.properties.pop) * 1000 : 0;
+  }
+
+  function renderWards() {
+    const rates = [...wardFeatures.keys()].map(wardRate).sort((x, y) => x - y);
+    const brk = [1, 2, 3, 4].map((i) => rates[Math.floor((i * rates.length) / 5)]);        // quintile cut points
+    const cls = (r) => brk.filter((b) => r >= b).length;
+    const sel = $("ward").value;
+    const fmt = (x) => (Math.round(x * 10) / 10).toLocaleString();
+    wardLayer = L.geoJSON({ type: "FeatureCollection", features: [...wardFeatures.values()] }, {
+      style: (ft) => {
+        const w = String(ft.properties.ward);
+        return { fillColor: WARD_COLORS[cls(wardRate(w))], fillOpacity: sel && sel !== w ? 0.25 : 0.7,
+                 color: css("--ink"), weight: sel === w ? 3 : 1, opacity: sel && sel !== w ? 0.4 : 0.8 };
+      },
+      onEachFeature: (ft, layer) => {
+        const w = String(ft.properties.ward), n = wardCounts.get(w) || 0;
+        layer.bindTooltip(`<strong>Ward ${esc(w)}</strong><br>${fmt(wardRate(w))} offenses per 1,000 residents<br>${n.toLocaleString()} offenses · population ${ft.properties.pop.toLocaleString()}`, { sticky: true });
+        layer.on("click", () => selectWard(w));
+      },
+    }).addTo(map);
+    const edges = [rates[0], ...brk, rates.at(-1)];
+    $("legend").innerHTML = `<div style="margin-bottom:4px"><strong>Offenses per 1,000 residents</strong></div>` + WARD_COLORS.map((c, i) =>
+      `<div><i style="background:${c};width:14px;height:14px;border-radius:3px"></i>${fmt(edges[i])} – ${fmt(edges[i + 1])}</div>`).join("")
+      + `<div class="muted" style="margin-top:4px">Darkest = highest fifth of wards</div>`;
+  }
+
+  function selectWard(w) {
+    $("ward").value = w;
+    layerChoice = "points";
+    apply();
+    const ft = wardFeatures.get(w);
+    if (ft) map.fitBounds(L.geoJSON(ft).getBounds(), { padding: [20, 20] });
+  }
+
+  function legendForDots() {
+    $("legend").innerHTML = TYPES.map((t) => `<div><i style="background:${typeColor(t)};width:12px;height:12px"></i>${esc(t)}</div>`).join("")
+      + `<div class="muted" style="margin-top:4px">Larger ring = more offenses at that spot</div>`;
+  }
+
   function renderMap() {
     pointLayer.clearLayers();
     if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+    if (wardLayer) { map.removeLayer(wardLayer); wardLayer = null; }
     const pts = filtered.filter((a) => a.lat != null);
     const auto = layerChoice === "auto";
-    const heat = layerChoice === "heat" || (auto && longSpan);
-    document.querySelectorAll(".seg button[data-layer]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.layer === (heat ? "heat" : "points")));
+    let mode = auto ? (longSpan ? "heat" : "points") : layerChoice;
+    if (mode === "wards" && !D.wards) mode = "points";
+    const heat = mode === "heat";
+    document.querySelectorAll(".seg button[data-layer]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.layer === mode));
     const unmapped = filtered.length - pts.length;
     $("rangeNote").textContent = `${fmtDay(bounds.from)} – ${fmtDay(bounds.to)} · ${filtered.length.toLocaleString()} offenses${unmapped ? ` (${unmapped} not mapped)` : ""}`;
-    $("mapnote").textContent = auto && longSpan
-      ? `Showing a heat map because the dates cover more than 6 months . Choose "Locations" to see individual spots, or pick a shorter period.`
+    $("mapnote").textContent = mode === "wards" ? "Wards are shaded by offenses per 1,000 residents. Busy shopping and work areas can look high because few people live there. Click a ward to zoom in."
+      : auto && longSpan
+      ? `Showing a heat map because the dates cover more than 6 months. Choose "Locations" to see individual spots, or pick a shorter period.`
       : !heat && longSpan ? `Showing individual locations for a long period. It can be slow to draw.` : "";
     $("mapnote").hidden = !$("mapnote").textContent;
+    if (mode === "wards") { renderWards(); return; }
+    legendForDots();
     if (heat) {
       heatLayer = L.heatLayer(pts.map((a) => [a.lat, a.lon]), { radius: 14, blur: 18, maxZoom: 15, gradient: HEAT }).addTo(map);
       return;
@@ -313,8 +378,8 @@
     // the preset menu and the month picker steer the same setting; registered before apply so they run first
     $("range").addEventListener("change", () => { $("month").value = ""; layerChoice = "auto"; });
     $("month").addEventListener("change", () => { $("range").value = $("month").value ? "month" : defaultRange; layerChoice = "auto"; });
-    for (const id of ["range", "month", "cat", "nbhd", "fa", ...TYPES.map((x) => "t-" + x)]) $(id).addEventListener("change", apply);
-    $("reset").addEventListener("click", () => { resetControls(); apply(); });
+    for (const id of ["range", "month", "ward", "cat", "nbhd", "fa", ...TYPES.map((x) => "t-" + x)]) $(id).addEventListener("change", apply);
+    $("reset").addEventListener("click", () => { resetControls(); apply(); map.fitBounds(CITY_BOUNDS); });
     $("prev").addEventListener("click", () => { page--; renderTable(); });
     $("next").addEventListener("click", () => { page++; renderTable(); });
     document.querySelectorAll("th[data-sort]").forEach((th) => th.addEventListener("click", () => {
@@ -332,6 +397,10 @@
       if (!tr) return;
       open.has(tr.dataset.id) ? open.delete(tr.dataset.id) : open.add(tr.dataset.id);
       renderTable();
+    });
+    $("ward").addEventListener("change", () => {            // zoom to the chosen ward, or back to the whole city
+      const ft = wardFeatures.get($("ward").value);
+      map.fitBounds(ft ? L.geoJSON(ft).getBounds() : CITY_BOUNDS, { padding: [20, 20] });
     });
     $("pClose").addEventListener("click", closePanel);
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePanel(); });
@@ -365,6 +434,14 @@
     const mon = (m) => new Date(m + "-15T12:00").toLocaleDateString("en-US", { month: "long", year: "numeric" });
     $("sub").textContent = `${D.records.length.toLocaleString()} reported offenses in the City of St. Louis, ${mon(D.months[0].m)} – ${mon(D.months.at(-1).m)}. Data through ${day(D.through)}; the City adds each month around the 5th of the next.`;
 
+    if (D.wards) {
+      D.wards.features.forEach((ft) => wardFeatures.set(String(ft.properties.ward), ft));
+      const nums = [...wardFeatures.keys()].sort((x, y) => x - y);
+      $("ward").innerHTML = '<option value="">Any ward</option>' + nums.map((w) => `<option value="${w}">Ward ${w}</option>`).join("");
+    } else {
+      $("ward").hidden = true;
+      document.querySelector('.seg button[data-layer="wards"]').hidden = true;
+    }
     buildRangeOptions();
     readHash();
     initMap();

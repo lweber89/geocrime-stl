@@ -32,6 +32,7 @@
   <input type="search" id="q" placeholder="Search address, offense, incident #" aria-label="Search">
   <select id="range" aria-label="Time period"></select>
   <select id="month" aria-label="Pick a single month"></select>
+  <select id="ward" aria-label="Ward"><option value="">Any ward</option></select>
   <select id="cat" aria-label="Offense category"><option value="">Any category</option></select>
   <select id="nbhd" aria-label="Neighborhood"><option value="">Any neighborhood</option></select>
   <label class="chip" title="Offenses flagged as involving a firearm"><input type="checkbox" id="fa"> Firearm</label>
@@ -54,6 +55,7 @@
     <div class="mapbadge" id="rangeNote" aria-live="polite"></div>
     <div class="maptools">
       <div class="seg" role="group" aria-label="Map layer">
+        <button type="button" data-layer="wards" aria-pressed="false">Wards</button>
         <button type="button" data-layer="points" aria-pressed="true">Locations</button>
         <button type="button" data-layer="heat" aria-pressed="false">Heat</button>
       </div>
