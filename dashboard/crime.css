@@ -2,32 +2,35 @@
    the crime map needs, so the original style.css never has to be edited.
 
    Offense-type colours follow common crime-mapping practice:
-   red = against persons, blue = property, purple = society, gray = other/catch-all. */
+   red = against persons, blue = property, purple = society, gray = other/catch-all.
+   The hex values were checked with the dataviz palette validator (colour-blind separation and contrast)
+   in light and dark. Gray is deliberately neutral for the catch-all bucket. The types are always named in a
+   legend or label, never shown by colour alone. */
 
 :root {
   --accent: #26313f;           /* UI accent is now a neutral slate so data colours are the only saturated colours */
   --type-person:   #c4302b;
   --type-property: #2a78d6;
-  --type-society:  #6b46b0;
-  --type-other:    #9a978f;
+  --type-society:  #7a3b9e;
+  --type-other:    #7d7a72;
   --outline:       #3b78c2;     /* subtle blue area outlines (wards, neighborhoods) */
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --accent: #4b5d73;
-    --type-person:   #ff6f61;
-    --type-property: #5aa2f0;
-    --type-society:  #b896f2;
-    --type-other:    #8a8883;
+    --type-person:   #e8604f;
+    --type-property: #5198e8;
+    --type-society:  #a05fcf;
+    --type-other:    #918e88;
     --outline:       #7db2ee;
   }
 }
 :root[data-theme="dark"] {
   --accent: #4b5d73;
-  --type-person:   #ff6f61;
-  --type-property: #5aa2f0;
-  --type-society:  #b896f2;
-  --type-other:    #8a8883;
+  --type-person:   #e8604f;
+  --type-property: #5198e8;
+  --type-society:  #a05fcf;
+  --type-other:    #918e88;
   --outline:       #7db2ee;
 }
 
@@ -102,3 +105,51 @@
             box-shadow: 0 0 0 1px var(--ink), 0 2px 6px rgba(0,0,0,.4); cursor: grab; }
 .leaflet-container.pinning, .leaflet-container.pinning .leaflet-interactive { cursor: crosshair; }
 .btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ---- charts page ---- */
+:root { --series: #26313f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --series: #9fb3cc; } }
+:root[data-theme="dark"] { --series: #9fb3cc; }
+.chartpage { max-width: 1400px; margin: 0 auto; padding: 0 16px 24px; }
+.areatitle { font-size: 20px; margin: 10px 0; }
+.areatitle .muted { font-size: 14px; font-weight: 400; margin-left: 6px; }
+.empty { padding: 12px; color: var(--ink-2); }
+.addrchip { gap: 8px; }
+.addrchip .btn { padding: 2px 8px; }
+.chartgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.chartcard { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; min-width: 0; }
+.chartcard.wide { grid-column: 1 / -1; }
+.chartcard h3 { margin: 0; font-size: 15px; }
+.chartcard figcaption p { margin: 2px 0 8px; font-size: 12.5px; }
+.lgrow { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 6px; font-size: 12.5px; color: var(--ink-2); }
+.lg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+.lg.line i { height: 3px; border-radius: 2px; vertical-align: middle; }
+.plot { width: 100%; }
+.plot svg { display: block; max-width: 100%; }
+.plot .grid { stroke: var(--grid); stroke-width: 1; }
+.plot .axis { stroke: var(--axis); stroke-width: 1; }
+.plot .ax { font-size: 10.5px; fill: var(--ink-2); }
+.plot .ax-strong { font-size: 11px; fill: var(--ink); font-weight: 600; }
+.plot .col { fill: var(--series); }
+.plot .dot { stroke: var(--surface); }
+.plot .cross { stroke: var(--axis); stroke-width: 1; }
+.plot .hit:focus { outline: none; stroke: var(--ink); stroke-width: 1.5; }
+.cats { display: flex; flex-direction: column; gap: 4px; }
+.cat-row { display: grid; grid-template-columns: minmax(90px, 40%) 1fr 48px; gap: 8px; align-items: center; font-size: 12.5px; padding: 2px 0; }
+.cat-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-track { height: 14px; background: transparent; }
+.cat-track b { display: block; height: 100%; border-radius: 0 4px 4px 0; }
+.cat-n { text-align: right; font-variant-numeric: tabular-nums; }
+.tview { margin-top: 8px; font-size: 12.5px; }
+.tview summary { cursor: pointer; color: var(--ink-2); }
+.tview table { border-collapse: collapse; margin-top: 6px; width: 100%; }
+.tview th, .tview td { text-align: right; padding: 3px 8px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+.tview th:first-child, .tview td:first-child { text-align: left; }
+.tooltip { position: fixed; z-index: 2000; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--axis);
+           border-radius: 8px; padding: 8px 10px; font-size: 12.5px; box-shadow: 0 4px 14px rgba(0,0,0,.2); min-width: 150px; }
+.tooltip[hidden] { display: none; }
+.tip-head { font-weight: 600; margin-bottom: 4px; }
+.tip-row { display: flex; align-items: center; gap: 6px; padding: 1px 0; }
+.tip-key { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.tip-name { flex: 1; color: var(--ink-2); }
+.addrchip[hidden] { display: none; }

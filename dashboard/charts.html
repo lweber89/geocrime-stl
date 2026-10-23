@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>St. Louis Crime Charts</title>
+<meta name="description" content="Trends in reported offenses in St. Louis for the whole city, a ward, a neighborhood or the area around an address.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="crime.css">
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>St. Louis Crime Charts</h1>
+    <p class="sub" id="sub">Loading…</p>
+  </div>
+  <div class="top-actions">
+    <nav class="pagenav" aria-label="Pages"><a href="./" data-nav="map">Crime map</a><a href="hotspots.html">Hotspots</a><a href="charts.html" aria-current="page">Charts</a></nav>
+  </div>
+</header>
+
+<details class="notice">
+  <summary><strong>These are reported offenses, not a measure of how safe a place is.</strong> <span class="muted">More</span></summary>
+  One incident can include several offenses. Locations are block-level addresses, and places with security staff or routine
+  reporting, such as stores and hospitals, appear more often. The most recent month may still be filling in.
+</details>
+
+<section class="filters" aria-label="Choose what the charts show">
+  <select id="ward" aria-label="Ward"><option value="">Any ward</option></select>
+  <select id="nbhd" aria-label="Neighborhood"><option value="">Any neighborhood</option></select>
+  <span class="chip addrchip" id="addrChip" hidden>Address area <button class="btn ghost" id="addrClear" type="button">Clear</button> <a href="./" data-nav="map">Change on the map</a></span>
+  <select id="cat" aria-label="Offense category"><option value="">All offense types</option></select>
+  <label class="chip"><input type="checkbox" id="fa"> Firearm</label>
+  <select id="per" aria-label="Period for the totals and breakdowns">
+    <option value="p3">Last 3 months</option><option value="p6">Last 6 months</option>
+    <option value="p12" selected>Last 12 months</option><option value="all">All dates</option>
+  </select>
+  <button class="btn ghost" id="reset" type="button">Reset</button>
+</section>
+
+<main class="chartpage">
+  <h2 class="areatitle"><span id="areaTitle">Whole city</span> <span class="muted" id="periodText"></span></h2>
+  <section class="tiles" id="tiles" aria-live="polite"></section>
+  <p class="empty" id="empty" hidden>No offenses match these choices.</p>
+
+  <div class="chartgrid">
+    <figure class="chartcard wide">
+      <figcaption><h3>Offenses per month</h3><p class="muted">All months, by type of offense.</p></figcaption>
+      <div class="lgrow" id="lg-monthly"></div>
+      <div class="plot" id="c-monthly"></div>
+      <details class="tview" id="t-monthly"><summary>Show data table</summary><table></table></details>
+    </figure>
+
+    <figure class="chartcard wide">
+      <figcaption><h3>Year over year</h3><p class="muted">Each line is a year; compare the same month across years.</p></figcaption>
+      <div class="lgrow" id="lg-yoy"></div>
+      <div class="plot" id="c-yoy"></div>
+      <details class="tview" id="t-yoy"><summary>Show data table</summary><table></table></details>
+    </figure>
+
+    <figure class="chartcard">
+      <figcaption><h3>Most common offenses</h3><p class="muted">Top 10 in the chosen period.</p></figcaption>
+      <div class="lgrow" id="lg-cats"></div>
+      <div class="cats" id="c-cats"></div>
+      <details class="tview" id="t-cats"><summary>Show data table</summary><table></table></details>
+    </figure>
+
+    <figure class="chartcard">
+      <figcaption><h3>Time of day</h3><p class="muted">Hour the offense was reported to have happened.</p></figcaption>
+      <div class="plot" id="c-hours"></div>
+      <p class="small muted" id="n-hours"></p>
+      <details class="tview" id="t-hours"><summary>Show data table</summary><table></table></details>
+    </figure>
+
+    <figure class="chartcard">
+      <figcaption><h3>Day of week</h3><p class="muted">In the chosen period.</p></figcaption>
+      <div class="plot" id="c-days"></div>
+      <details class="tview" id="t-days"><summary>Show data table</summary><table></table></details>
+    </figure>
+  </div>
+</main>
+
+<div class="tooltip" id="tip" role="tooltip" hidden></div>
+
+<footer>
+  Source: City of St. Louis (SLMPD) monthly crime data. Rates use 2020 census populations. Dashboard design adapted from a project by Reddit user u/autosoap.
+</footer>
+
+<script src="data.js"></script>
+<script src="charts.js"></script>
+</body>
+</html>
