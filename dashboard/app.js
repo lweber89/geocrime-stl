@@ -20,7 +20,7 @@
   let D, filtered = [], sortKey = "t", sortDir = -1, page = 0, open = new Set();
   let map, pointLayer, heatLayer, layerChoice = "auto";   // "auto" picks by date span; the buttons override it
   let defaultRange = "all", cityLimited = false, bounds = null, priorInfo = null;
-  let wardLayer, outlineLayer, wardCounts = new Map(), wardFeatures = new Map(), nbhdFeatures = new Map(), wardNbhds = new Map();
+  let wardLayer, outlineLayer, wardCounts = new Map(), nbhdCounts = new Map(), wardFeatures = new Map(), nbhdFeatures = new Map(), wardNbhds = new Map();
   let addrLayer, center = null, curMatches = null, pinMode = false;          // center: the searched address and radius, or null
   const incCount = new Map();
 
@@ -128,20 +128,23 @@
     const n = monthsIn(from, to);
     const terms = f.q.trim().toUpperCase().split(/\s+/).filter(Boolean);
     const near = (a) => a.lat != null && ((a.lat - center.lat) * 110540) ** 2 + ((a.lon - center.lon) * center.kx) ** 2 <= center.m2;
-    const matches = (a, withWard = true, withArea = true) => {
+    const matches = (a, withWard = true, withArea = true, withNbhd = true) => {
       if (withArea && center && !near(a)) return false;
       if (withWard && f.ward && a.ward !== f.ward) return false;
       if (f.hide.includes(a.type)) return false;
       if (f.cat && a.cat !== f.cat) return false;
-      if (f.nbhd && a.nbhd !== f.nbhd) return false;
+      if (withNbhd && f.nbhd && a.nbhd !== f.nbhd) return false;
       if (f.fa && !a.firearm) return false;
       return !terms.length || terms.every((t) => a.text.includes(t));
     };
     curMatches = matches;
     filtered = D.records.filter((a) => a.date >= from && a.date <= to && matches(a));
-    // counts for the ward map ignore the ward filter, so every ward stays on the map when one is selected
-    wardCounts = new Map();
-    for (const a of D.records) if (a.ward && a.date >= from && a.date <= to && matches(a, false)) wardCounts.set(a.ward, (wardCounts.get(a.ward) || 0) + 1);
+    // counts for the ward and neighborhood maps ignore the ward and neighborhood filters, so every area stays on the map
+    wardCounts = new Map(); nbhdCounts = new Map();
+    for (const a of D.records) if (a.date >= from && a.date <= to && matches(a, false, true, false)) {
+      if (a.ward) wardCounts.set(a.ward, (wardCounts.get(a.ward) || 0) + 1);
+      if (a.nbhd) nbhdCounts.set(a.nbhd, (nbhdCounts.get(a.nbhd) || 0) + 1);
+    }
 
     // the same number of months immediately before, with the same filters (null if the data does not go back that far)
     const pFrom = new Date(from.getFullYear(), from.getMonth() - n, 1), pTo = new Date(from.getTime() - 1);
@@ -412,34 +415,45 @@
 
   // ---- ward map: each ward shaded by offenses per 1,000 residents, in five equal-sized groups of wards
   const WARD_COLORS = ["#fff1d6", "#fdd49e", "#fc8d59", "#d7301f", "#7f0000"];
+  const NO_RATE_COLOR = "#b9b7b0";
 
-  function wardRate(w) {
-    const f = wardFeatures.get(w);
-    return f && f.properties.pop ? ((wardCounts.get(w) || 0) / f.properties.pop) * 1000 : 0;
-  }
+  const MIN_RATE_POP = 500;      // neighborhoods with fewer residents get a count but no rate (parks, industrial areas)
 
-  function renderWards() {
-    const rates = [...wardFeatures.keys()].map(wardRate).sort((x, y) => x - y);
+  // Shade each ward or neighborhood by offenses per 1,000 residents, in five equal-sized groups of areas.
+  function renderAreas(kind) {
+    const isW = kind === "wards";
+    const feats = isW ? wardFeatures : nbhdFeatures, counts = isW ? wardCounts : nbhdCounts;
+    const key = (ft) => (isW ? String(ft.properties.ward) : ft.properties.name);
+    const label = (k) => (isW ? `Ward ${k}` : k);
+    const rated = (ft) => ft.properties.pop >= (isW ? 1 : MIN_RATE_POP);
+    const rate = (ft) => ((counts.get(key(ft)) || 0) / ft.properties.pop) * 1000;
+    const rates = [...feats.values()].filter(rated).map(rate).sort((x, y) => x - y);
     const brk = [1, 2, 3, 4].map((i) => rates[Math.floor((i * rates.length) / 5)]);        // quintile cut points
     const cls = (r) => brk.filter((b) => r >= b).length;
-    const sel = $("ward").value;
+    const sel = isW ? $("ward").value : $("nbhd").value;
+    // with a ward chosen, the neighborhoods that lie in it stay bright and the rest fade (and the reverse is not needed)
+    const inWard = !isW && $("ward").value ? wardNbhds.get($("ward").value) : null;
+    const dim = (k) => (sel ? sel !== k : inWard ? !inWard.has(k) : false);
     const fmt = (x) => (Math.round(x * 10) / 10).toLocaleString();
-    wardLayer = L.geoJSON({ type: "FeatureCollection", features: [...wardFeatures.values()] }, {
+    wardLayer = L.geoJSON({ type: "FeatureCollection", features: [...feats.values()] }, {
       style: (ft) => {
-        const w = String(ft.properties.ward);
-        return { fillColor: WARD_COLORS[cls(wardRate(w))], fillOpacity: sel && sel !== w ? 0.25 : 0.7,
-                 color: css("--ink"), weight: sel === w ? 3 : 1, opacity: sel && sel !== w ? 0.4 : 0.8 };
+        const k = key(ft), d = dim(k);
+        return { fillColor: rated(ft) ? WARD_COLORS[cls(rate(ft))] : NO_RATE_COLOR, fillOpacity: d ? 0.25 : 0.7,
+                 color: css("--ink"), weight: sel === k ? 3 : 1, opacity: d ? 0.4 : 0.8 };
       },
       onEachFeature: (ft, layer) => {
-        const w = String(ft.properties.ward), n = wardCounts.get(w) || 0;
-        layer.bindTooltip(`<strong>Ward ${esc(w)}</strong><br>${fmt(wardRate(w))} offenses per 1,000 residents<br>${n.toLocaleString()} offenses · population ${ft.properties.pop.toLocaleString()}`, { sticky: true });
-        layer.on("click", () => selectWard(w));
+        const k = key(ft), n = counts.get(k) || 0, pop = ft.properties.pop;
+        layer.bindTooltip(`<strong>${esc(label(k))}</strong><br>` + (rated(ft)
+          ? `${fmt(rate(ft))} offenses per 1,000 residents<br>${n.toLocaleString()} offenses · population ${pop.toLocaleString()}`
+          : `${n.toLocaleString()} offenses<br>Too few residents (${pop.toLocaleString()}) for a rate`), { sticky: true });
+        layer.on("click", () => (isW ? selectWard(k) : selectNbhd(k)));
       },
     }).addTo(map);
     const edges = [rates[0], ...brk, rates.at(-1)];
     $("legend").innerHTML = `<div style="margin-bottom:4px"><strong>Offenses per 1,000 residents</strong></div>` + WARD_COLORS.map((c, i) =>
       `<div><i style="background:${c};width:14px;height:14px;border-radius:3px"></i>${fmt(edges[i])} – ${fmt(edges[i + 1])}</div>`).join("")
-      + `<div class="muted" style="margin-top:4px">Darkest = highest fifth of wards</div>`;
+      + (isW ? "" : `<div><i style="background:${NO_RATE_COLOR};width:14px;height:14px;border-radius:3px"></i>Fewer than ${MIN_RATE_POP} residents</div>`)
+      + `<div class="muted" style="margin-top:4px">Darkest = highest fifth of ${isW ? "wards" : "neighborhoods"}</div>`;
   }
 
   // Subtle blue outlines that follow the area: wards for the whole city, neighborhoods inside a chosen ward,
@@ -497,6 +511,13 @@
     ]).addTo(map);
   }
 
+  function selectNbhd(n) {
+    $("nbhd").value = n;
+    $("ward").value = "";
+    layerChoice = "points";
+    apply();
+    zoomToScope();
+  }
   function renderMap() { renderLayers(); renderAddress(); }
 
   function renderLayers() {
@@ -506,15 +527,16 @@
     const pts = filtered.filter((a) => a.lat != null && !a.masked);   // masked offenses count everywhere but are never drawn
     const auto = layerChoice === "auto";
     let mode = auto ? "points" : layerChoice;
-    if (mode === "wards" && !D.wards) mode = "points";
+    if ((mode === "wards" && !D.wards) || (mode === "nbhds" && !D.nbhdShapes) || (center && (mode === "wards" || mode === "nbhds"))) mode = "points";   // area shading means nothing around one spot
+    document.querySelectorAll(".seg button[data-layer='wards'], .seg button[data-layer='nbhds']").forEach((b) => { b.hidden = !!center || (b.dataset.layer === "wards" ? !D.wards : !D.nbhdShapes); });
     const heat = mode === "heat";
     document.querySelectorAll(".seg button[data-layer]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.layer === mode));
     const unmapped = filtered.length - pts.length;
     $("rangeNote").textContent = `${fmtDay(bounds.from)} – ${fmtDay(bounds.to)} · ${filtered.length.toLocaleString()} offenses${unmapped ? ` (${unmapped} not shown on the map)` : ""}`;
-    $("mapnote").textContent = mode === "wards" ? "Wards are shaded by offenses per 1,000 residents. Busy shopping and work areas can look high because few people live there. Click a ward to zoom in."
+    $("mapnote").textContent = mode === "wards" || mode === "nbhds" ? `${mode === "wards" ? "Wards are" : "Neighborhoods are"} shaded by offenses per 1,000 residents. Busy shopping and work areas can look high because few people live there. Click ${mode === "wards" ? "a ward" : "a neighborhood"} to zoom in.`
       : cityLimited ? "Showing the last 6 months. Longer periods are available when you choose a ward or a neighborhood." : "";
     $("mapnote").hidden = !$("mapnote").textContent;
-    if (mode === "wards") { renderWards(); return; }
+    if (mode === "wards" || mode === "nbhds") { renderAreas(mode); return; }
     renderOutlines();
     legendForDots();
     if (heat) {

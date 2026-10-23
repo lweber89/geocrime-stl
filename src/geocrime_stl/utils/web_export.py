@@ -79,6 +79,64 @@ MASKED_CATEGORIES = (
 )
 MASK_GRID_DEG = 0.0025
 
+# NIBRS categories seen in the data when the masking list was last reviewed. A category outside this list is
+# reported by the build (log warning + manifest "newCategories") so someone can decide whether to mask it.
+KNOWN_CATEGORIES = frozenset((
+    'Aggravated Assault',
+    'All Other Larceny',
+    'All Other Offenses',
+    'Animal Cruelty',
+    'Arson',
+    'Betting/Wagering',
+    'Burglary/Breaking and Entering',
+    'Counterfeiting/Forgery',
+    'Credit Card/Automatic Teller Machine Fraud',
+    'Criminal Sexual Contact',
+    'Curfew/Loitering/Vagrancy Violations',
+    'Destruction/Damage/Vandalism of Property',
+    'Disorderly Conduct',
+    'Driving Under the Influence',
+    'Drug Equipment Violations',
+    'Drug/Narcotic Violations',
+    'Embezzlement',
+    'False Pretense/Swindle/Confidence Game',
+    'Family Offenses, Nonviolent',
+    'Fondling',
+    'Hacking/Computer Invasion',
+    'Human Trafficking, Commercial Sex Acts',
+    'Identity Theft',
+    'Impersonation',
+    'Incest',
+    'Intimidation',
+    'Justifiable Homicide',
+    'Kidnapping/Abduction',
+    'Liquor Law Violations',
+    'Motor Vehicle Theft',
+    'Murder and Nonnegligent Manslaughter',
+    'Negligent Manslaughter',
+    'Operating/Promoting/Assisting Gambling',
+    'Pocket-picking',
+    'Pornography/Obscene Material',
+    'Prostitution',
+    'Purchasing Prostitution',
+    'Purse-snatching',
+    'Rape',
+    'Robbery',
+    'Shoplifting',
+    'Simple Assault',
+    'Sodomy',
+    'Statutory Rape',
+    'Stolen Property Offenses',
+    'Theft From Building',
+    'Theft From Coin-Operated Machine or Device',
+    'Theft From Motor Vehicle',
+    'Theft From Motor Vehicle Parts/Accessories',
+    'Trespass of Real Property',
+    'Weapons Law Violations',
+    'Welfare Fraud',
+    'Wire Fraud',
+))
+
 BOUNDS_MARGIN_DEG = 0.02   # slack around the city's bounding box before a point counts as unmapped
 SNAP_MAX_M = 30            # geocoding jitter: snap an address to its most common point within this
 MAX_ROW_DROP = 0.05        # refuse a feed that has >5% fewer rows than the one it would replace
@@ -181,6 +239,11 @@ def _prepare(df: pd.DataFrame) -> pd.DataFrame:
     for col in ("lat", "lon"):
         d.loc[mk, col] = (d.loc[mk, col] // MASK_GRID_DEG) * MASK_GRID_DEG + MASK_GRID_DEG / 2
     logger.info("%d rows masked (no address, coarse location)", int(mk.sum()))
+    new_cats = sorted(set(d["cat"]) - KNOWN_CATEGORIES - {"Unknown"})
+    if new_cats:
+        logger.warning("NIBRS categories not seen before: %s. Review MASKED_CATEGORIES in web_export.py "
+                       "(sensitive offenses should be added there), then add them to KNOWN_CATEGORIES.", new_cats)
+    d.attrs["new_categories"] = new_cats
 
     d["est"] = d["t"].dt.strftime("%H:%M").isin(PLACEHOLDER_TIMES).astype(int)
     d["month"] = d["t"].dt.strftime("%Y-%m")
@@ -370,6 +433,7 @@ def build_web_feed(
             "noWard": int(d["ward"].isna().sum()),
             "masked": int(d["masked"].sum()),
             "maskedCategories": list(MASKED_CATEGORIES),
+            "newCategories": d.attrs.get("new_categories", []),
             "months": [{"m": m, "n": int(counts[m])} for m in months],
         }
         (tmp / "manifest.json").write_text(json.dumps(manifest, separators=(",", ":")), encoding="utf-8")

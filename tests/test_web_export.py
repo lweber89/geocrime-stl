@@ -213,3 +213,15 @@ class MaskingTests(unittest.TestCase):
         self.assertEqual(manifest["masked"], 3)
         self.assertIn("Kidnapping/Abduction", manifest["maskedCategories"])
         self.assertEqual(manifest["schema"], 3)
+
+    def test_unseen_category_is_reported(self):
+        df = make_df(months=("2026-01",), per_month=4)
+        df["nibrs_cat"] = ["Simple Assault", "Shoplifting", "Brand New Offense", "Rape"]
+        with self.assertLogs("geocrime_stl.utils.web_export", level="WARNING") as cm:
+            manifest = build_web_feed(df, self.out, force=True)
+        self.assertEqual(manifest["newCategories"], ["Brand New Offense"])
+        self.assertTrue(any("Brand New Offense" in line for line in cm.output))
+
+    def test_masked_categories_are_all_known(self):
+        from geocrime_stl.utils.web_export import KNOWN_CATEGORIES, MASKED_CATEGORIES
+        self.assertTrue(set(MASKED_CATEGORIES) <= KNOWN_CATEGORIES)
