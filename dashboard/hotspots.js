@@ -226,12 +226,12 @@
     }
     const rows = [...by.values()].filter((b) => b.n).sort((a, b) => b.n - a.n).slice(0, 25);
     if (!rows.length) return '<p class="muted">No offenses with a street address for these choices.</p>';
-    const top = (m) => [...m].sort((x, y) => y[1] - x[1])[0][0];
+    const top = (m) => { const named = [...m].filter(([c]) => c !== CATCH_ALL); return (named.length ? named : [...m]).sort((x, y) => y[1] - x[1])[0][0]; };
     return `<ol class="hlist">${rows.map((b, i) => `<li class="hrow"><span class="hname"><span class="rank">${i + 1}</span> ${esc(HOT.title(b.addr))}<span class="muted small"> · ${esc(b.nbhd || "")}</span></span>
       <span class="hval">${num(b.n)}<small> ${num(b.inc.size)} incidents · ${view.inQ ? pctText(b.n, b.prior) : ""}</small></span>
       <span class="small muted hmain">Most common: ${esc(top(b.cats))}</span>
       <a class="hgo" href="${esc(mapHash({ q: b.addr, range: MAP_RANGE[st.per] }))}">See on the map</a></li>`).join("")}</ol>
-      <p class="small muted">Blocks with the most offenses (street address as reported). Stores, hospitals and other places that routinely report can rank high. Offenses whose location is withheld are not listed.</p>`;
+      <p class="small muted">Blocks with the most offenses (street address as reported). Stores, hospitals and other places that routinely report can rank high. Offenses whose location is withheld are not listed. "Most common" ignores the police catch-all category "All Other Offenses" unless it is the only one.</p>`;
   }
 
   function renderList() {
