@@ -503,14 +503,14 @@
     pointLayer.clearLayers();
     if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
     if (wardLayer) { map.removeLayer(wardLayer); wardLayer = null; }
-    const pts = filtered.filter((a) => a.lat != null);
+    const pts = filtered.filter((a) => a.lat != null && !a.masked);   // masked offenses count everywhere but are never drawn
     const auto = layerChoice === "auto";
     let mode = auto ? "points" : layerChoice;
     if (mode === "wards" && !D.wards) mode = "points";
     const heat = mode === "heat";
     document.querySelectorAll(".seg button[data-layer]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.layer === mode));
     const unmapped = filtered.length - pts.length;
-    $("rangeNote").textContent = `${fmtDay(bounds.from)} – ${fmtDay(bounds.to)} · ${filtered.length.toLocaleString()} offenses${unmapped ? ` (${unmapped} not mapped)` : ""}`;
+    $("rangeNote").textContent = `${fmtDay(bounds.from)} – ${fmtDay(bounds.to)} · ${filtered.length.toLocaleString()} offenses${unmapped ? ` (${unmapped} not shown on the map)` : ""}`;
     $("mapnote").textContent = mode === "wards" ? "Wards are shaded by offenses per 1,000 residents. Busy shopping and work areas can look high because few people live there. Click a ward to zoom in."
       : cityLimited ? "Showing the last 6 months. Longer periods are available when you choose a ward or a neighborhood." : "";
     $("mapnote").hidden = !$("mapnote").textContent;
@@ -542,11 +542,11 @@
 
   function focusRecord(id) {
     const a = D.byId.get(id);
-    if (!a || a.lat == null) return;
+    if (!a || a.lat == null || a.masked) return;
     const key = a.lat.toFixed(4) + "," + a.lon.toFixed(4);
     map.setView([a.lat, a.lon], 17);
     $("map").scrollIntoView({ behavior: "smooth", block: "center" });
-    openPanel(filtered.filter((x) => x.lat != null && x.lat.toFixed(4) + "," + x.lon.toFixed(4) === key));
+    openPanel(filtered.filter((x) => x.lat != null && !x.masked && x.lat.toFixed(4) + "," + x.lon.toFixed(4) === key));
   }
 
   // Show every offense of one incident, in the month it happened.
@@ -561,7 +561,7 @@
   function downloadCsv() {
     const q = (v) => { v = String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const rows = [...filtered].sort((a, b) => b.date - a.date).map((a) =>
-      [a.t.replace("T", " "), a.est ? "yes" : "", a.addr, a.nbhd, a.district, a.type, a.cat, a.off, a.firearm ? "yes" : "", a.inc, a.lat ?? "", a.lon ?? ""].map(q).join(","));
+      [a.t.replace("T", " "), a.est ? "yes" : "", a.masked ? "(withheld)" : a.addr, a.nbhd, a.district, a.type, a.cat, a.off, a.firearm ? "yes" : "", a.inc, a.masked ? "" : (a.lat ?? ""), a.masked ? "" : (a.lon ?? "")].map(q).join(","));
     const csv = ["when,time_not_recorded,address,neighborhood,police_district,crime_against,nibrs_category,offense,firearm,incident,lat,lon", ...rows].join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = Object.assign(document.createElement("a"), { href: url, download: `stl-crime-${monKey(bounds.from)}-to-${monKey(bounds.to)}.csv` });
@@ -573,7 +573,8 @@
   function flags(a) {
     const f = [];
     if (a.firearm) f.push("Firearm");
-    if (a.lat == null) f.push("Not mapped");
+    if (a.masked) f.push("Location withheld");
+    else if (a.lat == null) f.push("Not mapped");
     return f.map((x) => `<span class="flag">${esc(x)}</span>`).join("");
   }
 
@@ -585,7 +586,7 @@
       <p class="muted" style="margin:8px 0 0">Incident #${esc(a.inc)} · ${n} offense${n > 1 ? "s" : ""} in this incident${
         n > 1 ? ` (<a href="#" class="inc" data-inc="${esc(a.inc)}" data-month="${esc(a.t.slice(0, 7))}">show all</a>)` : ""}${
         a.est ? " · exact time not recorded" : ""}${
-        a.lat != null ? ` · <a href="#" class="zoom" data-id="${esc(a.id)}">Show on map</a>` : " · location could not be mapped"}</p>`;
+        a.masked ? " · location withheld for privacy" : a.lat != null ? ` · <a href="#" class="zoom" data-id="${esc(a.id)}">Show on map</a>` : " · location could not be mapped"}</p>`;
   }
 
   function sortVal(a, k) {

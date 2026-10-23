@@ -92,8 +92,8 @@ class WebExportTests(unittest.TestCase):
         f = self.load_month("2026-01")
         self.assertEqual(set(f["d"]), {"type", "cat", "off", "nbhd", "ward"})
         row = f["r"][0]
-        self.assertEqual(len(row), 13)
-        inc, t, lat, lon, addr, ty, ca, of, nb, district, firearm, est, ward = row
+        self.assertEqual(len(row), 14)
+        inc, t, lat, lon, addr, ty, ca, of, nb, district, firearm, est, ward, masked = row
         self.assertEqual(ward, -1, "no ward column in the input -> no ward")
         self.assertEqual(f["d"]["type"][ty], "Property")
         self.assertEqual(f["d"]["nbhd"][nb], "Downtown")
@@ -187,3 +187,29 @@ class WebExportTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MaskingTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.out = Path(self._tmp.name) / "web"
+
+    def test_sensitive_rows_lose_address_and_exact_location_but_stay_counted(self):
+        df = make_df(months=("2026-01",), per_month=4)
+        df["nibrs_cat"] = ["Rape", "Kidnapping/Abduction", "Family Offenses, Nonviolent", "Simple Assault"]
+        df["ward"] = 5
+        manifest = build_web_feed(df, self.out, force=True)
+        f = json.loads((self.out / "2026-01.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(f["r"]), 4, "masked rows stay in the counts")
+        self.assertEqual([r[13] for r in f["r"]], [1, 1, 1, 0])
+        for r, (la, lo) in zip(f["r"][:3], zip(df["lat"][:3], df["lon"][:3])):
+            self.assertEqual(r[4], "", "no street address")
+            self.assertIsNotNone(r[2])
+            self.assertLess(abs(r[2] - la), 0.0013, "moved to the middle of a ~250 m cell")
+            self.assertNotEqual(r[2], round(la, 5))
+            self.assertEqual(f["d"]["ward"][r[12]], "5", "ward is kept")
+        self.assertEqual(f["r"][3][4], "103 MAIN ST")
+        self.assertEqual(manifest["masked"], 3)
+        self.assertIn("Kidnapping/Abduction", manifest["maskedCategories"])
+        self.assertEqual(manifest["schema"], 3)

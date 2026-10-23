@@ -16,7 +16,9 @@ File format, one row per offense::
      "d": {"type": [...], "cat": [...], "off": [...], "nbhd": [...], "ward": ["1", ..., "14"]},
      "r": [[inc, "YYYY-MM-DDTHH:MM", lat, lon, address,
             typeIdx, catIdx, offenseIdx, nbhdIdx, district, firearm(0/1), estTime(0/1),
-            wardIdx (-1 = no ward)], ...]}
+            wardIdx (-1 = no ward), masked(0/1)], ...]}
+
+Masked rows (see MASKED_CATEGORIES) have no street address and only a coarse location.
 
 It also writes ``city.geojson``, ``wards.geojson`` and ``neighborhoods.geojson`` (outlines with 2020 census population)
 for maps.
@@ -47,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = ["WebExportError", "build_web_feed"]
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # Columns the feed needs. nibrs_code, inc_desc and nbhd_num are not used by the dashboard.
 REQUIRED_COLUMNS = (
@@ -65,6 +67,17 @@ UNASSIGNED_DISTRICTS = frozenset({"0"})
 # missing OccurredFromTime with 00:00, and the source data has a second spike at exactly 12:00.
 # These rows are flagged (est=1) so hour-of-day views can leave them out.
 PLACEHOLDER_TIMES = frozenset({"00:00", "12:00"})
+
+# Sensitive offenses whose exact location is withheld from the public feed. They still count in every total,
+# rate and chart, and keep their ward and neighborhood. In the feed they have NO street address and their
+# coordinates are rounded to the centre of a ~250 m grid cell (enough to count them in an address radius,
+# too coarse to point at a home). The dashboard draws no dot for them. The same list is published in the
+# manifest so the methodology page and the app never disagree with this one.
+MASKED_CATEGORIES = (
+    "Rape", "Sodomy", "Criminal Sexual Contact", "Fondling", "Statutory Rape", "Incest",
+    "Human Trafficking, Commercial Sex Acts", "Family Offenses, Nonviolent", "Kidnapping/Abduction",
+)
+MASK_GRID_DEG = 0.0025
 
 BOUNDS_MARGIN_DEG = 0.02   # slack around the city's bounding box before a point counts as unmapped
 SNAP_MAX_M = 30            # geocoding jitter: snap an address to its most common point within this
@@ -162,6 +175,13 @@ def _prepare(df: pd.DataFrame) -> pd.DataFrame:
     d["lat"], d["lon"], moved = _snap_to_address_mode(d["addr"], d["lat"], d["lon"])
     logger.info("%d rows snapped to their address's most common point", moved)
 
+    d["masked"] = d["cat"].isin(MASKED_CATEGORIES).astype(int)
+    mk = d["masked"] == 1
+    d.loc[mk, "addr"] = ""
+    for col in ("lat", "lon"):
+        d.loc[mk, col] = (d.loc[mk, col] // MASK_GRID_DEG) * MASK_GRID_DEG + MASK_GRID_DEG / 2
+    logger.info("%d rows masked (no address, coarse location)", int(mk.sum()))
+
     d["est"] = d["t"].dt.strftime("%H:%M").isin(PLACEHOLDER_TIMES).astype(int)
     d["month"] = d["t"].dt.strftime("%Y-%m")
     # Stable order => stable row ids (the dashboard identifies a row as "<month>-<position>").
@@ -221,11 +241,11 @@ def _month_file(month: str, g: pd.DataFrame, wards: list[str]) -> dict:
     lat = [None if pd.isna(x) else round(float(x), 5) for x in g["lat"]]
     lon = [None if pd.isna(x) else round(float(x), 5) for x in g["lon"]]
     rows = [
-        [inc, t.strftime("%Y-%m-%dT%H:%M"), la, lo, ad, ty, ca, of, nb, di, fa, es, wd]
-        for inc, t, la, lo, ad, ty, ca, of, nb, di, fa, es, wd in zip(
+        [inc, t.strftime("%Y-%m-%dT%H:%M"), la, lo, ad, ty, ca, of, nb, di, fa, es, wd, mk]
+        for inc, t, la, lo, ad, ty, ca, of, nb, di, fa, es, wd, mk in zip(
             g["inc"], g["t"], lat, lon, g["addr"],
             codes["type"], codes["cat"], codes["off"], codes["nbhd"],
-            g["district"], g["firearm"], g["est"], ward_codes,
+            g["district"], g["firearm"], g["est"], ward_codes, g["masked"],
         )
     ]
     return {"m": month, "d": dicts, "r": rows}
@@ -348,6 +368,8 @@ def build_web_feed(
             "incidents": int(d["inc"].nunique()),
             "unmapped": int(d["lat"].isna().sum()),
             "noWard": int(d["ward"].isna().sum()),
+            "masked": int(d["masked"].sum()),
+            "maskedCategories": list(MASKED_CATEGORIES),
             "months": [{"m": m, "n": int(counts[m])} for m in months],
         }
         (tmp / "manifest.json").write_text(json.dumps(manifest, separators=(",", ":")), encoding="utf-8")
