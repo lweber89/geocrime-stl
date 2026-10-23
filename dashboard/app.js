@@ -3,6 +3,7 @@
 
   const TYPES = ["Person", "Property", "Society", "Other"];   // worst first: drives colour priority on the map
   const PAGE = 100;
+  const DEFAULT_RADIUS = "0.5";
   const CITY_SQ_MILES = 62.11, METERS_PER_MILE = 1609.344;
   const RADIUS_LABEL = { 0.25: "¼ mile", 0.5: "½ mile", 1: "1 mile" };
   const CITY_BOUNDS = [[38.532, -90.32], [38.774, -90.166]];
@@ -76,7 +77,7 @@
 
   function writeHash(f) {
     const p = new URLSearchParams();
-    for (const k of FIELDS) if (f[k] && !(k === "range" && (f[k] === defaultRange || f[k] === "month")) && !(k === "radius" && f[k] === "1")) p.set(k, f[k]);
+    for (const k of FIELDS) if (f[k] && !(k === "range" && (f[k] === defaultRange || f[k] === "month")) && !(k === "radius" && f[k] === DEFAULT_RADIUS)) p.set(k, f[k]);
     if (f.fa) p.set("fa", "1");
     if (f.hide.length) p.set("hide", f.hide.join(","));
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
@@ -85,7 +86,7 @@
   function readHash() {
     const p = new URLSearchParams(location.hash.slice(1));
     for (const k of FIELDS) if (p.has(k)) $(k).value = p.get(k);
-    if (!$("radius").value) $("radius").value = "1";
+    if (!$("radius").value) $("radius").value = DEFAULT_RADIUS;
     $("address").value = $("pt").value ? $("lbl").value : "";
     if (!$("month").value) $("month").value = "";                // unknown month in the link
     $("range").value = $("month").value ? "month" : ($("range").value || defaultRange);   // old or unknown ranges fall back
@@ -96,7 +97,7 @@
 
   function resetControls() {
     for (const k of ["q", "month", "ward", "cat", "nbhd", "pt", "lbl", "address"]) $(k).value = "";
-    $("radius").value = "1";
+    $("radius").value = DEFAULT_RADIUS;
     setAddrMsg("");
     $("fa").checked = false;
     TYPES.forEach((t) => ($("t-" + t).checked = true));
@@ -319,7 +320,15 @@
     const text = $("address").value.trim();
     if (!text) { setAddrMsg("Type a street address, for example 1200 Market St."); return; }
     setAddrMsg("Looking up that address…");
-    const r = await GEO.find(text, { contains: pointInCity });
+    try {
+      await showAddressResult(await GEO.find(text, { contains: pointInCity }));
+    } catch (err) {                                   // never fail silently
+      console.error(err);
+      setAddrMsg("Something went wrong while showing that address. Please try again.");
+    }
+  }
+
+  async function showAddressResult(r) {
     if (r.status === "ok") {
       $("pt").value = `${r.lat.toFixed(5)},${r.lon.toFixed(5)}`;
       $("lbl").value = r.label;
@@ -396,7 +405,11 @@
 
   // Zoom to the chosen neighborhood or ward, or back out to the whole city.
   function zoomToScope() {
-    if (center) { map.fitBounds(L.circle([center.lat, center.lon], { radius: Math.sqrt(center.m2) }).getBounds(), { padding: [20, 20] }); return; }
+    if (center) {
+      const r = Math.sqrt(center.m2), dy = r / 110540, dx = r / center.kx;      // radius in degrees of latitude / longitude
+      map.fitBounds([[center.lat - dy, center.lon - dx], [center.lat + dy, center.lon + dx]], { padding: [20, 20] });
+      return;
+    }
     const ft = nbhdFeatures.get($("nbhd").value) || wardFeatures.get($("ward").value);
     map.fitBounds(ft ? L.geoJSON(ft).getBounds() : CITY_BOUNDS, { padding: [20, 20] });
   }
