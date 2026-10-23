@@ -294,11 +294,15 @@
     const fmt = (x) => (x >= 100 ? Math.round(x) : Math.round(x * 10) / 10).toLocaleString();
     const ch = changeTile(n);
 
+    const wd = wardAt(center.lat, center.lon), nb = neighborhoodAt(center.lat, center.lon);
+    const where = wd || nb ? `<p class="rep-where small">Located in ${[
+      wd ? `<a href="#" data-ward="${esc(wd)}">Ward ${esc(wd)}</a>` : "", nb ? `<a href="#" data-nbhd="${esc(nb)}">${esc(nb)}</a>` : ""].filter(Boolean).join(" · ")}</p>` : "";
     $("pTitle").textContent = $("lbl").value || "Your address";
     $("pSub").textContent = `Within ${within} · ${periodText()}`;
     $("pBody").innerHTML = `<div class="rep">
       <div class="rep-big">${n.toLocaleString()}</div>
       <div class="muted">reported offenses within ${esc(within)} (${esc(periodText())})</div>
+      ${where}
       <p class="rep-change"><strong>${esc(ch[0])}</strong> <span class="muted">${esc(ch[1])}</span></p>
       <h3>By type</h3>${typeRows}
       <h3>Most common</h3><ol class="rep-top">${top || '<li class="muted">None reported</li>'}</ol>
@@ -333,6 +337,11 @@
   // true if the point is inside the City of St. Louis (the real outline, not a box)
   function pointInCity(lat, lon) {
     return D.city && D.city.geometry ? pointInGeom(D.city.geometry, lat, lon) : GEO.inCity(lat, lon);
+  }
+
+  function wardAt(lat, lon) {
+    for (const [w, ft] of wardFeatures) if (pointInGeom(ft.geometry, lat, lon)) return w;
+    return null;
   }
 
   function neighborhoodAt(lat, lon) {
@@ -696,6 +705,13 @@
       const inc = e.target.closest("a.inc");
       if (inc) { e.preventDefault(); showIncident(inc.dataset.inc, inc.dataset.month); return; }
       if (e.target.closest("a.back")) { e.preventDefault(); openReport(); return; }
+      const area = e.target.closest("a[data-ward], a[data-nbhd]");           // "Located in Ward 6 · Dutchtown": leave the spot, view that area
+      if (area) {
+        e.preventDefault();
+        clearAddress();
+        if (area.dataset.ward) selectWard(area.dataset.ward); else selectNbhd(area.dataset.nbhd);
+        return;
+      }
       const ad = e.target.closest("a.addr");
       if (ad) { e.preventDefault(); $("q").value = ad.dataset.addr; apply(); }
     });

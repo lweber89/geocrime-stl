@@ -209,3 +209,5 @@ table.hot th button[aria-pressed="true"] { color: var(--ink); }
 @media (min-width: 761px) { .mapbadge { display: none; } }
 #legend { display: block; }
 .legnote { display: block; }
+
+.rep-where { margin: 6px 0 0; }
