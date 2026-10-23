@@ -30,14 +30,8 @@
 
 <section class="filters" aria-label="Filters">
   <input type="search" id="q" placeholder="Search address, offense, incident #" aria-label="Search">
-  <select id="range" aria-label="Date range">
-    <option value="7">Last 7 days</option>
-    <option value="30" selected>Last 30 days</option>
-    <option value="90">Last 90 days</option>
-    <option value="365">Last 12 months</option>
-    <option value="all">All dates</option>
-    <option value="custom">Custom…</option>
-  </select>
+  <select id="range" aria-label="Date range"></select>
+  <span class="muted" id="rangeNote" aria-live="polite"></span>
   <span id="customRange" hidden>
     <input type="date" id="from" aria-label="From date"> – <input type="date" id="to" aria-label="To date">
   </span>

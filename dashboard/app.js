@@ -2,7 +2,8 @@
   "use strict";
 
   const TYPES = ["Person", "Property", "Society", "Other"];   // worst first: drives colour priority on the map
-  const PAGE = 100, HEAT_ABOVE = 15000;                       // above this many mapped offenses, force the heat layer
+  const PAGE = 100;
+  const HEAT_AFTER_DAYS = 183;                                // date spans longer than ~6 months open as a heat map
   const HEAT = { 0.2: "#ffe08a", 0.45: "#fdae61", 0.7: "#f46d43", 0.9: "#d73027", 1.0: "#7f0000" };
   const $ = (id) => document.getElementById(id);
   const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -13,11 +14,52 @@
   const fmtDate = (a) => a.date.toLocaleString("en-US", a.est ? DATE : { ...DATE, hour: "numeric", minute: "2-digit" });
 
   let D, filtered = [], sortKey = "t", sortDir = -1, page = 0, open = new Set();
-  let map, pointLayer, heatLayer, layerMode = "points";
+  let map, pointLayer, heatLayer, layerChoice = "auto";   // "auto" picks by date span; the buttons override it
+  let defaultRange = "all", longSpan = false;
   const incCount = new Map();
 
   // ------------------------------------------------------------ filters
   const FIELDS = ["q", "range", "from", "to", "cat", "nbhd"];
+
+  // ---- date ranges: calendar months, because the City publishes whole months (no "last 7 days")
+  const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  const monLabel = (key) => `${MON[Number(key.slice(5, 7)) - 1]} ${key.slice(0, 4)}`;
+  const monStart = (key) => new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1);
+  const monEnd = (key) => new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)), 0, 23, 59, 59);
+  const fmtDay = (d) => d.toLocaleDateString("en-US", DATE);
+
+  // Returns { from, to } as Dates (always real dates: "all" uses the first and last month in the data).
+  function rangeBounds(f) {
+    const keys = D.months.map((x) => x.m), last = keys.at(-1), first = keys[0];
+    const back = (n) => keys[Math.max(0, keys.length - n)];
+    const v = f.range;
+    if (v === "custom") {
+      return { from: f.from ? new Date(f.from + "T00:00") : monStart(first), to: f.to ? new Date(f.to + "T23:59:59") : monEnd(last) };
+    }
+    if (v.startsWith("m:")) return { from: monStart(v.slice(2)), to: monEnd(v.slice(2)) };
+    if (v === "last3") return { from: monStart(back(3)), to: monEnd(last) };
+    if (v === "last12") return { from: monStart(back(12)), to: monEnd(last) };
+    if (v === "ytd") { const jan = last.slice(0, 4) + "-01"; return { from: monStart(jan < first ? first : jan), to: monEnd(last) }; }
+    return { from: monStart(first), to: monEnd(last) };                       // "all"
+  }
+
+  function buildRangeOptions() {
+    const keys = D.months.map((x) => x.m), last = keys.at(-1), first = keys[0];
+    const back = (n) => keys[Math.max(0, keys.length - n)];
+    const span = (a, b) => (a === b ? monLabel(a) : `${monLabel(a)} – ${monLabel(b)}`);
+    const jan = last.slice(0, 4) + "-01";
+    const opt = (v, t) => `<option value="${v}">${esc(t)}</option>`;
+    defaultRange = "m:" + last;
+    $("range").innerHTML =
+      opt("m:" + last, `${monLabel(last)} (latest month)`)
+      + opt("last3", `Last 3 months (${span(back(3), last)})`)
+      + opt("last12", `Last 12 months (${span(back(12), last)})`)
+      + opt("ytd", `Year to date (${span(jan < first ? first : jan, last)})`)
+      + opt("all", `All dates (${span(first, last)})`)
+      + `<optgroup label="A single month">${[...keys].reverse().map((k) => opt("m:" + k, monLabel(k))).join("")}</optgroup>`
+      + opt("custom", "Custom dates…");
+    $("range").value = defaultRange;
+  }
 
   function readFilters() {
     const f = {};
@@ -29,7 +71,7 @@
 
   function writeHash(f) {
     const p = new URLSearchParams();
-    for (const k of FIELDS) if (f[k] && !(k === "range" && f[k] === "30")) p.set(k, f[k]);
+    for (const k of FIELDS) if (f[k] && !(k === "range" && f[k] === defaultRange)) p.set(k, f[k]);
     if (f.fa) p.set("fa", "1");
     if (f.hide.length) p.set("hide", f.hide.join(","));
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
@@ -38,6 +80,7 @@
   function readHash() {
     const p = new URLSearchParams(location.hash.slice(1));
     for (const k of FIELDS) if (p.has(k)) $(k).value = p.get(k);
+    if (!$("range").value) $("range").value = defaultRange;      // an old or unknown range in the link
     $("fa").checked = p.get("fa") === "1";
     const hide = (p.get("hide") || "").split(",");
     TYPES.forEach((t) => ($("t-" + t).checked = !hide.includes(t)));
@@ -48,24 +91,20 @@
     for (const k of ["q", "from", "to", "cat", "nbhd"]) $(k).value = "";
     $("fa").checked = false;
     TYPES.forEach((t) => ($("t-" + t).checked = true));
-    $("range").value = "30";
+    $("range").value = defaultRange;
+    layerChoice = "auto";
   }
 
   function apply() {
     const f = readFilters();
     writeHash(f);
     $("customRange").hidden = f.range !== "custom";
-    let from = null, to = null;
-    if (f.range === "custom") {
-      if (f.from) from = new Date(f.from + "T00:00");
-      if (f.to) to = new Date(f.to + "T23:59:59");
-    } else if (f.range !== "all") {
-      from = new Date(D.maxDate); from.setDate(from.getDate() - Number(f.range)); from.setHours(0, 0, 0, 0);
-    }
+    const { from, to } = rangeBounds(f);
+    longSpan = (to - from) / 86400000 > HEAT_AFTER_DAYS;
+    $("rangeNote").textContent = `${fmtDay(from)} – ${fmtDay(to)}`;
     const terms = f.q.trim().toUpperCase().split(/\s+/).filter(Boolean);
     filtered = D.records.filter((a) => {
-      if (from && a.date < from) return false;
-      if (to && a.date > to) return false;
+      if (a.date < from || a.date > to) return false;
       if (f.hide.includes(a.type)) return false;
       if (f.cat && a.cat !== f.cat) return false;
       if (f.nbhd && a.nbhd !== f.nbhd) return false;
@@ -106,8 +145,7 @@
     }).addTo(map);
     pointLayer = L.layerGroup().addTo(map);
     document.querySelectorAll(".seg button[data-layer]").forEach((b) => b.addEventListener("click", () => {
-      layerMode = b.dataset.layer;
-      document.querySelectorAll(".seg button[data-layer]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+      layerChoice = b.dataset.layer;
       renderMap();
     }));
     $("legend").innerHTML = TYPES.map((t) => `<div><i style="background:${typeColor(t)};width:12px;height:12px"></i>${esc(t)}</div>`).join("")
@@ -127,10 +165,13 @@
     pointLayer.clearLayers();
     if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
     const pts = filtered.filter((a) => a.lat != null);
-    const forceHeat = layerMode === "points" && pts.length > HEAT_ABOVE;
-    $("mapnote").textContent = forceHeat
-      ? `Showing a heat map because ${pts.length.toLocaleString()} offenses match. Narrow the dates or filters to see individual locations.` : "";
-    if (layerMode === "heat" || forceHeat) {
+    const auto = layerChoice === "auto";
+    const heat = layerChoice === "heat" || (auto && longSpan);
+    document.querySelectorAll(".seg button[data-layer]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.layer === (heat ? "heat" : "points")));
+    $("mapnote").textContent = auto && longSpan
+      ? `Showing a heat map because the dates cover more than 6 months (${pts.length.toLocaleString()} offenses). Choose "Locations" to see individual spots, or pick a shorter period.`
+      : !heat && longSpan ? `Showing individual locations for ${pts.length.toLocaleString()} offenses. This long a period can be slow to draw.` : "";
+    if (heat) {
       heatLayer = L.heatLayer(pts.map((a) => [a.lat, a.lon]), { radius: 14, blur: 18, maxZoom: 15, gradient: HEAT }).addTo(map);
       return;
     }
@@ -214,6 +255,7 @@
   function wire() {
     let t;
     $("q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(apply, 200); });
+    $("range").addEventListener("change", () => { layerChoice = "auto"; });   // a new period gets the default layer again
     for (const id of ["range", "from", "to", "cat", "nbhd", "fa", ...TYPES.map((x) => "t-" + x)]) $(id).addEventListener("change", apply);
     $("reset").addEventListener("click", () => { resetControls(); apply(); });
     $("prev").addEventListener("click", () => { page--; renderTable(); });
@@ -262,6 +304,7 @@
     const mon = (m) => new Date(m + "-15T12:00").toLocaleDateString("en-US", { month: "long", year: "numeric" });
     $("sub").textContent = `${D.records.length.toLocaleString()} reported offenses in the City of St. Louis, ${mon(D.months[0].m)} – ${mon(D.months.at(-1).m)}. Data through ${day(D.through)}; the City adds each month around the 5th of the next.`;
 
+    buildRangeOptions();
     readHash();
     initMap();
     wire();
