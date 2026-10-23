@@ -49,7 +49,10 @@ tempCodeRunnerFile.py
 # ==========================================
 # Generated data (see data/README.md)
 # ==========================================
-# data/web (the dashboard feed) and data/processed (the master dataset) are committed.
+# The master parquet in data/processed is committed. The dashboard feed (data/web) is built by the deploy workflow,
+# and the large GeoJSON copy of the master is a local convenience for GIS users: neither is committed.
+/data/web/
+/data/processed/slmpd_crime_data.geojson
 /data/raw/
 /data/processed/monthly/
 /data/web.tmp/

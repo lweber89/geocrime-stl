@@ -78,13 +78,21 @@ def save_master(
     parquet_path: Path | str | None = None,
     geojson_path: Path | str | None = None,
     *,
-    write_geojson: bool = True,
+    write_geojson: bool | None = None,
 ) -> None:
     """Write the master dataset as GeoParquet and (optionally) GeoJSON.
 
+    The GeoJSON is a convenience for GIS users (it is large and is not committed to git). Pass ``write_geojson``
+    to choose, or set the environment variable ``GEOCRIME_WRITE_GEOJSON=0`` to skip it (the monthly GitHub Action does).
+
     GeoPandas is imported here, not at module level, so the rest of this module works without it.
     """
+    import os  # noqa: PLC0415
+
     import geopandas as gpd  # noqa: PLC0415
+
+    if write_geojson is None:
+        write_geojson = os.environ.get("GEOCRIME_WRITE_GEOJSON", "1") != "0"
 
     parquet_path = Path(parquet_path) if parquet_path else MASTER_PARQUET
     geojson_path = Path(geojson_path) if geojson_path else MASTER_GEOJSON

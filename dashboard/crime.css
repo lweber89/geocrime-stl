@@ -186,3 +186,18 @@ table.hot th button[aria-pressed="true"] { color: var(--ink); }
   .hotpage .panel { position: static; width: auto; height: auto; box-shadow: none; }
   .hotpage .panel-body { overflow: visible; }
 }
+
+/* ---- methodology page ---- */
+.doc { max-width: 820px; margin: 0 auto; padding: 0 16px 28px; line-height: 1.55; }
+.doc .toc { font-size: 13px; color: var(--ink-2); margin: 6px 0 14px; }
+.doc h2 { font-size: 19px; margin: 26px 0 6px; }
+.doc ul { padding-left: 20px; }
+.doc li { margin: 5px 0; }
+.doc dt { font-weight: 600; margin-top: 10px; }
+.doc dd { margin: 2px 0 0 0; }
+.doc ul.plain { columns: 2; column-gap: 24px; }
+.doc .tablewrap { overflow-x: auto; }
+.doc table.dict { border-collapse: collapse; width: 100%; font-size: 14px; }
+.doc table.dict th, .doc table.dict td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+.doc code { font-size: 13px; }
+@media (max-width: 560px) { .doc ul.plain { columns: 1; } }

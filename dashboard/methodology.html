@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About the Data</title>
+<meta name="description" content="Where the St. Louis crime data comes from, how it is processed, what the numbers mean, and what is withheld.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="crime.css">
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>About the Data</h1>
+    <p class="sub" id="sub">Methodology, definitions and limits.</p>
+  </div>
+  <div class="top-actions">
+    <nav class="pagenav" aria-label="Pages"><a href="./">Crime map</a><a href="hotspots.html">Hotspots</a><a href="charts.html">Charts</a><a href="methodology.html" aria-current="page">Methodology</a></nav>
+  </div>
+</header>
+
+<main class="doc">
+  <nav class="toc" aria-label="On this page">
+    <a href="#what">What this is</a> · <a href="#source">Where the data comes from</a> · <a href="#processing">How it is processed</a> ·
+    <a href="#words">What the words mean</a> · <a href="#numbers">How the numbers are made</a> · <a href="#privacy">Privacy and withheld locations</a> ·
+    <a href="#limits">Limits</a> · <a href="#fields">Data dictionary</a> · <a href="#credits">Credits and feedback</a>
+  </nav>
+
+  <section id="what">
+    <h2>What this is</h2>
+    <p>A free, independent map and set of charts of crimes reported to the St. Louis police. It is meant for residents first,
+    and for neighborhood leaders, aldermen and analysts second. It is a hobby project, not an official City or police site.</p>
+    <p><strong>These are reported offenses, not a measure of how safe a place is.</strong> A busy shopping area can show many
+    offenses because many people pass through, and a quiet block can have crime that nobody reported.</p>
+  </section>
+
+  <section id="source">
+    <h2>Where the data comes from</h2>
+    <p>Every number comes from the monthly crime data files that the St. Louis Metropolitan Police Department (SLMPD) publishes
+    for the City of St. Louis. A script downloads each new month, cleans it, and rebuilds the files this site reads. Nothing else
+    is mixed in, except the boundaries and populations described below.</p>
+    <ul>
+      <li><strong>Data through:</strong> <span id="through">…</span>. The police add a month around the 5th of the following month, and this site updates after that.</li>
+      <li><strong>Size:</strong> <span id="size">…</span>.</li>
+      <li><strong>Revisions:</strong> police records can be corrected after they are published. A month is downloaded when it is first added (and again if it is rerun), so it can differ slightly from the police's latest version.</li>
+    </ul>
+  </section>
+
+  <section id="processing">
+    <h2>How it is processed</h2>
+    <ul>
+      <li><strong>Locations.</strong> Coordinates come from the police data. Offenses with no coordinates, or with coordinates outside the City of St. Louis, are removed when the data is cleaned, so they are not in any count on this site.
+        A small number of rows (<span id="unmapped">…</span> in the current data) are in an unassigned police district and have unreliable addresses, so they are counted but not mapped.</li>
+      <li><strong>Same place, same dot.</strong> One address is sometimes recorded at points a few meters apart. Points within about 30 meters of an address's most common point are moved onto it, so one store is one dot.</li>
+      <li><strong>Wards.</strong> Each offense is placed in one of the City's 14 wards (boundaries in effect since 2023) from its coordinates.
+        Neighborhoods and wards do not nest, so a neighborhood can be split across wards.</li>
+      <li><strong>Neighborhoods.</strong> The neighborhood name is the one in the police data. Outlines and populations come from the City's neighborhood boundaries.</li>
+      <li><strong>Times.</strong> When an offense has no time, the cleaning step fills in midnight, and the police data also has an unusual number of offenses at exactly noon.
+        Those offenses are marked "exact time not recorded" and are left out of the time-of-day chart (the day-of-week chart still includes them).</li>
+    </ul>
+  </section>
+
+  <section id="words">
+    <h2>What the words mean</h2>
+    <dl>
+      <dt>Offense and incident</dt>
+      <dd>An <em>incident</em> is one police report. It can include several <em>offenses</em>, and offenses against people are counted once per victim. This site counts offenses, so the totals are higher than the number of reports.</dd>
+      <dt>Category (NIBRS)</dt>
+      <dd>Offenses use the FBI's National Incident-Based Reporting System categories, for example Simple Assault, Robbery or Theft From Motor Vehicle. "All Other Offenses" is NIBRS's catch-all.</dd>
+      <dt>Person, Property, Society, Other</dt>
+      <dd>NIBRS groups offenses by what they are <em>against</em>: <strong>Person</strong> (assault, robbery, homicide, sex offenses), <strong>Property</strong> (theft, burglary, vandalism, fraud), <strong>Society</strong> (weapons, drugs, trespass, disorderly conduct) and <strong>Other</strong> (the catch-all).
+        In the data, robbery and arson are grouped under Property.</dd>
+      <dt>Firearm</dt>
+      <dd>The police data flags offenses that involved a firearm. This site shows the flag as the police recorded it.</dd>
+      <dt>Time of day</dt>
+      <dd>Night is 8 pm to 5 am, dawn 5 to 7 am, day 7 am to 5 pm and dusk 5 to 8 pm. These are fixed approximations, because real sunrise and sunset in St. Louis move by a couple of hours across the year.</dd>
+    </dl>
+  </section>
+
+  <section id="numbers">
+    <h2>How the numbers are made</h2>
+    <ul>
+      <li><strong>Rates per 1,000 residents.</strong> Offenses divided by the area's 2020 census population, times 1,000. Rates make wards and neighborhoods of different sizes comparable, but they are misleading where few people live and many visit (downtown, Forest Park, shopping and industrial areas).
+        Neighborhoods with fewer than 500 residents show a count and no rate. Raw counts are always shown beside rates.</li>
+      <li><strong>Shading in fifths.</strong> Wards, neighborhoods and hexagons are shaded in five groups with about the same number of areas in each. The darkest group is the highest fifth, not a fixed level of crime.</li>
+      <li><strong>Hexagons.</strong> The Hotspots map covers the city in hexagons about 250 meters across. Each offense is counted in the hexagon it falls in. Hexagons with fewer than 5 offenses are left blank, so single events do not look like patterns. They are counts, not rates.</li>
+      <li><strong>Change.</strong> Compares the chosen period with the same number of months immediately before it. Small numbers can swing a lot: 2 offenses to 4 is "+100%".</li>
+      <li><strong>Busy month after month.</strong> For each hexagon, we count how many of the last 12 months it was among the busiest, meaning at or above about the top tenth of all active hexagon-months (and at least 3 offenses).</li>
+      <li><strong>Address reports.</strong> Counts every offense within the chosen radius (¼, ½ or 1 mile) of the point, as the crow flies. The "per square mile" comparison uses the city's area of about 62 square miles.</li>
+      <li><strong>Whole-city map.</strong> Limited to the last 6 months of dots so the map stays readable. Longer periods are available for a ward, neighborhood or address.</li>
+    </ul>
+  </section>
+
+  <section id="privacy">
+    <h2>Privacy and withheld locations</h2>
+    <p>The police publish these records, but a map that anyone can search by address is easier to misuse than a data file, so we withhold the exact location of sensitive offenses.
+    These categories are masked:</p>
+    <ul class="plain" id="masked"><li>…</li></ul>
+    <p>For those offenses (<span id="maskedN">…</span> in the current data):</p>
+    <ul>
+      <li>They <strong>still count</strong> in every total, rate, chart, ward, neighborhood and hexagon number.</li>
+      <li>They have <strong>no street address</strong>, no dot on the map, and no place in the Blocks list. Their location is rounded to the center of a grid cell about 250 meters across, which is enough to count them in a radius search but too coarse to point to a home.</li>
+      <li>They keep their ward and neighborhood. The CSV download leaves their address and coordinates blank.</li>
+    </ul>
+    <p><strong>Address searches.</strong> When you type an address, it is sent to public geocoding services (the City of St. Louis, OpenStreetMap's Nominatim and the U.S. Census Bureau) to find its location. This site does not store it.
+    A dropped pin or "Use my location" never leaves your browser. The address you chose is kept only in the page link, which is yours to share or not.</p>
+  </section>
+
+  <section id="limits">
+    <h2>Limits</h2>
+    <ul>
+      <li>Reported is not the same as happened. Some crimes are never reported, and reporting differs by place.</li>
+      <li>Stores, hospitals, and other places with security staff or routine reporting appear more often.</li>
+      <li>Addresses are block-level and can be wrong or shifted. A dot is where the police recorded the offense, not necessarily where it happened.</li>
+      <li>The most recent month can still be revised. Compare full months where you can.</li>
+      <li>Populations are from the 2020 census and do not reflect people who work or visit, or growth and decline since.</li>
+      <li>Hexagons and ranked lists show where offenses are reported, not why. Please do not use them to judge a neighborhood or a person.</li>
+    </ul>
+  </section>
+
+  <section id="fields">
+    <h2>Data dictionary</h2>
+    <p>The CSV download from the map has these columns.</p>
+    <div class="tablewrap"><table class="dict">
+      <thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>when</code></td><td>Date and time the offense is reported to have occurred (local time).</td></tr>
+        <tr><td><code>time_not_recorded</code></td><td>"yes" when the time is probably a placeholder (exactly 00:00 or 12:00).</td></tr>
+        <tr><td><code>address</code></td><td>Block-level street address as reported. "(withheld)" for masked offenses.</td></tr>
+        <tr><td><code>neighborhood</code></td><td>Neighborhood name in the police data.</td></tr>
+        <tr><td><code>police_district</code></td><td>SLMPD district number (0 means unassigned).</td></tr>
+        <tr><td><code>crime_against</code></td><td>Person, Property, Society or Other (NIBRS).</td></tr>
+        <tr><td><code>nibrs_category</code></td><td>NIBRS offense category.</td></tr>
+        <tr><td><code>offense</code></td><td>Offense description from the police data.</td></tr>
+        <tr><td><code>firearm</code></td><td>"yes" when the offense is flagged as involving a firearm.</td></tr>
+        <tr><td><code>incident</code></td><td>Police incident number. One incident can have several rows.</td></tr>
+        <tr><td><code>lat</code>, <code>lon</code></td><td>Location in decimal degrees (WGS 84). Blank when withheld or unmapped.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="credits">
+    <h2>Credits and feedback</h2>
+    <ul>
+      <li><strong>Crime data:</strong> St. Louis Metropolitan Police Department, published for the City of St. Louis.</li>
+      <li><strong>Boundaries and populations:</strong> City of St. Louis wards and neighborhoods; 2020 U.S. Census.</li>
+      <li><strong>Map:</strong> <a href="https://leafletjs.com">Leaflet</a>, with map tiles &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors.</li>
+      <li><strong>Design:</strong> adapted from a crash-map dashboard by Reddit user u/autosoap, used with permission.</li>
+      <li><strong>Code:</strong> open source at <a href="https://github.com/lweber89/geocrime-stl">github.com/lweber89/geocrime-stl</a>.</li>
+    </ul>
+    <p>Found a problem or have an idea? Please <a href="https://github.com/lweber89/geocrime-stl/issues">open an issue on GitHub</a>.</p>
+  </section>
+</main>
+
+<footer>
+  Source: City of St. Louis (SLMPD) monthly crime data. Dashboard design adapted from a project by Reddit user u/autosoap.
+</footer>
+<script src="methodology.js"></script>
+</body>
+</html>
