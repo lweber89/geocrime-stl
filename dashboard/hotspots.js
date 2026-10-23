@@ -1,5 +1,5 @@
 /* hotspots.js: the Hotspots page. A hexagon map plus ranked lists (hot spots, neighborhoods, wards, blocks).
- * The maths (grid, counting, busy-month test) is in hotspots-core.js; this file is the page.
+ * The maths (grid and counting) is in hotspots-core.js; this file is the page.
  * Offense category, firearm and period are kept in the page link, shared with the map and charts pages.
  */
 (() => {
@@ -15,7 +15,8 @@
   const HEX_WIDTH = 250;                 // metres, flat to flat
   const MIN_CELL = 5;                    // cells with fewer offenses in the period are left blank
   const MIN_RATE_POP = 500;              // neighborhoods with fewer residents get a count but no rate
-  const WINDOW = 12;                     // months looked at for "busy month after month"
+  const TOP_CATEGORIES = 20;             // the offense menu offers "all" plus this many of the most common categories
+  const CATCH_ALL = "All Other Offenses"; // NIBRS catch-all: counted in "all", but not offered on its own
   const RAMP = ["#fff1d6", "#fdd49e", "#fc8d59", "#d7301f", "#7f0000"];           // same fifths as the map's ward and neighborhood shading
   const UP = ["#fc8d59", "#d7301f"], DOWN = ["#8db8e8", "#2b6cb0"], FLAT = "#d9d7cf";
   const MAP_RANGE = { p3: "last3", p6: "last6", p12: "last12", p24: "all", all: "all" };
@@ -30,7 +31,7 @@
     st.cat = p.get("cat") || ""; st.fa = p.get("fa") === "1";
     st.per = PERIOD_N[p.get("per")] || p.get("per") === "all" ? p.get("per") : "p12";
     st.tab = ["hex", "nbhd", "ward", "block"].includes(p.get("tab")) ? p.get("tab") : "hex";
-    st.mode = ["count", "change", "chronic"].includes(p.get("mode")) ? p.get("mode") : "count";
+    st.mode = ["count", "change"].includes(p.get("mode")) ? p.get("mode") : "count";
   }
   function writeState() {
     const p = new URLSearchParams();
@@ -59,11 +60,10 @@
     const n = st.per === "all" ? keys.length : Math.min(PERIOD_N[st.per], keys.length);
     const months = keys.slice(keys.length - n);
     const priorKeys = keys.length - 2 * n >= 0 ? keys.slice(keys.length - 2 * n, keys.length - n) : null;
-    const window = keys.slice(-WINDOW);
     const recs = D.records.filter((a) => (!st.cat || a.cat === st.cat) && (!st.fa || a.firearm));
     const cells = HOT.bin(recs, { width: HEX_WIDTH });
-    const meas = HOT.measure(cells, { months, prior: priorKeys, window });
-    view = { keys, n, months, priorKeys, window, recs, ...meas, inP: new Set(months), inQ: priorKeys ? new Set(priorKeys) : null };
+    const meas = HOT.measure(cells, { months, prior: priorKeys });
+    view = { keys, n, months, priorKeys, recs, ...meas, inP: new Set(months), inQ: priorKeys ? new Set(priorKeys) : null };
   }
 
   // ------------------------------------------------------------ the hexagon map
@@ -78,8 +78,7 @@
       const d = c.change, lo = Math.max(2, Math.ceil(view.tau / 3));
       return d >= view.tau ? UP[1] : d >= lo ? UP[0] : d <= -view.tau ? DOWN[1] : d <= -lo ? DOWN[0] : FLAT;
     }
-    if (!c.high) return null;
-    return RAMP[Math.min(4, Math.ceil(c.high / (view.windowMonths / 5)) - 1)];
+    return null;
   }
 
   function describeCell(c) {
@@ -89,7 +88,7 @@
 
   function cellTip(c) {
     const change = c.prior == null ? "" : `<br>${pctText(c.n, c.prior)} vs. the previous ${view.n} months (${num(c.prior)})`;
-    return `<strong>${esc(describeCell(c))}</strong><br>${num(c.n)} offenses in the period${change}<br>${c.high} of the last ${view.windowMonths} months among the busiest`;
+    return `<strong>${esc(describeCell(c))}</strong><br>${num(c.n)} offenses in the period${change}`;
   }
 
   function pctText(n, prior) {
@@ -120,7 +119,7 @@
       drawn++;
     }
     legend(drawn);
-    $("rangeNote").textContent = `${monLabel(view.months[0])} – ${monLabel(view.months.at(-1))} · ${num(view.recs.filter((a) => view.inP.has(a.m)).length)} offenses`;
+    $("legnote").textContent = $("rangeNote").textContent = `${monLabel(view.months[0])} – ${monLabel(view.months.at(-1))} · ${num(view.recs.filter((a) => view.inP.has(a.m)).length)} offenses`;
     $("mapnote").textContent = st.mode === "change" && !view.priorKeys
       ? "There is not enough history to compare with an earlier period. Choose a shorter period."
       : `Each hexagon is about ${HEX_WIDTH} m across (a few blocks). Cells with fewer than ${MIN_CELL} offenses are left blank. These are counts, not rates.`;
@@ -129,20 +128,17 @@
   function legend(drawn) {
     const sw = (c, t) => `<div><i style="background:${c};width:14px;height:14px;border-radius:3px"></i>${t}</div>`;
     const fmt = (x) => num(Math.round(x));
+    const span = (a, b) => (a >= b ? fmt(a) : `${fmt(a)} – ${fmt(b)}`);       // "2 – 2" reads as just "2"
     let h = "";
     if (st.mode === "count") {
       const b = [MIN_CELL, ...view.countBreaks, Infinity];
       h = `<div style="margin-bottom:4px"><strong>Offenses per hexagon</strong></div>` + RAMP.map((c, i) =>
-        sw(c, i === 4 ? `${fmt(b[i])}+` : `${fmt(b[i])} – ${fmt(b[i + 1] - 1)}`)).join("");
-    } else if (st.mode === "change") {
+        sw(c, i === 4 ? `${fmt(b[i])}+` : span(b[i], b[i + 1] - 1))).join("");
+    } else {
       const lo = Math.max(2, Math.ceil(view.tau / 3));
       h = `<div style="margin-bottom:4px"><strong>Change vs. the previous ${view.n} months</strong></div>`
-        + sw(UP[1], `Up ${fmt(view.tau)}+`) + sw(UP[0], `Up ${lo} – ${fmt(view.tau - 1)}`) + sw(FLAT, "About the same")
-        + sw(DOWN[0], `Down ${lo} – ${fmt(view.tau - 1)}`) + sw(DOWN[1], `Down ${fmt(view.tau)}+`);
-    } else {
-      const w = view.windowMonths;
-      h = `<div style="margin-bottom:4px"><strong>Months among the busiest<br>(of the last ${w})</strong></div>` + RAMP.map((c, i) =>
-        sw(c, `${Math.floor((i * w) / 5) + 1} – ${Math.floor(((i + 1) * w) / 5)}`)).join("");
+        + sw(UP[1], `Up ${fmt(view.tau)}+`) + sw(UP[0], `Up ${span(lo, view.tau - 1)}`) + sw(FLAT, "About the same")
+        + sw(DOWN[0], `Down ${span(lo, view.tau - 1)}`) + sw(DOWN[1], `Down ${fmt(view.tau)}+`);
     }
     $("legend").innerHTML = h + (drawn ? "" : `<div class="muted" style="margin-top:4px">Nothing to show for these choices.</div>`);
   }
@@ -182,10 +178,6 @@
       items.push(list("Biggest increases", pool.filter((c) => c.change > 0).sort((a, b) => b.change - a.change).slice(0, 8), (c) => `+${num(c.change)}<small> ${num(c.prior)} → ${num(c.n)}</small>`,
         `Change in offenses compared with the previous ${view.n} months. Small numbers can swing a lot.`));
       items.push(list("Biggest decreases", pool.filter((c) => c.change < 0).sort((a, b) => a.change - b.change).slice(0, 8), (c) => `−${num(-c.change)}<small> ${num(c.prior)} → ${num(c.n)}</small>`));
-    } else {
-      const arr = cells.filter((c) => c.high).sort((a, b) => b.high - a.high || b.n - a.n).slice(0, 15);
-      items.push(list(`Busy in the most months (of ${view.windowMonths})`, arr, (c) => `${c.high}<small> months · ${num(c.n)} offenses</small>`,
-        `A month counts as busy when a hexagon had at least ${num(view.busy)} offenses, the level only about one in ten active hexagon-months reaches.`));
     }
     return items.join("");
   }
@@ -271,10 +263,14 @@
     D.records.forEach((a) => { a.m = a.t.slice(0, 7); });          // month key, used for all the counting
     const mon = (m) => new Date(m + "-15T12:00").toLocaleDateString("en-US", { month: "long", year: "numeric" });
     $("sub").textContent = `Where reported offenses cluster, ${mon(D.months[0].m)} – ${mon(D.months.at(-1).m)}. The City adds each month around the 5th of the next.`;
-    const esc2 = esc;
-    $("cat").innerHTML = '<option value="">All offense types</option>' + D.types.map((t) =>
-      `<optgroup label="${esc2(t)}">${D.cats[t].map((c) => `<option value="${esc2(c)}">${esc2(c)}</option>`).join("")}</optgroup>`).join("");
     readState();
+    // "All" plus the most common categories (the catch-all is counted in "All" but not listed on its own)
+    const tally = new Map();
+    for (const r of D.records) tally.set(r.cat, (tally.get(r.cat) || 0) + 1);
+    const top = [...tally].filter(([c]) => c !== CATCH_ALL).sort((x, y) => y[1] - x[1]).slice(0, TOP_CATEGORIES).map(([c]) => c);
+    if (st.cat && !top.includes(st.cat) && tally.has(st.cat)) top.push(st.cat);          // a category chosen on the map, not in the top list
+    $("cat").innerHTML = '<option value="">All offense types</option>' + top.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+    if (!top.includes(st.cat)) st.cat = "";
     $("cat").value = st.cat; $("fa").checked = st.fa; $("per").value = st.per;
     initMap();
     $("cat").addEventListener("change", () => { st.cat = $("cat").value; render(); });

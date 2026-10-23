@@ -41,14 +41,13 @@
 <div class="stage">
   <section class="mapwrap">
     <div id="map" role="region" aria-label="Hexagon map of offenses"></div>
-    <div class="mapbadge" id="rangeNote" aria-live="polite"></div>
+    <div class="mapbadge" id="rangeNote"></div>
     <div class="maptools">
       <div class="seg" role="group" aria-label="What the colors show">
         <button type="button" data-mode="count" aria-pressed="true">Most offenses</button>
         <button type="button" data-mode="change" aria-pressed="false">Rising or falling</button>
-        <button type="button" data-mode="chronic" aria-pressed="false">Busy month after month</button>
       </div>
-      <div class="legend" id="legend"></div>
+      <div class="legend" aria-live="polite"><div class="legnote" id="legnote"></div><div id="legend"></div></div>
     </div>
     <div class="mapnote" id="mapnote"></div>
   </section>

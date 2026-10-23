@@ -537,7 +537,7 @@
     const heat = mode === "heat";
     document.querySelectorAll(".seg button[data-layer]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.layer === mode));
     const unmapped = filtered.length - pts.length;
-    $("rangeNote").textContent = `${fmtDay(bounds.from)} – ${fmtDay(bounds.to)} · ${filtered.length.toLocaleString()} offenses${unmapped ? ` (${unmapped} not shown on the map)` : ""}`;
+    $("legnote").textContent = $("rangeNote").textContent = `${fmtDay(bounds.from)} – ${fmtDay(bounds.to)} · ${filtered.length.toLocaleString()} offenses${unmapped ? ` (${unmapped} not shown on the map)` : ""}`;
     $("mapnote").textContent = mode === "wards" || mode === "nbhds" ? `${mode === "wards" ? "Wards are" : "Neighborhoods are"} shaded by offenses per 1,000 residents. Busy shopping and work areas can look high because few people live there. Click ${mode === "wards" ? "a ward" : "a neighborhood"} to zoom in.`
       : cityLimited ? "Showing the last 6 months. Longer periods are available when you choose a ward or a neighborhood." : "";
     $("mapnote").hidden = !$("mapnote").textContent;

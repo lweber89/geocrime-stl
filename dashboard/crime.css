@@ -201,3 +201,11 @@ table.hot th button[aria-pressed="true"] { color: var(--ink); }
 .doc table.dict th, .doc table.dict td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
 .doc code { font-size: 13px; }
 @media (max-width: 560px) { .doc ul.plain { columns: 1; } }
+
+/* the period and total sit at the top of the legend (top right) on wide screens, so nothing overlaps the layer buttons;
+   on phones the legend is hidden and the small badge at the bottom of the map is used instead */
+.legnote { font-weight: 600; color: var(--ink); max-width: 240px; margin-bottom: 6px; }
+.legnote:empty { display: none; }
+@media (min-width: 761px) { .mapbadge { display: none; } }
+#legend { display: block; }
+.legnote { display: block; }
