@@ -128,16 +128,21 @@
     const n = monthsIn(from, to);
     const terms = f.q.trim().toUpperCase().split(/\s+/).filter(Boolean);
     const near = (a) => a.lat != null && ((a.lat - center.lat) * 110540) ** 2 + ((a.lon - center.lon) * center.kx) ** 2 <= center.m2;
-    const matches = (a, withWard = true, withArea = true, withNbhd = true) => {
+    const matches = (a, withWard = true, withArea = true, withNbhd = true, withCat = true) => {
       if (withArea && center && !near(a)) return false;
       if (withWard && f.ward && a.ward !== f.ward) return false;
       if (f.hide.includes(a.type)) return false;
-      if (f.cat && a.cat !== f.cat) return false;
+      if (withCat && f.cat && a.cat !== f.cat) return false;
       if (withNbhd && f.nbhd && a.nbhd !== f.nbhd) return false;
       if (f.fa && !a.firearm) return false;
       return !terms.length || terms.every((t) => a.text.includes(t));
     };
     curMatches = matches;
+    // the numbers in the category menu: offenses of each category in the chosen period and area (ignoring the category choice itself)
+    const catCounts = new Map();
+    for (const a of D.records) if (a.date >= from && a.date <= to && matches(a, true, true, true, false)) catCounts.set(a.cat, (catCounts.get(a.cat) || 0) + 1);
+    for (const o of $("cat").options) if (o.value) o.textContent = `${o.value} (${(catCounts.get(o.value) || 0).toLocaleString()})`;
+    $("cat").title = "The number beside each category is how many offenses it has in the period and area you have chosen.";
     filtered = D.records.filter((a) => a.date >= from && a.date <= to && matches(a));
     // counts for the ward and neighborhood maps ignore the ward and neighborhood filters, so every area stays on the map
     wardCounts = new Map(); nbhdCounts = new Map();
@@ -705,7 +710,7 @@
     const counts = new Map();
     D.records.forEach((a) => counts.set(a.cat, (counts.get(a.cat) || 0) + 1));
     $("cat").innerHTML = '<option value="">Any category</option>' + D.types.map((t) =>
-      `<optgroup label="${esc(t)}">${D.cats[t].map((c) => `<option value="${esc(c)}">${esc(c)} (${counts.get(c).toLocaleString()})</option>`).join("")}</optgroup>`).join("");
+      `<optgroup label="${esc(t)}">${D.cats[t].map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}</optgroup>`).join("");
     $("nbhd").innerHTML = '<option value="">Any neighborhood</option>' + D.nbhds.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
 
     const day = (s) => new Date(s + "T12:00").toLocaleDateString("en-US", DATE);
