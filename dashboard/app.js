@@ -3,7 +3,7 @@
 
   const TYPES = ["Person", "Property", "Society", "Other"];   // worst first: drives colour priority on the map
   const PAGE = 100;
-  const DEFAULT_RADIUS = "0.5";
+  const DEFAULT_RADIUS = "0.5", TREND_MONTHS = 24;       // the report chart always shows the latest 24 months
   const CITY_SQ_MILES = 62.11, METERS_PER_MILE = 1609.344;
   const RADIUS_LABEL = { 0.25: "¼ mile", 0.5: "½ mile", 1: "1 mile" };
   const CITY_BOUNDS = [[38.532, -90.32], [38.774, -90.166]];
@@ -21,7 +21,7 @@
   let map, pointLayer, heatLayer, layerChoice = "auto";   // "auto" picks by date span; the buttons override it
   let defaultRange = "all", cityLimited = false, bounds = null, priorInfo = null;
   let wardLayer, outlineLayer, wardCounts = new Map(), wardFeatures = new Map(), nbhdFeatures = new Map(), wardNbhds = new Map();
-  let addrLayer, center = null, curMatches = null;          // center: the searched address and radius, or null
+  let addrLayer, center = null, curMatches = null, pinMode = false;          // center: the searched address and radius, or null
   const incCount = new Map();
 
   // ------------------------------------------------------------ filters
@@ -206,6 +206,7 @@
     // the city limit stays on every view, so the map never looks bare
     if (D.city) L.geoJSON(D.city, { interactive: false, style: { color: css("--outline"), weight: 2.5, opacity: 0.85, fill: false } }).addTo(map);
     pointLayer = L.layerGroup().addTo(map);
+    map.on("click", (e) => { if (pinMode) { setPinMode(false); dropPin(e.latlng.lat, e.latlng.lng); } });
     document.querySelectorAll(".seg button[data-layer]").forEach((b) => b.addEventListener("click", () => {
       layerChoice = b.dataset.layer;
       renderMap();
@@ -241,15 +242,18 @@
   const periodText = () => (monthsIn(bounds.from, bounds.to) === 1 ? monLabel(monKey(bounds.from)) : `${monLabel(monKey(bounds.from))} – ${monLabel(monKey(bounds.to))}`);
 
   function trendSvg(monthly) {
-    const keys = [...monthly.keys()], vals = [...monthly.values()];
-    const W = 320, H = 92, base = 18, top = 6, bw = W / keys.length, max = Math.max(1, ...vals);
+    const keys = [...monthly.keys()].slice(-TREND_MONTHS), vals = keys.map((k) => monthly.get(k));
+    const W = 320, H = 96, base = 20, top = 6, bw = W / keys.length, max = Math.max(1, ...vals);
     const lo = monKey(bounds.from), hi = monKey(bounds.to);
     const bars = keys.map((k, i) => {
       const h = Math.max(vals[i] ? 1.5 : 0, (vals[i] / max) * (H - base - top));
       return `<rect class="bar${k >= lo && k <= hi ? " on" : ""}" x="${(i * bw + 0.5).toFixed(1)}" y="${(H - base - h).toFixed(1)}" width="${(bw - 1).toFixed(1)}" height="${h.toFixed(1)}"><title>${monLabel(k)}: ${vals[i].toLocaleString()} offenses</title></rect>`;
     }).join("");
-    return `<svg class="trend" viewBox="0 0 ${W} ${H}" role="img" aria-label="Offenses per month near this address">${bars}
-      <text x="0" y="${H - 4}" class="ax">${monLabel(keys[0])}</text><text x="${W}" y="${H - 4}" text-anchor="end" class="ax">${monLabel(keys.at(-1))}</text></svg>`;
+    // a year label under each January, so the bars can be read against the calendar
+    const ticks = keys.map((k, i) => (k.endsWith("-01")
+      ? `<line x1="${(i * bw).toFixed(1)}" x2="${(i * bw).toFixed(1)}" y1="${H - base}" y2="${H - base + 4}" class="tick"/><text x="${(i * bw + 2).toFixed(1)}" y="${H - 4}" class="ax">${k.slice(0, 4)}</text>` : "")).join("");
+    return `<svg class="trend" viewBox="0 0 ${W} ${H}" role="img" aria-label="Offenses per month near this address, latest ${keys.length} months">${bars}${ticks}
+      <text x="${W}" y="${H - 4}" text-anchor="end" class="ax">${monLabel(keys.at(-1))}</text></svg>`;
   }
 
   function openReport() {
@@ -267,7 +271,7 @@
 
     const monthly = new Map(D.months.map((x) => [x.m, 0]));       // every month, whatever period is chosen
     for (const a of D.records) if (curMatches(a)) { const m = a.t.slice(0, 7); monthly.set(m, (monthly.get(m) || 0) + 1); }
-    const peak = [...monthly].sort((x, y) => y[1] - x[1])[0];
+    const peak = [...monthly].slice(-TREND_MONTHS).sort((x, y) => y[1] - x[1])[0];
 
     const cityCount = D.records.filter((a) => a.date >= bounds.from && a.date <= bounds.to && curMatches(a, true, false)).length;
     const here = n / (Math.PI * miles * miles), cityDensity = cityCount / CITY_SQ_MILES;
@@ -283,7 +287,7 @@
       <h3>By type</h3>${typeRows}
       <h3>Most common</h3><ol class="rep-top">${top || '<li class="muted">None reported</li>'}</ol>
       <h3>Month by month</h3>${trendSvg(monthly)}
-      <p class="muted small">Offenses per month within ${esc(within)}, all ${D.months.length} months. Darker bars are the period you chose.${peak && peak[1] ? ` Busiest month: ${monLabel(peak[0])} (${peak[1].toLocaleString()}).` : ""}</p>
+      <p class="muted small">Offenses per month within ${esc(within)}, latest ${Math.min(TREND_MONTHS, D.months.length)} months. Darker bars are the period you chose.${peak && peak[1] ? ` Busiest month: ${monLabel(peak[0])} (${peak[1].toLocaleString()}).` : ""}</p>
       <h3>For context</h3>
       <p class="small">About <strong>${fmt(here)}</strong> offenses per square mile here, compared with <strong>${fmt(cityDensity)}</strong> across the whole city in the same period. A circle near the city limit includes land outside the city, which lowers the local figure.</p>
       <p class="muted small">These are reported offenses, not a measure of how safe a place is. Stores, hospitals and other busy places produce many reports. Click a dot on the map for the details.</p>
@@ -305,12 +309,19 @@
     return c;
   }
 
-  // true if the point is inside the City of St. Louis (the real outline, not a box)
-  function pointInCity(lat, lon) {
-    const g = D.city && D.city.geometry;
-    if (!g) return GEO.inCity(lat, lon);
+  function pointInGeom(g, lat, lon) {
     const polys = g.type === "Polygon" ? [g.coordinates] : g.coordinates;
     return polys.some((p) => inRing(p[0], lon, lat) && !p.slice(1).some((h) => inRing(h, lon, lat)));
+  }
+
+  // true if the point is inside the City of St. Louis (the real outline, not a box)
+  function pointInCity(lat, lon) {
+    return D.city && D.city.geometry ? pointInGeom(D.city.geometry, lat, lon) : GEO.inCity(lat, lon);
+  }
+
+  function neighborhoodAt(lat, lon) {
+    for (const ft of nbhdFeatures.values()) if (pointInGeom(ft.geometry, lat, lon)) return ft.properties.name;
+    return null;
   }
 
   function clearAddress() { for (const k of ["pt", "lbl", "address"]) $(k).value = ""; setAddrMsg(""); }
@@ -328,16 +339,60 @@
     }
   }
 
+  const radiusText = () => RADIUS_LABEL[Number($("radius").value)] || $("radius").value + " mile";
+
+  // Make a point (a found address, a dropped pin, or the device's location) the area to report on.
+  function placePoint(lat, lon, label, { text = "", zoom = true, msg = "" } = {}) {
+    $("pt").value = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+    $("lbl").value = label;
+    $("address").value = text;
+    $("ward").value = ""; $("nbhd").value = "";
+    layerChoice = "auto";
+    apply();
+    if (zoom) zoomToScope();
+    setAddrMsg(msg);
+  }
+
+  // A pin placed on the map or dragged to a new spot.
+  function dropPin(lat, lon, { zoom = true } = {}) {
+    if (!pointInCity(lat, lon)) {
+      setAddrMsg("That spot is outside the City of St. Louis. This map only has reports from the city police department.");
+      renderAddress();                                           // put a dragged pin back where it was
+      return;
+    }
+    const nb = neighborhoodAt(lat, lon);
+    placePoint(lat, lon, nb ? `Pin in ${nb}` : "Pin on the map", { zoom, msg: `Showing reports within ${radiusText()} of the pin. Drag the pin to move it.` });
+  }
+
+  function setPinMode(on) {
+    pinMode = on;
+    $("pinBtn").setAttribute("aria-pressed", String(on));
+    $("pinBtn").textContent = on ? "Cancel pin" : "Drop a pin";
+    $("map").classList.toggle("pinning", on);
+    if (on) setAddrMsg("Click the map where you want the center. Press Esc to cancel.");
+    else if (/Click the map/.test($("addrMsg").textContent)) setAddrMsg("");
+  }
+
+  function useMyLocation() {
+    if (!navigator.geolocation) { setAddrMsg("This browser cannot share your location. Type an address or drop a pin instead."); return; }
+    setAddrMsg("Finding your location… your browser may ask for permission.");
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const { latitude: lat, longitude: lon, accuracy } = pos.coords;
+      if (!pointInCity(lat, lon)) { setAddrMsg("Your location is outside the City of St. Louis. This map only has reports from the city police department."); return; }
+      const nb = neighborhoodAt(lat, lon);
+      placePoint(lat, lon, nb ? `Your location, in ${nb}` : "Your location", {
+        msg: `Showing reports within ${radiusText()} of your location.${accuracy > 300 ? ` Your device reported about ${Math.round(accuracy)} meters of accuracy, so drag the pin if it is off.` : " Drag the pin to move it."}`,
+      });
+    }, (err) => {
+      setAddrMsg(err && err.code === 1
+        ? "Location sharing was blocked. You can allow it in your browser's site settings, or type an address or drop a pin instead."
+        : "We could not get your location. Type an address or drop a pin instead.");
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+  }
+
   async function showAddressResult(r) {
     if (r.status === "ok") {
-      $("pt").value = `${r.lat.toFixed(5)},${r.lon.toFixed(5)}`;
-      $("lbl").value = r.label;
-      $("address").value = r.label;
-      $("ward").value = ""; $("nbhd").value = "";
-      layerChoice = "auto";
-      apply();
-      zoomToScope();
-      setAddrMsg(`Showing reports within ${RADIUS_LABEL[Number($("radius").value)]} of ${r.label}. Address found by ${r.source}.`);
+      placePoint(r.lat, r.lon, r.label, { text: r.label, msg: `Showing reports within ${radiusText()} of ${r.label}. Address found by ${r.source}. Drag the pin to adjust.` });
     } else if (r.status === "outside") {
       setAddrMsg("That address is outside the City of St. Louis. This map only has reports from the city police department.");
     } else if (r.status === "error") {
@@ -433,7 +488,10 @@
     if (!center) return;
     addrLayer = L.layerGroup([
       L.circle([center.lat, center.lon], { radius: Math.sqrt(center.m2), color: css("--outline"), weight: 2.5, fillColor: css("--outline"), fillOpacity: 0.06, interactive: false }),
-      L.circleMarker([center.lat, center.lon], { radius: 7, color: css("--surface"), weight: 3, fillColor: css("--ink"), fillOpacity: 1, interactive: false }),
+      L.marker([center.lat, center.lon], {
+        draggable: true, keyboard: false, title: "Drag to move the location",
+        icon: L.divIcon({ className: "pin", html: "<span></span>", iconSize: [22, 22], iconAnchor: [11, 11] }),
+      }).on("dragend", (e) => { const p = e.target.getLatLng(); dropPin(p.lat, p.lng, { zoom: false }); }),
     ]).addTo(map);
   }
 
@@ -476,7 +534,7 @@
       L.circleMarker([a.lat, a.lon], {
         radius: 5 + Math.min(10, 2.2 * Math.sqrt(g.list.length - 1)), color: surface, weight: 2,
         fillColor: typeColor(g.worst), fillOpacity: 0.9,
-      }).on("click", () => openPanel(g.list)).addTo(pointLayer);
+      }).on("click", () => { if (!pinMode) openPanel(g.list); }).addTo(pointLayer);
     }
   }
 
@@ -593,8 +651,11 @@
     $("addrForm").addEventListener("submit", searchAddress);
     $("addrClear").addEventListener("click", () => { clearAddress(); apply(); zoomToScope(); });
     $("reportBtn").addEventListener("click", openReport);
+    $("pinBtn").addEventListener("click", () => setPinMode(!pinMode));
+    $("locBtn").addEventListener("click", useMyLocation);
+    if (!navigator.geolocation) $("locBtn").hidden = true;
     $("pClose").addEventListener("click", closePanel);
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePanel(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (pinMode) setPinMode(false); closePanel(); } });
     $("panel").addEventListener("click", (e) => {
       const inc = e.target.closest("a.inc");
       if (inc) { e.preventDefault(); showIncident(inc.dataset.inc, inc.dataset.month); return; }

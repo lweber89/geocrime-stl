@@ -95,3 +95,10 @@
 .trend .bar { fill: var(--axis); opacity: .55; }
 .trend .bar.on { fill: var(--accent); opacity: 1; }
 .trend .ax { font-size: 9px; fill: var(--ink-2); }
+.trend .tick { stroke: var(--axis); stroke-width: 1; }
+
+/* the draggable pin, and the crosshair while placing one */
+.pin span { display: block; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); border: 3px solid var(--surface);
+            box-shadow: 0 0 0 1px var(--ink), 0 2px 6px rgba(0,0,0,.4); cursor: grab; }
+.leaflet-container.pinning, .leaflet-container.pinning .leaflet-interactive { cursor: crosshair; }
+.btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
