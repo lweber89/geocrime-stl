@@ -49,7 +49,7 @@ plugins:
           execute: True
           allow_errors: false
           ignore: ["conf.py"]
-          execute_ignore: ["*ignore.ipynb"]
+          execute_ignore: ["*ignore.ipynb", "*02_hotspots.ipynb"]   # an interactive leafmap widget: shown as code; run it locally to see the map
     - mkdocstrings:
         handlers:
             python:
