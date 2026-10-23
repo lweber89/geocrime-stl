@@ -14,13 +14,16 @@ It contains **no data**. It reads the feed in `../data/web` (see `../data/README
 |---|---|
 | `index.html`, `app.js` | The crime map: filters, map, table |
 | `data.js` | Loads the feed and gives every page the same clean records (`window.CRIME`) |
+| `style.css` | Base layout and styles, adapted from the crash-map project (see Credits) |
 | `crime.css` | Colours (offense-type palette) and the few crime-specific rules |
 | `favicon.svg` | Site icon |
 
+## Credits
+
+This dashboard started from a crash-map dashboard by Reddit user **u/autosoap**, who gave permission
+to reuse and adapt it. The layout and base stylesheet come from that project. Credit wording will be
+updated once the author says how he would like to be credited.
+
 ## Not included yet
 
-- **`style.css`.** `index.html` loads it before `crime.css`, which only overrides parts of it. It is
-  the base stylesheet from the original crash-map project this dashboard started from, so it is
-  deliberately not committed here until that project's licence has been checked and credited.
-  Until it is added the page will load, but without its base layout.
 - `hotspots.html` and `charts.html`, which the page navigation links to, are still to be written.
