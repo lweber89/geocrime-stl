@@ -45,3 +45,12 @@ tempCodeRunnerFile.py
 
 # Exports
 /test_exports/*
+
+# ==========================================
+# Generated data (see data/README.md)
+# ==========================================
+# data/web (the dashboard feed) and data/processed (the master dataset) are committed.
+/data/raw/
+/data/processed/monthly/
+/data/web.tmp/
+/data/processed/profile_output.txt

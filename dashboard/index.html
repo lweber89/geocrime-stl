@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>St. Louis Crime Map</title>
+<meta name="description" content="Searchable map of reported offenses in St. Louis: filter by date, offense category, neighborhood and more.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="crime.css">
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>St. Louis Crime Map</h1>
+    <p class="sub" id="sub">Loading…</p>
+  </div>
+  <div class="top-actions">
+    <nav class="pagenav" aria-label="Pages"><a href="./" aria-current="page">Crime map</a><a href="hotspots.html">Hotspots</a><a href="charts.html">Charts</a></nav>
+  </div>
+</header>
+
+<aside class="notice" role="note">
+  <strong>These are reported offenses, not a measure of how safe a place is.</strong>
+  One incident can include several offenses, and offenses against people are counted once per victim.
+  Locations are block-level addresses, and places with security staff or routine reporting, such as stores
+  and hospitals, appear more often. Times are often rounded to the hour as reported.
+</aside>
+
+<section class="filters" aria-label="Filters">
+  <input type="search" id="q" placeholder="Search address, offense, incident #" aria-label="Search">
+  <select id="range" aria-label="Date range">
+    <option value="7">Last 7 days</option>
+    <option value="30" selected>Last 30 days</option>
+    <option value="90">Last 90 days</option>
+    <option value="365">Last 12 months</option>
+    <option value="all">All dates</option>
+    <option value="custom">Custom…</option>
+  </select>
+  <span id="customRange" hidden>
+    <input type="date" id="from" aria-label="From date"> – <input type="date" id="to" aria-label="To date">
+  </span>
+  <select id="cat" aria-label="Offense category"><option value="">Any category</option></select>
+  <select id="nbhd" aria-label="Neighborhood"><option value="">Any neighborhood</option></select>
+  <label class="chip" title="Offenses flagged as involving a firearm"><input type="checkbox" id="fa"> Firearm</label>
+  <span class="chipgroup" role="group" aria-label="Offense types">
+    <label class="chip" title="Crimes against persons: assault, robbery, homicide, sex offenses"><input type="checkbox" id="t-Person" checked><i class="dot" style="background:var(--type-person)"></i> Person</label>
+    <label class="chip" title="Crimes against property: theft, burglary, vandalism"><input type="checkbox" id="t-Property" checked><i class="dot" style="background:var(--type-property)"></i> Property</label>
+    <label class="chip" title="Crimes against society: weapons, drugs, trespass, disorderly conduct"><input type="checkbox" id="t-Society" checked><i class="dot" style="background:var(--type-society)"></i> Society</label>
+    <label class="chip" title="NIBRS 'All Other Offenses' catch-all"><input type="checkbox" id="t-Other" checked><i class="dot" style="background:var(--type-other)"></i> Other</label>
+  </span>
+  <button class="btn ghost" id="reset" type="button">Reset</button>
+</section>
+
+<section class="tiles" id="tiles" aria-live="polite"></section>
+
+<section class="mapwrap">
+  <div id="map" role="region" aria-label="Offense map"></div>
+  <div class="maptools">
+    <div class="seg" role="group" aria-label="Map layer">
+      <button type="button" data-layer="points" aria-pressed="true">Locations</button>
+      <button type="button" data-layer="heat" aria-pressed="false">Heat</button>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="mapnote" id="mapnote"></div>
+</section>
+
+<section class="tablewrap">
+  <div class="tablehead">
+    <h2 id="count">Offenses</h2>
+    <div class="pager"><button class="btn ghost" id="prev" type="button">‹ Prev</button><span id="page"></span><button class="btn ghost" id="next" type="button">Next ›</button></div>
+  </div>
+  <div class="scroll">
+  <table id="tbl">
+    <thead><tr>
+      <th data-sort="t" aria-sort="descending">When</th>
+      <th data-sort="loc">Location</th>
+      <th data-sort="nbhd">Neighborhood</th>
+      <th data-sort="cat">Offense</th>
+      <th>Flags</th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  <p>Source: St. Louis Metropolitan Police Department (SLMPD) crime data as posted by the City of St. Louis,
+  which publishes each month's data around the 5th of the following month. An "offense" is one row in that data;
+  an "incident" is one police report, which can contain several offenses. Offenses are grouped by the NIBRS
+  "crimes against" classification. Locations are the addresses in the data, usually block-level, and a few
+  records without a usable location are left off the map. Neighborhoods come from the City's data.</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
