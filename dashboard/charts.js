@@ -342,6 +342,10 @@
     $("cap-monthly").textContent = `By type of offense, ${monLabel(D.months.slice(-pb.n)[0].m)} – ${monLabel(D.months.at(-1).m)} (follows the period menu).`;
     $("periodText").textContent = `${monLabel(monKey(pb.from))} – ${monLabel(monKey(pb.to))}`;
     $("addrChip").hidden = !area.pt;
+    for (const id of ["ward", "nbhd"]) {                 // locked while a spot is chosen; "Clear" brings them back
+      $(id).disabled = !!area.pt;
+      $(id).title = area.pt ? "Clear the address to choose a ward or neighborhood." : "";
+    }
     drawTiles(inPeriod, pb);
     drawMonthly(); drawYoY(); drawCategories(inPeriod); drawTiming(inPeriod);
     $("empty").hidden = scoped.length > 0;
