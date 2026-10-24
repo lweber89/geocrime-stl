@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How the numbers are built
+    url: https://lweber89.github.io/geocrime-stl/dashboard/methodology.html
+    about: Counts, masking of sensitive offenses, hotspots and time-of-day are explained here.

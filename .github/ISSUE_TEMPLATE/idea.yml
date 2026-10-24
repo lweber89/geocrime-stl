@@ -1,0 +1,26 @@
+name: Idea or polish
+description: A suggestion, a wording fix, a design tweak, or an accessibility problem.
+labels: ["idea", "needs-triage"]
+body:
+  - type: dropdown
+    id: page
+    attributes:
+      label: Which page?
+      options: [Crime map, Charts, Hotspots, Methodology, Docs site, Whole site, Not sure]
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind?
+      options: [New feature, Wording or labels, Design or layout, Accessibility (keyboard, screen reader, contrast), Speed, Other]
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you change, and why?
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Link to the view (optional)

@@ -1,0 +1,46 @@
+name: Something is broken or looks wrong
+description: A page does not work, looks off, or behaves unexpectedly.
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping. The link in your browser's address bar holds the whole view (offense, period, ward, pin, tab), so pasting it below is the most useful thing you can do.
+        Please do not include personal information about anyone.
+  - type: dropdown
+    id: page
+    attributes:
+      label: Which page?
+      options: [Crime map, Charts, Hotspots, Methodology, Docs site, Python package or data pipeline, Not sure]
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Link to the view (copy from the address bar)
+      placeholder: https://lweber89.github.io/geocrime-stl/dashboard/#...
+  - type: textarea
+    id: saw
+    attributes:
+      label: What did you see?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect instead?
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      options: [Phone, Tablet, Laptop or desktop]
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version (if you know)
+      placeholder: Safari on iPhone, Chrome 130, ...
+  - type: textarea
+    id: shot
+    attributes:
+      label: Screenshot (optional)
+      description: Drag an image into this box.
