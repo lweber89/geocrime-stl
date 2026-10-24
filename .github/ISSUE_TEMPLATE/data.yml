@@ -1,0 +1,33 @@
+name: A number or data point looks wrong
+description: A count, rate, date, location or category does not match what you know or expect.
+labels: ["data", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The dashboard uses the City's published SLMPD files, cleaned as described on the [Methodology page](https://lweber89.github.io/geocrime-stl/dashboard/methodology.html).
+        Some oddities come from the source data, and those are still worth reporting. Please do not include personal information about anyone.
+  - type: dropdown
+    id: page
+    attributes:
+      label: Which page?
+      options: [Crime map, Charts, Hotspots, Not sure]
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Link to the view (copy from the address bar)
+      placeholder: https://lweber89.github.io/geocrime-stl/dashboard/#...
+  - type: textarea
+    id: what
+    attributes:
+      label: What looks wrong?
+      description: Include the number you see and the number you expected, if you have one.
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: How do you know?
+      description: Another source, local knowledge, or a pattern that seems off. "It just seems low" is fine too.
