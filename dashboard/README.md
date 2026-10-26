@@ -31,8 +31,7 @@ It can also be started by hand from the Actions tab.
 ## Credits
 
 This dashboard started from a crash-map dashboard by Reddit user **u/autosoap**, who gave permission
-to reuse and adapt it. The layout and base stylesheet come from that project. Credit wording will be
-updated once the author says how he would like to be credited.
+to reuse and adapt it. The layout and base stylesheet come from that project.
 
 ## Pages
 

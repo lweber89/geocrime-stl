@@ -26,6 +26,8 @@ A Python utility for cleaning and standardizing St. Louis Metropolitan Police De
     gc.generate_monthly_metrics(data_pkg)
     gc.plot_monthly_maps(data_pkg)
 
+Data is available from January 2024. `pip install` gives you the library; the scripts that build the full history (`download_historical_data.py`) and add the latest month (`run_pipeline.py`), the master dataset and the dashboard source come with a clone of this repository. See the [Usage](https://lweber89.github.io/geocrime-stl/usage/) and [Installation](https://lweber89.github.io/geocrime-stl/installation/) pages.
+
 ---
 
 ### ⚠️ Important Note & Disclaimer
