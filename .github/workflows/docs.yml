@@ -50,6 +50,8 @@ jobs:
                   mkdir -p site/dashboard
                   cp -r dashboard/. site/dashboard/
                   rm -f site/dashboard/README.md
+                  # a docs page named dashboard.md would collide with the map's index.html; fail loudly if that ever happens
+                  grep -qi leaflet site/dashboard/index.html || { echo "site/dashboard/index.html is not the crime map"; exit 1; }
                   python -m geocrime_stl.utils.web_export --out site/dashboard/data
                   ls -la site/dashboard/data | head -n 8
                   du -sh site
