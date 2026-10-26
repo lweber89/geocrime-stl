@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The historical download now starts in **January 2024** (it began in May 2024). SLMPD published January-April 2024 under one-off file names, so their exact URLs are listed in `SPECIAL_URLS` in `config.py`, and `construct_url` checks that list first.
+- Dates in the January-April 2024 files are ISO (`2024-01-05`) while later files use `m/d/YYYY`; `parse_incident_dates` reads both.
+
 ## 0.2.0
 
 **New: the public crime dashboard** at <https://lweber89.github.io/geocrime-stl/dashboard/> (runs entirely in the browser; no server).

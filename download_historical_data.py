@@ -31,8 +31,8 @@ def run_historical_backfill() -> None:
 
     and outputs the master GeoParquet/GeoJSON files plus the dashboard's monthly JSON feed.
     """
-    # Set the fixed historical starting point (May 2024)
-    start_date = datetime(2024, 5, 1)  # noqa: DTZ001
+    # Set the fixed historical starting point (January 2024, the earliest month in the current data layout)
+    start_date = datetime(2024, 1, 1)  # noqa: DTZ001
     
     # Dynamic End Date: Calculate the most recently completed month relative to today
     today = datetime.now()  # noqa: DTZ005

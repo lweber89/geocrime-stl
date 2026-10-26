@@ -71,6 +71,15 @@ STL_MAP_CONFIG = MapConfig(
 # --- SLMPD ETL Settings ---
 BASE_URL = "https://slmpd.org/wp-content/uploads"
 
+# Months whose files do not follow the normal <upload folder>/<MonthYYYY>.csv naming. SLMPD published
+# January-April 2024 before settling on a layout, so their exact URLs are listed here. Keys are (year, month).
+SPECIAL_URLS = {
+    (2024, 1): f"{BASE_URL}/2024/03/January2024.csv",
+    (2024, 2): f"{BASE_URL}/2024/03/February2024.csv",
+    (2024, 3): f"{BASE_URL}/2024/05/Downloadable-NIBRS-Crime-File-March-2024-CSV.csv",
+    (2024, 4): f"{BASE_URL}/2024/05/Downloadable-NIBRS-Crime-File-April-2024-CSV.csv",
+}
+
 COLUMN_RENAMES = {
     "Latitude": "lat",
     "Longitude": "lon",
