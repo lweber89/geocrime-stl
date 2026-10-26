@@ -87,6 +87,7 @@ KNOWN_CATEGORIES = frozenset((
     'All Other Offenses',
     'Animal Cruelty',
     'Arson',
+    'Assisting or Promoting Prostitution',
     'Betting/Wagering',
     'Burglary/Breaking and Entering',
     'Counterfeiting/Forgery',
