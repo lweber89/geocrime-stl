@@ -7,7 +7,7 @@ from datetime import datetime
 
 import requests
 
-from geocrime_stl.config import BASE_URL
+from geocrime_stl.config import BASE_URL, SPECIAL_URLS
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +72,11 @@ def construct_url(
                     dt = datetime.strptime(clean_month.capitalize(), "%b")
                 month_int = dt.month
                 month_str = dt.strftime("%B")
+
+        # A few early months were published under one-off names; look those up first
+        special = SPECIAL_URLS.get((year_int, month_int))
+        if special:
+            return special, month_int, year_int
 
         # Handle the city's specific upload folder schedule offset
         folder_month_int = (month_int % 12) + 1
