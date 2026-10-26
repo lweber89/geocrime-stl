@@ -55,6 +55,21 @@ def raw_csv_to_dataframe(csv_bytes: bytes, **kwargs) -> pd.DataFrame:
         raise ValueError(f"Failed to decode raw byte stream to DataFrame: {e}") from e
 
 
+def parse_incident_dates(values: pd.Series) -> pd.Series:
+    """Parse the ``IncidentDate`` column, which SLMPD has published in two layouts.
+
+    Most monthly files use ``m/d/YYYY`` (``5/1/2024``). The January-April 2024 files use ISO dates
+    (``2024-01-05``). The ``m/d/YYYY`` layout is tried first, so months that already worked parse
+    exactly as before; anything it cannot read is then tried as ISO. Values that match neither become NaT.
+    """
+    parsed = pd.to_datetime(values, format="%m/%d/%Y", exact=False, errors="coerce")
+    unread = parsed.isna() & values.notna()
+    if unread.any():
+        parsed = parsed.copy()
+        parsed[unread] = pd.to_datetime(values[unread], format="ISO8601", errors="coerce")
+    return parsed
+
+
 def clean_and_spatial_clip(
     df: pd.DataFrame, month: int, year: int
 ) -> CrimeDataPackage:
@@ -81,9 +96,7 @@ def clean_and_spatial_clip(
         return CrimeDataPackage(df=df, month=month, year=year)
 
     # Date Alignments & Conversions
-    df["IncidentDate"] = pd.to_datetime(
-        df["IncidentDate"], format="%m/%d/%Y", exact=False, errors="coerce"
-    )
+    df["IncidentDate"] = parse_incident_dates(df["IncidentDate"])
 
     # Filter by date alignment (keeps only requested month/year observations)
     df = df[(df["IncidentDate"].dt.month == month) & (df["IncidentDate"].dt.year == year)].copy()
