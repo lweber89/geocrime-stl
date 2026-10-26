@@ -16,7 +16,7 @@ Not by default. The pipeline downloads, cleans and discards them. If you want a 
 Usually the month has not been published yet (SLMPD typically posts the previous month in the first half of the following month). It can also mean SLMPD changed its file layout. [Open an issue](https://github.com/lweber89/geocrime-stl/issues) with the month and the message you saw.
 
 ## Is the dashboard the same data?
-Yes. It is built from the same cleaned monthly data, with one addition: sensitive offenses are counted but shown without an address or dot. See the [dashboard guide](dashboard.md).
+Yes. It is built from the same cleaned monthly data, with one addition: sensitive offenses are counted but shown without an address or dot. See the [dashboard guide](about-dashboard.md).
 
 ## Can I contribute?
 Not code, for now (see [Contributing](contributing.md)), but bug reports and ideas are welcome as issues.
