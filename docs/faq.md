@@ -18,5 +18,8 @@ Usually the month has not been published yet (SLMPD typically posts the previous
 ## Is the Explorer the same data?
 Yes. It is built from the same cleaned monthly data, with one addition: sensitive offenses are counted but shown without an address or dot. See the [Explorer guide](about-explorer.md).
 
+## Why a circle around a pin, and not a walking-time area?
+The Explorer is meant for looking at what was reported near a place, with controls anyone can follow: everything within a chosen distance. A walking-time area (an isochrone) was suggested and considered. It would need a street network and a routing calculation, and it would make the result look more precise than the data supports. Offenses are block-level addresses reported by different people at different rates, so they cannot say how exposed someone is on a particular walk. That moves from exploring the data to analyzing it, so the Explorer keeps simple distance rings. If you need walking-time analysis, the cleaned data is available for GIS tools through the package.
+
 ## Can I contribute?
 Not code, for now (see [Contributing](contributing.md)), but bug reports and ideas are welcome as issues.
