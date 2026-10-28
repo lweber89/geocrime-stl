@@ -54,10 +54,10 @@ To see a step-by-step walkthrough of the entire ETL process, check out the inter
 
 👉 **[View the Demo Notebook](https://github.com/lweber89/geocrime-stl/blob/main/docs/examples/01_etl_demo.ipynb)**
 
-## 🌐 Crime Dashboard
-To explore the St. Louis crime data, visit the dashboard below. It is built from the same monthly data this package processes, with a map you can search by address, ward or neighborhood, trend charts, hotspots, and a page explaining the methodology:
+## 🌐 Crime Data Explorer
+To explore the St. Louis crime data, visit the Explorer below. It is built from the same monthly data this package processes, with a map you can search by address, ward or neighborhood, trend charts, hotspots, and a page explaining the methodology:
 
-👉 **[St. Louis Crime Dashboard](https://lweber89.github.io/geocrime-stl/dashboard/)**
+👉 **[St. Louis Crime Data Explorer](https://lweber89.github.io/geocrime-stl/dashboard/)**
 
 ## 🤝 Contributing & Pull Requests
 Thank you for your interest in the project!
@@ -75,5 +75,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 👉 **[PyPI Home](https://pypi.org/project/geocrime-stl/)**
 
-👉 **[St. Louis Crime Dashboard](https://lweber89.github.io/geocrime-stl/dashboard/)**
+👉 **[St. Louis Crime Data Explorer](https://lweber89.github.io/geocrime-stl/dashboard/)**
 

@@ -1,6 +1,6 @@
-# Crime dashboard
+# St. Louis Crime Data Explorer
 
-The [St. Louis Crime Dashboard](https://lweber89.github.io/geocrime-stl/dashboard/) is a free, public website built from the same monthly data this package processes. It runs entirely in your browser: there is no server of its own, no account, and no analytics or tracking scripts. Two things do reach outside services: the map loads its tiles from OpenStreetMap and its code libraries from public CDNs (as any web map does), and an address you search for is sent to public geocoding services (the City of St. Louis, OpenStreetMap or the U.S. Census Bureau) to find its location. Dropping a pin sends nothing.
+The [St. Louis Crime Data Explorer](https://lweber89.github.io/geocrime-stl/dashboard/) is a free, public website built from the same monthly data this package processes. It runs entirely in your browser: there is no server of its own, no account, and no analytics or tracking scripts. Two things do reach outside services: the map loads its tiles from OpenStreetMap and its code libraries from public CDNs (as any web map does), and an address you search for is sent to public geocoding services (the City of St. Louis, OpenStreetMap or the U.S. Census Bureau) to find its location. Dropping a pin sends nothing.
 
 It covers reported offenses inside the City of St. Louis from **January 2024** and is updated each month once SLMPD posts the previous month.
 
@@ -24,11 +24,11 @@ It covers reported offenses inside the City of St. Louis from **January 2024** a
 
 ## How it is built and updated
 
-The dashboard is plain HTML, CSS, JavaScript and Leaflet (a map library), hosted free on GitHub Pages as part of this documentation site. A GitHub Action runs daily from the 10th to the 25th of each month, downloads the new month, updates the master dataset and redeploys; if the police have not posted by the 25th it fails so the owner is told. See `dashboard/README.md` and `data/README.md` in the repository for the details.
+The Explorer is plain HTML, CSS, JavaScript and Leaflet (a map library), hosted free on GitHub Pages as part of this documentation site. A GitHub Action runs daily from the 10th to the 25th of each month, downloads the new month, updates the master dataset and redeploys; if the police have not posted by the 25th it fails so the owner is told. See `dashboard/README.md` and `data/README.md` in the repository for the details.
 
 ## Credits
 
-The dashboard started from a crash-map project by Reddit user **u/autosoap**, who gave permission to reuse and adapt it. Basemap tiles are from OpenStreetMap contributors.
+The Explorer started from a crash-map project by Reddit user **u/autosoap**, who gave permission to reuse and adapt it. Basemap tiles are from OpenStreetMap contributors.
 
 ## Feedback
 

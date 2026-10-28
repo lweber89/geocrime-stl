@@ -10,7 +10,7 @@ This is a personal project I maintain to learn geospatial data engineering with 
 - **A number or data point looks wrong**: a count, date, location or category.
 - **Idea or polish**: a feature, wording, design or accessibility suggestion.
 
-The most useful thing you can add is the link from your browser's address bar. The dashboard keeps its whole view (offense, period, ward, pin, tab) in the link, so I can see exactly what you saw. Please do not include personal information about anyone.
+The most useful thing you can add is the link from your browser's address bar. The Explorer keeps its whole view (offense, period, ward, pin, tab) in the link, so I can see exactly what you saw. Please do not include personal information about anyone.
 
 ## For people running a fork
 
