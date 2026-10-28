@@ -211,3 +211,7 @@ table.hot th button[aria-pressed="true"] { color: var(--ink); }
 .legnote { display: block; }
 
 .rep-where { margin: 6px 0 0; }
+
+/* the site name, shown above each page's own heading */
+.brand { display: block; margin: 0 0 2px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); text-decoration: none; }
+.brand:hover, .brand:focus-visible { color: var(--ink); text-decoration: underline; }
