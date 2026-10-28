@@ -47,7 +47,7 @@ Files are named like `stl_crime_data_04_2026.csv`. Each function returns `True` 
 
 `run_pipeline.py` always takes the previous calendar month. For a specific month, call it from Python: `from run_pipeline import run_monthly_etl; run_monthly_etl(month=9, year=2026)`.
 
-These write the master dataset to `data/processed/slmpd_crime_data.parquet` (GeoParquet) and a GeoJSON copy for GIS users. Rebuild only the dashboard's data feed from the master with:
+These write the master dataset to `data/processed/slmpd_crime_data.parquet` (GeoParquet) and a GeoJSON copy for GIS users. Rebuild only the Explorer's data feed from the master with:
 
     python -m geocrime_stl.utils.web_export
 

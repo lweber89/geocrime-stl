@@ -75,8 +75,8 @@ markdown_extensions:
 
 nav:
     - Home: index.md
-    - Crime Dashboard: https://lweber89.github.io/geocrime-stl/dashboard/
-    - About the Dashboard: about-dashboard.md
+    - Crime Data Explorer: https://lweber89.github.io/geocrime-stl/dashboard/
+    - About the Explorer: about-explorer.md
     - Installation: installation.md
     - Usage: usage.md
     - Contributing: contributing.md

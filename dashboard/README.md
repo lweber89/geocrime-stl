@@ -1,6 +1,6 @@
 # dashboard/
 
-The public website: a static, client-side map and charts (plain HTML, CSS, JavaScript and Leaflet).
+The public website, the **St. Louis Crime Data Explorer**: a static, client-side map and charts (plain HTML, CSS, JavaScript and Leaflet).
 It contains **no data**. It reads the feed in `../data/web` (see `../data/README.md`).
 
 ## Run it locally
@@ -30,7 +30,7 @@ It can also be started by hand from the Actions tab.
 
 ## Credits
 
-This dashboard started from a crash-map dashboard by Reddit user **u/autosoap**, who gave permission
+This site started from a crash-map dashboard by Reddit user **u/autosoap**, who gave permission
 to reuse and adapt it. The layout and base stylesheet come from that project.
 
 ## Pages

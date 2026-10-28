@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        The dashboard uses the City's published SLMPD files, cleaned as described on the [Methodology page](https://lweber89.github.io/geocrime-stl/dashboard/methodology.html).
+        The Explorer uses the City's published SLMPD files, cleaned as described on the [Methodology page](https://lweber89.github.io/geocrime-stl/dashboard/methodology.html).
         Some oddities come from the source data, and those are still worth reporting. Please do not include personal information about anyone.
   - type: dropdown
     id: page
