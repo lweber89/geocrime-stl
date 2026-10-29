@@ -6,7 +6,7 @@ body:
     id: page
     attributes:
       label: Which page?
-      options: [Crime map, Charts, Hotspots, Methodology, Docs site, Whole site, Not sure]
+      options: [Crime map, Charts, Hotspots, Methodology, Docs site, Python package or data pipeline, Whole site, Not sure]
     validations:
       required: true
   - type: dropdown
