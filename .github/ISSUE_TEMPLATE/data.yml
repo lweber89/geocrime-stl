@@ -11,7 +11,7 @@ body:
     id: page
     attributes:
       label: Which page?
-      options: [Crime map, Charts, Hotspots, Not sure]
+      options: [Crime map, Charts, Hotspots, Python package or data pipeline, Not sure]
     validations:
       required: true
   - type: input
