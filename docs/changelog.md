@@ -2,11 +2,16 @@
 
 ## Unreleased
 
-- Explorer: the distance around an address or pin is now a slider from ⅛ to 1 mile in steps of an eighth of a mile (the ¼, ½ and 1 mile quick picks remain), and dragging the pin re-centers and re-fits the map around the new spot.
-- The public site is now named the **St. Louis Crime Data Explorer** (the address is unchanged).
+**Package (ships in the next release)**
+
 - The historical download now starts in **January 2024** (it began in May 2024). SLMPD published January-April 2024 under one-off file names, so their exact URLs are listed in `SPECIAL_URLS` in `config.py`, and `construct_url` checks that list first.
 - Dates in the January-April 2024 files are ISO (`2024-01-05`) while later files use `m/d/YYYY`; `parse_incident_dates` reads both.
-- Explorer: new site icon (a white shield with a star on royal blue).
+
+**Explorer (website only; already live, not part of the pip package)**
+
+- The public site is now named the **St. Louis Crime Data Explorer** (the address is unchanged).
+- The distance around an address or pin is now a slider from ⅛ to 1 mile in steps of an eighth of a mile (the ¼, ½ and 1 mile quick picks remain), and dragging the pin re-centers and re-fits the map around the new spot.
+- New site icon (a white shield with a star on royal blue).
 
 ## 0.2.0
 
