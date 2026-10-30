@@ -261,7 +261,7 @@
   async function main() {
     D = await CRIME.load();
     D.records.forEach((a) => { a.m = a.t.slice(0, 7); });          // month key, used for all the counting
-    $("sub").textContent = `Reported offenses, ${CRIME.span(D.months)} · Updated monthly`;
+    $("sub").textContent = `${CRIME.span(D.months)} · Updated monthly.`;
     readState();
     // "All" plus the most common categories (the catch-all is counted in "All" but not listed on its own)
     const tally = new Map();

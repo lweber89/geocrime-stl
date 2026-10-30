@@ -14,18 +14,12 @@
   <div>
     <a class="brand" href="./">St. Louis Crime Data Explorer</a>
     <h1>St. Louis Crime Charts</h1>
-    <p class="sub" id="sub">Loading…</p>
+    <p class="sub"><span id="sub">Loading…</span> <span class="caveat">These are reported offenses, not a measure of how safe a place is.</span></p>
   </div>
   <div class="top-actions">
     <nav class="pagenav" aria-label="Pages"><a href="./" data-nav="map">Crime map</a><a href="hotspots.html">Hotspots</a><a href="charts.html" aria-current="page">Charts</a><a href="methodology.html">Methodology</a></nav>
   </div>
 </header>
-
-<details class="notice">
-  <summary><strong>These are reported offenses, not a measure of how safe a place is.</strong> <span class="muted">More</span></summary>
-  One incident can include several offenses. Locations are block-level addresses, and places with security staff or routine
-  reporting, such as stores and hospitals, appear more often. The most recent month may still be filling in.
-</details>
 
 <section class="filters" aria-label="Choose what the charts show">
   <select id="ward" aria-label="Ward"><option value="">Any ward</option></select>

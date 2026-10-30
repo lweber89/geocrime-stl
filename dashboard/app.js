@@ -761,7 +761,7 @@
       `<optgroup label="${esc(t)}">${D.cats[t].map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}</optgroup>`).join("");
     $("nbhd").innerHTML = '<option value="">Any neighborhood</option>' + D.nbhds.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
 
-    $("sub").textContent = `Reported offenses, ${CRIME.span(D.months)} · Updated monthly`;
+    $("sub").textContent = `${CRIME.span(D.months)} · Updated monthly.`;
 
     if (D.wards) {
       D.wards.features.forEach((ft) => wardFeatures.set(String(ft.properties.ward), ft));

@@ -42,8 +42,6 @@
 .tile .v.sm { font-size: 15px; line-height: 1.3; padding: 4px 0; font-weight: 600; }
 
 /* ---- full-height map with a details panel beside it ---- */
-.notice summary { cursor: pointer; }
-.notice summary::-webkit-details-marker { display: none; }
 .stage { display: flex; gap: 10px; max-width: 1400px; margin: 0 auto; padding: 0 16px; position: relative;
          height: max(460px, calc(100svh - 270px)); }
 .stage .mapwrap { flex: 1; min-width: 0; height: 100%; }

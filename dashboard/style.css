@@ -62,18 +62,12 @@ a { color: var(--accent); }
 h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
 h2 { font-size: 15px; margin: 0; }
 .sub { margin: 2px 0 0; color: var(--ink-2); }
+.sub .caveat { color: var(--ink); }
 
 .top, .filters, .tiles, .maprow, body > .mapwrap, .charts, .tablewrap, footer { max-width: 1400px; margin: 0 auto; padding: 0 16px; }
 body > .mapwrap .maptools { right: 26px; }
 .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 20px; padding-bottom: 12px; }
 
-/* data-coverage disclaimer under the title; same 16px gutter as the other sections */
-.notice {
-  width: calc(100% - 32px); max-width: calc(1400px - 32px); margin: 0 auto 12px;
-  background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent);
-  border-radius: 8px; padding: 10px 14px; color: var(--ink-2);
-}
-.notice strong { color: var(--ink); }
 
 .btn { font: inherit; border-radius: 8px; padding: 6px 12px; cursor: pointer; text-decoration: none; display: inline-block; }
 .btn.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
