@@ -31,14 +31,9 @@
 
 <form class="addrbar" id="addrForm" role="search" aria-label="Crime near an address">
   <input type="search" id="address" placeholder="Enter a St. Louis address, e.g. 1200 Market St" aria-label="Street address" autocomplete="street-address">
-  <div class="radiuspick" role="group" aria-label="Distance from the address or pin">
+  <div class="radiuspick" id="radiusBox" role="group" aria-label="Distance from the address or pin" hidden>
     <input type="range" id="radius" min="0.125" max="1" step="0.125" value="0.5" aria-label="Distance from the address or pin">
     <output id="radiusOut" for="radius">½ mile</output>
-    <span class="quick">
-      <button type="button" class="btn ghost" data-radius="0.25" aria-pressed="false" title="Show a quarter mile">¼</button>
-      <button type="button" class="btn ghost" data-radius="0.5" aria-pressed="true" title="Show a half mile">½</button>
-      <button type="button" class="btn ghost" data-radius="1" aria-pressed="false" title="Show one mile">1 mi</button>
-    </span>
   </div>
   <button class="btn primary" type="submit">See crime near this address</button>
   <button class="btn ghost" type="button" id="pinBtn" aria-pressed="false" title="Click the map to choose a spot instead of typing an address">Drop a pin</button>

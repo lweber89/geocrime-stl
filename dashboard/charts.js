@@ -380,7 +380,7 @@
     const counts = new Map(); D.records.forEach((a) => counts.set(a.cat, (counts.get(a.cat) || 0) + 1));
     $("cat").innerHTML = '<option value="">All offense types</option>' + D.types.map((t) =>
       `<optgroup label="${esc(t)}">${D.cats[t].map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}</optgroup>`).join("");
-    $("sub").textContent = `Reported offenses in the City of St. Louis, ${monLabel(D.months[0].m)} – ${monLabel(D.months.at(-1).m)}. The City adds each month around the 5th of the next.`;
+    $("sub").textContent = `Reported offenses, ${CRIME.span(D.months)} · Updated monthly`;
     readState();
     const sync = wire();
     sync();
