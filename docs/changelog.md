@@ -1,11 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.2.1
 
-**Package (ships in the next release)**
+**Package**
 
-- The historical download now starts in **January 2024** (it began in May 2024). SLMPD published January-April 2024 under one-off file names, so their exact URLs are listed in `SPECIAL_URLS` in `config.py`, and `construct_url` checks that list first.
-- Dates in the January-April 2024 files are ISO (`2024-01-05`) while later files use `m/d/YYYY`; `parse_incident_dates` reads both.
+- **January-April 2024 now download.** SLMPD published those four months under one-off file names, so their exact URLs are listed in `SPECIAL_URLS` in `config.py`, and `construct_url` checks that list first. Coverage now runs from **January 2024** (the repository's historical download script used to start in May 2024).
+- **Both date layouts are read.** Dates in the January-April 2024 files are ISO (`2024-01-05`) while later files use `m/d/YYYY`; the new `parse_incident_dates` reads both, trying `m/d/YYYY` first so later months parse exactly as before.
+- The offense category "Assisting or Promoting Prostitution" is now on the known list in `web_export`, so the build no longer warns about it. It was reviewed and is not masked.
+- Removed the unused `RAW_DIR` setting from `config.py` (raw CSVs are not kept).
 
 **Explorer (website only; already live, not part of the pip package)**
 
