@@ -13,6 +13,7 @@ It contains **no data**. It reads the feed in `../data/web` (see `../data/README
 | File | Purpose |
 |---|---|
 | `index.html`, `app.js` | The crime map: filters, map, table |
+| `radius.js` | The distance choices for an address or pin (1/8 to 1 mile in eighths), shared by the map and Charts; tested in `tests/js/radius.test.js` |
 | `data.js` | Loads the feed and gives every page the same clean records (`window.CRIME`) |
 | `style.css` | Base layout and styles, adapted from the crash-map project (see Credits) |
 | `crime.css` | Colours (offense-type palette) and the few crime-specific rules |

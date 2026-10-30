@@ -79,6 +79,12 @@
 .addrbar input[type="search"] { flex: 1 1 320px; min-width: 0; font: inherit; padding: 9px 12px; border: 1px solid var(--axis); border-radius: 8px;
                                 background: var(--surface); color: var(--ink); }
 .addrbar select { font: inherit; padding: 9px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--ink); }
+/* distance from the address or pin: a slider in eighths of a mile, its current value in words, and three quick picks */
+.radiuspick { display: flex; align-items: center; gap: 8px; }
+.radiuspick input[type="range"] { width: 130px; accent-color: var(--accent); cursor: pointer; }
+.radiuspick output { min-width: 4.6em; font-variant-numeric: tabular-nums; }
+.radiuspick .quick { display: flex; gap: 4px; }
+.radiuspick .quick .btn { padding: 6px 9px; }
 .btn.primary { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
 .addrmsg { max-width: 1400px; margin: 0 auto; padding: 0 16px 8px; min-height: 1.45em; font-size: 12.5px; }
 

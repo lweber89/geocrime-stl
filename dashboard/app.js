@@ -5,7 +5,6 @@
   const PAGE = 100;
   const DEFAULT_RADIUS = "0.5", TREND_MONTHS = 24;       // the report chart always shows the latest 24 months
   const CITY_SQ_MILES = 62.11, METERS_PER_MILE = 1609.344;
-  const RADIUS_LABEL = { 0.25: "¼ mile", 0.5: "½ mile", 1: "1 mile" };
   const CITY_BOUNDS = [[38.532, -90.32], [38.774, -90.166]];
   const CITY_MAX_MONTHS = 6;                                  // whole-city views are limited to 6 months of dots; a ward or neighborhood can show any period
   const HEAT = { 0.2: "#ffe08a", 0.45: "#fdae61", 0.7: "#f46d43", 0.9: "#d73027", 1.0: "#7f0000" };
@@ -21,7 +20,7 @@
   let map, pointLayer, heatLayer, layerChoice = "auto";   // "auto" picks by date span; the buttons override it
   let defaultRange = "all", cityLimited = false, bounds = null, priorInfo = null;
   let wardLayer, outlineLayer, wardCounts = new Map(), nbhdCounts = new Map(), wardFeatures = new Map(), nbhdFeatures = new Map(), wardNbhds = new Map();
-  let addrLayer, center = null, curMatches = null, pinMode = false;          // center: the searched address and radius, or null
+  let addrLayer, ringLayer, center = null, curMatches = null, pinMode = false;   // center: the searched address and radius, or null
   const incCount = new Map();
 
   // ------------------------------------------------------------ filters
@@ -75,6 +74,14 @@
     return f;
   }
 
+  // Keep the words beside the distance slider (and its screen-reader text and the quick-pick buttons) in step with its value.
+  function syncRadiusUI() {
+    const miles = RADIUS.snap($("radius").value), text = RADIUS.label(miles);
+    $("radiusOut").textContent = text;
+    $("radius").setAttribute("aria-valuetext", text);
+    document.querySelectorAll("[data-radius]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.radius) === miles)));
+  }
+
   function writeHash(f) {
     const p = new URLSearchParams();
     for (const k of FIELDS) if (f[k] && !(k === "range" && (f[k] === defaultRange || f[k] === "month")) && !(k === "radius" && f[k] === DEFAULT_RADIUS)) p.set(k, f[k]);
@@ -88,7 +95,7 @@
   function readHash() {
     const p = new URLSearchParams(location.hash.slice(1));
     for (const k of FIELDS) if (p.has(k)) $(k).value = p.get(k);
-    if (!$("radius").value) $("radius").value = DEFAULT_RADIUS;
+    if (p.has("radius")) $("radius").value = RADIUS.snap(p.get("radius"));     // older or hand-edited links may hold an in-between or junk distance
     $("address").value = $("pt").value ? $("lbl").value : "";
     if ($("pt").value) { $("ward").value = ""; $("nbhd").value = ""; }   // a spot and a ward/neighborhood never go together (old links might)
     if (!$("month").value) $("month").value = "";                // unknown month in the link
@@ -119,6 +126,7 @@
   const monthsOf = (range) => { const b = rangeBounds({ range, month: "" }); return monthsIn(b.from, b.to); };
 
   function apply() {
+    syncRadiusUI();
     let f = readFilters();
     // Whole-city views are limited to 6 months; longer periods need a ward, neighborhood or address search.
     center = null;
@@ -282,7 +290,7 @@
 
   function openReport() {
     if (!center) return;
-    const miles = Number(readFilters().radius), n = filtered.length, within = RADIUS_LABEL[miles] || miles + " mile";
+    const n = filtered.length, within = RADIUS.label(readFilters().radius);
     const maxType = Math.max(1, ...TYPES.map((t) => filtered.filter((a) => a.type === t).length));
     const typeRows = TYPES.map((t) => {
       const c = filtered.filter((a) => a.type === t).length;
@@ -374,7 +382,7 @@
     }
   }
 
-  const radiusText = () => RADIUS_LABEL[Number($("radius").value)] || $("radius").value + " mile";
+  const radiusText = () => RADIUS.label($("radius").value);
 
   // Make a point (a found address, a dropped pin, or the device's location) the area to report on.
   function placePoint(lat, lon, label, { text = "", zoom = true, msg = "" } = {}) {
@@ -530,14 +538,15 @@
 
   // the searched address: a ring showing the radius, and a dot on the address itself
   function renderAddress() {
-    if (addrLayer) { map.removeLayer(addrLayer); addrLayer = null; }
+    if (addrLayer) { map.removeLayer(addrLayer); addrLayer = null; ringLayer = null; }
     if (!center) return;
+    ringLayer = L.circle([center.lat, center.lon], { radius: Math.sqrt(center.m2), color: css("--outline"), weight: 2.5, fillColor: css("--outline"), fillOpacity: 0.06, interactive: false });
     addrLayer = L.layerGroup([
-      L.circle([center.lat, center.lon], { radius: Math.sqrt(center.m2), color: css("--outline"), weight: 2.5, fillColor: css("--outline"), fillOpacity: 0.06, interactive: false }),
+      ringLayer,
       L.marker([center.lat, center.lon], {
         draggable: true, keyboard: false, title: "Drag to move the location",
         icon: L.divIcon({ className: "pin", html: "<span></span>", iconSize: [22, 22], iconAnchor: [11, 11] }),
-      }).on("dragend", (e) => { const p = e.target.getLatLng(); dropPin(p.lat, p.lng, { zoom: false }); }),
+      }).on("dragend", (e) => { const p = e.target.getLatLng(); dropPin(p.lat, p.lng); }),    // zoom: re-center and re-fit the ring around the new spot
     ]).addTo(map);
   }
 
@@ -703,6 +712,15 @@
       renderTable();
     });
     $("radius").addEventListener("change", () => { if (center) zoomToScope(); });   // runs after apply, so the new radius is in use
+    // while the slider is being dragged, show the new distance and resize the ring right away; the counts follow when it is released
+    $("radius").addEventListener("input", () => {
+      syncRadiusUI();
+      if (ringLayer) ringLayer.setRadius(RADIUS.snap($("radius").value) * METERS_PER_MILE);
+    });
+    document.querySelectorAll("[data-radius]").forEach((b) => b.addEventListener("click", () => {
+      $("radius").value = b.dataset.radius;
+      $("radius").dispatchEvent(new Event("change"));                    // same path as moving the slider: apply, then zoom
+    }));
     $("addrForm").addEventListener("submit", searchAddress);
     $("addrClear").addEventListener("click", () => { clearAddress(); apply(); zoomToScope(); });
     $("reportBtn").addEventListener("click", openReport);
