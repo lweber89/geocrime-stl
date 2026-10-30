@@ -21,7 +21,6 @@
   const num = (n) => Number(n).toLocaleString("en-US");
   const compact = (n) => (n >= 1000 ? `${Math.round(n / 100) / 10}K`.replace(".0K", "K") : String(n));
   const NS = "http://www.w3.org/2000/svg";
-  const RADIUS_LABEL = { 0.25: "¼ mile", 0.5: "½ mile", 1: "1 mile" };
   const METERS_PER_MILE = 1609.344;
   const HOURS = ["12a", "1a", "2a", "3a", "4a", "5a", "6a", "7a", "8a", "9a", "10a", "11a", "12p", "1p", "2p", "3p", "4p", "5p", "6p", "7p", "8p", "9p", "10p", "11p"];
   const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -62,7 +61,7 @@
   }
 
   function describeArea() {
-    if (area.pt) return `Within ${RADIUS_LABEL[Number(area.radius)] || area.radius + " mile"} of ${area.lbl || "the chosen spot"}`;
+    if (area.pt) return `Within ${RADIUS.label(area.radius)} of ${area.lbl || "the chosen spot"}`;
     if (area.nbhd) return area.nbhd;
     if (area.ward) return `Ward ${area.ward}`;
     return "Whole city";
@@ -80,7 +79,7 @@
     let near = null;
     if (area.pt) {
       const [la, lo] = area.pt.split(",").map(Number);
-      const m2 = (Number(area.radius || 0.5) * METERS_PER_MILE) ** 2, kx = 111320 * Math.cos((la * Math.PI) / 180);
+      const m2 = (RADIUS.snap(area.radius) * METERS_PER_MILE) ** 2, kx = 111320 * Math.cos((la * Math.PI) / 180);
       near = (a) => a.lat != null && ((a.lat - la) * 110540) ** 2 + ((a.lon - lo) * kx) ** 2 <= m2;
     }
     return (a) => (!near || near(a)) && (!area.ward || a.ward === area.ward) && (!area.nbhd || a.nbhd === area.nbhd)

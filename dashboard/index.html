@@ -31,9 +31,15 @@
 
 <form class="addrbar" id="addrForm" role="search" aria-label="Crime near an address">
   <input type="search" id="address" placeholder="Enter a St. Louis address, e.g. 1200 Market St" aria-label="Street address" autocomplete="street-address">
-  <select id="radius" aria-label="Distance from the address">
-    <option value="0.25">¼ mile</option><option value="0.5" selected>½ mile</option><option value="1">1 mile</option>
-  </select>
+  <div class="radiuspick" role="group" aria-label="Distance from the address or pin">
+    <input type="range" id="radius" min="0.125" max="1" step="0.125" value="0.5" aria-label="Distance from the address or pin">
+    <output id="radiusOut" for="radius">½ mile</output>
+    <span class="quick">
+      <button type="button" class="btn ghost" data-radius="0.25" aria-pressed="false" title="Show a quarter mile">¼</button>
+      <button type="button" class="btn ghost" data-radius="0.5" aria-pressed="true" title="Show a half mile">½</button>
+      <button type="button" class="btn ghost" data-radius="1" aria-pressed="false" title="Show one mile">1 mi</button>
+    </span>
+  </div>
   <button class="btn primary" type="submit">See crime near this address</button>
   <button class="btn ghost" type="button" id="pinBtn" aria-pressed="false" title="Click the map to choose a spot instead of typing an address">Drop a pin</button>
   <button class="btn ghost" type="button" id="locBtn" title="Use this device's location (it stays in your browser)">Use my location</button>
@@ -119,6 +125,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="radius.js"></script>
 <script src="geocode.js"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>
