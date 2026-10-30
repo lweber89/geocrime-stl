@@ -290,7 +290,7 @@
 
   function openReport() {
     if (!center) return;
-    const n = filtered.length, within = RADIUS.label(readFilters().radius);
+    const miles = RADIUS.snap(readFilters().radius), n = filtered.length, within = RADIUS.label(miles);
     const maxType = Math.max(1, ...TYPES.map((t) => filtered.filter((a) => a.type === t).length));
     const typeRows = TYPES.map((t) => {
       const c = filtered.filter((a) => a.type === t).length;
