@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+**Explorer (website only; not part of the pip package)**
+
+- The "reported offenses, not a measure of how safe a place is" box under each page title is gone; its sentence now sits in the title line, and the rest is on the Methodology page (which now also notes that times are often rounded to the hour and that hexagon and block counts are not adjusted for population).
+
 ## 0.2.1
 
 **Package**
