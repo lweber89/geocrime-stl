@@ -17,7 +17,7 @@ It contains **no data**. It reads the feed in `../data/web` (see `../data/README
 | `data.js` | Loads the feed and gives every page the same clean records (`window.CRIME`) |
 | `style.css` | Base layout and styles, adapted from the crash-map project (see Credits) |
 | `crime.css` | Colours (offense-type palette) and the few crime-specific rules |
-| `favicon.svg` | Site icon |
+| `favicon.svg` | Site icon: a white shield with a star on royal blue |
 
 ## Publishing and monthly updates
 
