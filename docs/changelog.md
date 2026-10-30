@@ -10,7 +10,8 @@
 **Explorer (website only; already live, not part of the pip package)**
 
 - The public site is now named the **St. Louis Crime Data Explorer** (the address is unchanged).
-- The distance around an address or pin is now a slider from ⅛ to 1 mile in steps of an eighth of a mile (the ¼, ½ and 1 mile quick picks remain), and dragging the pin re-centers and re-fits the map around the new spot.
+- The distance around an address or pin is now a slider from ⅛ to 1 mile in steps of an eighth of a mile. It appears once an address or pin is chosen, and dragging the pin re-centers and re-fits the map around the new spot.
+- A shorter line under each page title ("Reported offenses, Jan 2024 – Sep 2026 · Updated monthly"), and the routine status message under the address bar is gone, so the page starts with more room. Error messages still appear there, and the report now says which service found an address.
 - New site icon (a white shield with a star on royal blue).
 
 ## 0.2.0

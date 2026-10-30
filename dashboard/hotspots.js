@@ -261,8 +261,7 @@
   async function main() {
     D = await CRIME.load();
     D.records.forEach((a) => { a.m = a.t.slice(0, 7); });          // month key, used for all the counting
-    const mon = (m) => new Date(m + "-15T12:00").toLocaleDateString("en-US", { month: "long", year: "numeric" });
-    $("sub").textContent = `Where reported offenses cluster, ${mon(D.months[0].m)} – ${mon(D.months.at(-1).m)}. The City adds each month around the 5th of the next.`;
+    $("sub").textContent = `Reported offenses, ${CRIME.span(D.months)} · Updated monthly`;
     readState();
     // "All" plus the most common categories (the catch-all is counted in "All" but not listed on its own)
     const tally = new Map();

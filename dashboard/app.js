@@ -21,6 +21,7 @@
   let defaultRange = "all", cityLimited = false, bounds = null, priorInfo = null;
   let wardLayer, outlineLayer, wardCounts = new Map(), nbhdCounts = new Map(), wardFeatures = new Map(), nbhdFeatures = new Map(), wardNbhds = new Map();
   let addrLayer, ringLayer, center = null, curMatches = null, pinMode = false;   // center: the searched address and radius, or null
+  let addrSource = "";                                                          // which lookup service found the searched address (shown in the report)
   const incCount = new Map();
 
   // ------------------------------------------------------------ filters
@@ -74,12 +75,11 @@
     return f;
   }
 
-  // Keep the words beside the distance slider (and its screen-reader text and the quick-pick buttons) in step with its value.
+  // Keep the words beside the distance slider (and its screen-reader text) in step with its value.
   function syncRadiusUI() {
-    const miles = RADIUS.snap($("radius").value), text = RADIUS.label(miles);
+    const text = RADIUS.label($("radius").value);
     $("radiusOut").textContent = text;
     $("radius").setAttribute("aria-valuetext", text);
-    document.querySelectorAll("[data-radius]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.radius) === miles)));
   }
 
   function writeHash(f) {
@@ -132,7 +132,7 @@
     center = null;
     if (f.pt) {
       const [la, lo] = f.pt.split(",").map(Number);
-      if (Number.isFinite(la) && Number.isFinite(lo)) center = { lat: la, lon: lo, m2: (Number(f.radius) * METERS_PER_MILE) ** 2, kx: 111320 * Math.cos((la * Math.PI) / 180) };
+      if (Number.isFinite(la) && Number.isFinite(lo)) center = { lat: la, lon: lo, m2: (RADIUS.snap(f.radius) * METERS_PER_MILE) ** 2, kx: 111320 * Math.cos((la * Math.PI) / 180) };
     }
     // around a single spot the ward and neighborhood menus are locked; "Clear address" is the way back to them
     for (const id of ["ward", "nbhd"]) {
@@ -182,6 +182,7 @@
     page = 0;
     $("addrClear").hidden = !center;
     $("reportBtn").hidden = !center;
+    $("radiusBox").hidden = !center;
     renderAll();
     if (center) openReport(); else closePanel();
   }
@@ -321,6 +322,7 @@
       <div class="rep-big">${n.toLocaleString()}</div>
       <div class="muted">reported offenses within ${esc(within)} (${esc(periodText())})</div>
       ${where}
+      <p class="muted small">${addrSource ? `Address found by ${esc(addrSource)}. ` : ""}Drag the pin on the map to move the center.</p>
       <p class="rep-change"><strong>${esc(ch[0])}</strong> <span class="muted">${esc(ch[1])}</span></p>
       <h3>By type</h3>${typeRows}
       <h3>Most common</h3><ol class="rep-top">${top || '<li class="muted">None reported</li>'}</ol>${catchNote}
@@ -382,10 +384,10 @@
     }
   }
 
-  const radiusText = () => RADIUS.label($("radius").value);
 
   // Make a point (a found address, a dropped pin, or the device's location) the area to report on.
-  function placePoint(lat, lon, label, { text = "", zoom = true, msg = "" } = {}) {
+  function placePoint(lat, lon, label, { text = "", zoom = true, msg = "", source = "" } = {}) {
+    addrSource = source;
     $("pt").value = `${lat.toFixed(5)},${lon.toFixed(5)}`;
     $("lbl").value = label;
     $("address").value = text;
@@ -404,7 +406,7 @@
       return;
     }
     const nb = neighborhoodAt(lat, lon);
-    placePoint(lat, lon, nb ? `Pin in ${nb}` : "Pin on the map", { zoom, msg: `Showing reports within ${radiusText()} of the pin. Drag the pin to move it.` });
+    placePoint(lat, lon, nb ? `Pin in ${nb}` : "Pin on the map", { zoom });
   }
 
   function setPinMode(on) {
@@ -424,7 +426,7 @@
       if (!pointInCity(lat, lon)) { setAddrMsg("Your location is outside the City of St. Louis. This map only has reports from the city police department."); return; }
       const nb = neighborhoodAt(lat, lon);
       placePoint(lat, lon, nb ? `Your location, in ${nb}` : "Your location", {
-        msg: `Showing reports within ${radiusText()} of your location.${accuracy > 300 ? ` Your device reported about ${Math.round(accuracy)} meters of accuracy, so drag the pin if it is off.` : " Drag the pin to move it."}`,
+        msg: accuracy > 300 ? `Your device reported about ${Math.round(accuracy)} meters of accuracy, so drag the pin if it is off.` : "",
       });
     }, (err) => {
       setAddrMsg(err && err.code === 1
@@ -435,7 +437,7 @@
 
   async function showAddressResult(r) {
     if (r.status === "ok") {
-      placePoint(r.lat, r.lon, r.label, { text: r.label, msg: `Showing reports within ${radiusText()} of ${r.label}. Address found by ${r.source}. Drag the pin to adjust.` });
+      placePoint(r.lat, r.lon, r.label, { text: r.label, source: r.source });
     } else if (r.status === "outside") {
       setAddrMsg("That address is outside the City of St. Louis. This map only has reports from the city police department.");
     } else if (r.status === "error") {
@@ -717,10 +719,6 @@
       syncRadiusUI();
       if (ringLayer) ringLayer.setRadius(RADIUS.snap($("radius").value) * METERS_PER_MILE);
     });
-    document.querySelectorAll("[data-radius]").forEach((b) => b.addEventListener("click", () => {
-      $("radius").value = b.dataset.radius;
-      $("radius").dispatchEvent(new Event("change"));                    // same path as moving the slider: apply, then zoom
-    }));
     $("addrForm").addEventListener("submit", searchAddress);
     $("addrClear").addEventListener("click", () => { clearAddress(); apply(); zoomToScope(); });
     $("reportBtn").addEventListener("click", openReport);
@@ -763,9 +761,7 @@
       `<optgroup label="${esc(t)}">${D.cats[t].map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}</optgroup>`).join("");
     $("nbhd").innerHTML = '<option value="">Any neighborhood</option>' + D.nbhds.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
 
-    const day = (s) => new Date(s + "T12:00").toLocaleDateString("en-US", DATE);
-    const mon = (m) => new Date(m + "-15T12:00").toLocaleDateString("en-US", { month: "long", year: "numeric" });
-    $("sub").textContent = `${D.records.length.toLocaleString()} reported offenses in the City of St. Louis, ${mon(D.months[0].m)} – ${mon(D.months.at(-1).m)}. Data through ${day(D.through)}; the City adds each month around the 5th of the next.`;
+    $("sub").textContent = `Reported offenses, ${CRIME.span(D.months)} · Updated monthly`;
 
     if (D.wards) {
       D.wards.features.forEach((ft) => wardFeatures.set(String(ft.properties.ward), ft));

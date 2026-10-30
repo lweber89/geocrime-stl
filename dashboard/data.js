@@ -92,5 +92,14 @@
   // Distinct incidents in a list of offense rows (for tiles: "offenses" vs "incidents").
   const incidents = (list) => new Set(list.map((a) => a.inc)).size;
 
-  window.CRIME = { load, incidents, title };
+  // The months the data covers, for the line under each page title: "Jan 2024 – Sep 2026".
+  const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const span = (months) => {
+    const name = (m) => `${SHORT_MONTHS[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
+    return `${name(months[0].m)} – ${name(months[months.length - 1].m)}`;
+  };
+
+  const api = { load, incidents, title, span };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;      // so tests can load this file in Node
+  else window.CRIME = api;
 })();
