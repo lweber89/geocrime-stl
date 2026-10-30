@@ -15,19 +15,12 @@
   <div>
     <a class="brand" href="./">St. Louis Crime Data Explorer</a>
     <h1>St. Louis Crime Hotspots</h1>
-    <p class="sub" id="sub">Loading…</p>
+    <p class="sub"><span id="sub">Loading…</span> <span class="caveat">A hotspot is where offenses were reported, not where danger is.</span></p>
   </div>
   <div class="top-actions">
     <nav class="pagenav" aria-label="Pages"><a href="./" data-nav="map">Crime map</a><a href="hotspots.html" aria-current="page">Hotspots</a><a href="charts.html" data-nav="charts">Charts</a><a href="methodology.html">Methodology</a></nav>
   </div>
 </header>
-
-<details class="notice">
-  <summary><strong>A hotspot is where offenses were reported, not where danger is.</strong> <span class="muted">More</span></summary>
-  Busy places such as shopping areas, downtown and hospitals appear more often because many people pass through and
-  report there. Counts are not adjusted for how many people live or visit. Sensitive offenses are counted, but their exact
-  location is withheld, so they never appear as a street in the Blocks list. See the methodology page for details.
-</details>
 
 <section class="filters" aria-label="Filters">
   <select id="cat" aria-label="Offense category"><option value="">All offense types</option></select>
