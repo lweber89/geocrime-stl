@@ -45,6 +45,8 @@ tempCodeRunnerFile.py
 
 # Exports
 /test_exports/*
+# the demo notebook writes its sample exports next to itself when run from docs/examples
+/docs/examples/test_exports/
 
 # ==========================================
 # Generated data (see data/README.md)
