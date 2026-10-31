@@ -392,8 +392,7 @@
     $("lbl").value = label;
     $("address").value = text;
     $("ward").value = ""; $("nbhd").value = "";
-    layerChoice = "auto";
-    apply();
+    apply();                                                   // the chosen map layer (dots, heat...) is kept; ward/neighborhood shading falls back to dots around a spot
     if (zoom) zoomToScope();
     setAddrMsg(msg);
   }
