@@ -24,7 +24,7 @@ theme:
     icon:
         repo: fontawesome/brands/github
     # logo: assets/logo.png
-    # favicon: assets/favicon.png
+    favicon: assets/favicon.svg   # a copy of dashboard/favicon.svg; the deploy fails if the two differ
     features:
         - navigation.tracking
         - navigation.top

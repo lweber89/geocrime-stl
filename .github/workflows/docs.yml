@@ -40,6 +40,13 @@ jobs:
                   pip install -r requirements_dev.txt
                   pip install -e .
 
+            - name: Check the docs icon matches the Explorer icon
+              run: |
+                  if ! cmp -s dashboard/favicon.svg docs/assets/favicon.svg; then
+                      echo "docs/assets/favicon.svg differs from dashboard/favicon.svg. Copy the dashboard one over it."
+                      exit 1
+                  fi
+
             - name: Build documentation
               run: mkdocs build
 
