@@ -71,3 +71,11 @@ test("addresses below 100 are not called the 0 block", () => {
   const c = HOT.bin([rec("2026-01", { addr: "0 FINE ARTS DR" })]).values().next().value;
   assert.equal(HOT.describe(c).place, "Fine Arts Dr");
 });
+
+test("sortRows goes largest-first or smallest-first, and rows with no value always come last", () => {
+  const rows = () => [{ id: "a", n: 5, v: 2 }, { id: "b", n: 9, v: null }, { id: "c", n: 7, v: 8 }, { id: "d", n: 3, v: 2 }];
+  const ids = (r) => r.map((x) => x.id).join("");
+  assert.equal(ids(HOT.sortRows(rows(), (r) => r.v, "desc")), "cadb");      // c(8), then the 2s by larger count, then none
+  assert.equal(ids(HOT.sortRows(rows(), (r) => r.v, "asc")), "adcb");       // 2s by larger count, then 8, then none
+  assert.equal(ids(HOT.sortRows(rows(), (r) => r.n, "asc")), "dacb");
+});

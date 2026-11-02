@@ -104,7 +104,18 @@
   }
   const classOf = (value, brk) => brk.filter((b) => value >= b).length;
 
-  const api = { cellOf, centerOf, cornersOf, bin, measure, describe, quantile, breaks, classOf, title };
+  // Sort table rows by `get(row)` in direction "desc" (largest first) or "asc". Rows with no value (get returns null or
+  // undefined) always go last, so they never crowd the top of an ascending list. Ties fall back to the larger count.
+  function sortRows(rows, get, dir = "desc") {
+    const sign = dir === "asc" ? 1 : -1;
+    return rows.sort((a, b) => {
+      const x = get(a), y = get(b), nx = x == null, ny = y == null;
+      if (nx || ny) return nx === ny ? b.n - a.n : nx ? 1 : -1;
+      return sign * (x - y) || b.n - a.n;
+    });
+  }
+
+  const api = { cellOf, centerOf, cornersOf, bin, measure, describe, quantile, breaks, classOf, title, sortRows };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.HOT = api;
 })();

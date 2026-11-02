@@ -9,6 +9,7 @@
 - The Methodology page now credits Grant Drawve (geographyofcrime.com) for the crime-mapping practices the Explorer draws on.
 - The distance around an address or pin now moves in quarter-mile steps (¼, ½, ¾, 1 mile) instead of eighths. Finer steps made it possible to find a hidden sensitive offense by watching the "not mapped" count change. Older links with an eighth-mile distance move to the nearest quarter.
 - The maps (Crime map and Hotspots) now stay on St. Louis: you cannot zoom out past the whole-city view or drag the map far away from the city.
+- On Hotspots, the Offenses, Per 1,000 and Change columns for wards and neighborhoods now sort both ways: click a column once for largest first, again for smallest first. Areas with no rate or no change always stay at the bottom.
 - Moving or dropping a pin no longer switches the map back to dots when you had chosen the heatmap (or another layer).
 
 ## 0.2.1

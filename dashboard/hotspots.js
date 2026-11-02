@@ -22,7 +22,7 @@
   const MAP_RANGE = { p3: "last3", p6: "last6", p12: "last12", p24: "all", all: "all" };
   const PERIOD_N = { p3: 3, p6: 6, p12: 12, p24: 24 };
 
-  let D, map, hexLayer, hexByKey = new Map(), st = { cat: "", fa: false, per: "p12", tab: "hex", mode: "count", sort: "rate" };
+  let D, map, hexLayer, hexByKey = new Map(), st = { cat: "", fa: false, per: "p12", tab: "hex", mode: "count", sort: "rate", dir: "desc" };
   let view = null;                       // everything computed for the current filters
 
   // ------------------------------------------------------------ state in the page link
@@ -202,9 +202,12 @@
   function areaList(kind) {
     const rows = areaRows(kind);
     if (!rows) return '<p class="muted">Outlines are not in this data feed.</p>';
-    const isW = kind === "ward", key = { rate: (r) => r.rate ?? -1, n: (r) => r.n, change: (r) => (r.change == null ? -Infinity : r.change) }[st.sort];
-    rows.sort((a, b) => key(b) - key(a) || b.n - a.n);
-    const th = (k, t, cls = "") => `<th class="${cls}"><button type="button" data-sort="${k}" aria-pressed="${st.sort === k}">${t}${st.sort === k ? " ↓" : ""}</button></th>`;
+    const isW = kind === "ward", key = { rate: (r) => r.rate, n: (r) => r.n, change: (r) => r.change }[st.sort];
+    HOT.sortRows(rows, key, st.dir);
+    const th = (k, t, cls = "") => {
+      const on = st.sort === k, word = st.dir === "asc" ? "ascending" : "descending";
+      return `<th class="${cls}"${on ? ` aria-sort="${word}"` : ""}><button type="button" data-sort="${k}" aria-pressed="${on}" title="${on ? "Click to reverse the order" : "Sort by " + t.toLowerCase()}">${t}${on ? (st.dir === "asc" ? " ↑" : " ↓") : ""}</button></th>`;
+    };
     const fmt = (x) => (Math.round(x * 10) / 10).toLocaleString();
     return `<table class="hot"><thead><tr><th>${isW ? "Ward" : "Neighborhood"}</th>${th("n", "Offenses", "r")}${th("rate", "Per 1,000", "r")}${th("change", "Change", "r")}</tr></thead><tbody>${
       rows.map((r) => `<tr><td>${rowLink(mapHash(isW ? { ward: r.name } : { nbhd: r.name }), r.label)}</td><td class="r">${num(r.n)}</td>
@@ -282,7 +285,10 @@
     $("list").addEventListener("click", (e) => {
       const cell = e.target.closest("[data-cell]"), sort = e.target.closest("[data-sort]");
       if (cell) focusCell(cell.dataset.cell);
-      if (sort) { st.sort = sort.dataset.sort; renderList(); }
+      if (sort) {                                       // a second click on the same column reverses it; a new column starts largest-first
+        if (st.sort === sort.dataset.sort) st.dir = st.dir === "desc" ? "asc" : "desc"; else { st.sort = sort.dataset.sort; st.dir = "desc"; }
+        renderList();
+      }
     });
     render();
   }
