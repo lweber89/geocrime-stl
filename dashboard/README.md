@@ -33,6 +33,8 @@ It can also be started by hand from the Actions tab.
 
 This site started from a crash-map dashboard by Reddit user **u/autosoap**, who gave permission
 to reuse and adapt it. The layout and base stylesheet come from that project.
+Crime-mapping practices we adopt are informed by the open work of Grant Drawve
+([geographyofcrime.com](https://geographyofcrime.com)).
 
 ## Pages
 

@@ -28,7 +28,7 @@ The Explorer is plain HTML, CSS, JavaScript and Leaflet (a map library), hosted 
 
 ## Credits
 
-The Explorer started from a crash-map project by Reddit user **u/autosoap**, who gave permission to reuse and adapt it. Basemap tiles are from OpenStreetMap contributors.
+The Explorer started from a crash-map project by Reddit user **u/autosoap**, who gave permission to reuse and adapt it. Where the Explorer follows established crime-mapping practice, it draws on the open work of crime mapper and researcher Grant Drawve ([geographyofcrime.com](https://geographyofcrime.com)). Basemap tiles are from OpenStreetMap contributors.
 
 ## Feedback
 
