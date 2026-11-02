@@ -7,6 +7,7 @@
 - The "reported offenses, not a measure of how safe a place is" box under each page title is gone; its sentence now sits in the title line, and the rest is on the Methodology page (which now also notes that times are often rounded to the hour and that hexagon and block counts are not adjusted for population).
 - The documentation site (this one) now uses the same shield icon in the browser tab as the Explorer.
 - The Methodology page now credits Grant Drawve (geographyofcrime.com) for the crime-mapping practices the Explorer draws on.
+- The distance around an address or pin now moves in quarter-mile steps (¼, ½, ¾, 1 mile) instead of eighths. Finer steps made it possible to find a hidden sensitive offense by watching the "not mapped" count change. Older links with an eighth-mile distance move to the nearest quarter.
 - Moving or dropping a pin no longer switches the map back to dots when you had chosen the heatmap (or another layer).
 
 ## 0.2.1
