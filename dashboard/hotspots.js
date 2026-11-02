@@ -250,6 +250,7 @@
   // ------------------------------------------------------------ start
   function initMap() {
     map = L.map("map", { preferCanvas: true, zoomSnap: 0.25 }).fitBounds(CITY_BOUNDS);
+    CRIME.lockExtent(map, CITY_BOUNDS);                // no zooming out past the whole city, no dragging far off it
     const dark = matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light" || document.documentElement.dataset.theme === "dark";
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19, className: dark ? "tiles-dark" : "tiles-light",
