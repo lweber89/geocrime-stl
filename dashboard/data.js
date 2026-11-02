@@ -99,7 +99,26 @@
     return `${name(months[0].m)} – ${name(months[months.length - 1].m)}`;
   };
 
-  const api = { load, incidents, title, span };
+  // Keep a Leaflet map on the city: the person can zoom in anywhere but cannot zoom out past the whole-city view, and
+  // cannot drag the map far off the city. `bounds` is [[south, west], [north, east]]. The whole-city zoom depends on
+  // the size of the map box, so it is worked out again whenever the box changes size.
+  function lockExtent(map, bounds) {
+    const fit = () => {
+      const size = map.getSize();
+      if (!size.x || !size.y) return;                       // box not laid out yet (hidden or zero height); try again on resize
+      map.setMinZoom(map.getBoundsZoom(bounds));
+    };
+    map.setMaxBounds(padBounds(bounds, 0.15));
+    fit();
+    map.on("resize", fit);
+  }
+  // bounds grown by `frac` of their size on every side, so the city edge can be reached and the map can still be nudged
+  function padBounds(b, frac) {
+    const dy = (b[1][0] - b[0][0]) * frac, dx = (b[1][1] - b[0][1]) * frac;
+    return [[b[0][0] - dy, b[0][1] - dx], [b[1][0] + dy, b[1][1] + dx]];
+  }
+
+  const api = { load, incidents, title, span, lockExtent, padBounds };
   if (typeof module !== "undefined" && module.exports) module.exports = api;      // so tests can load this file in Node
   else window.CRIME = api;
 })();
