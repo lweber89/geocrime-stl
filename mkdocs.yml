@@ -91,4 +91,8 @@ nav:
           - transform module: transform.md
           - monthly summary:  monthly_summary.md
           - export: export.md
+          - dataset: dataset.md
+          - web export: web_export.md
+          - wards: wards.md
+          - config: config.md
     
