@@ -11,6 +11,7 @@
 - The maps (Crime map and Hotspots) now stay on St. Louis: you cannot zoom out past the whole-city view or drag the map far away from the city.
 - On Hotspots, the Offenses, Per 1,000 and Change columns for wards and neighborhoods now sort both ways: click a column once for largest first, again for smallest first. Areas with no rate or no change always stay at the bottom.
 - The Methodology page notes that neighborhood names appear as the City spells them, without apostrophes (for example, "OFallon").
+- Pulling the map off the city and letting go now brings it back to the whole-city view (the same view as Reset), instead of stopping at the edge of the pan limit.
 - Moving or dropping a pin no longer switches the map back to dots when you had chosen the heatmap (or another layer).
 
 ## 0.2.1

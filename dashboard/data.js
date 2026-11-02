@@ -111,6 +111,19 @@
     map.setMaxBounds(padBounds(bounds, 0.15));
     fit();
     map.on("resize", fit);
+    // Let go of the map with its center off the city and it glides back to the whole-city view, the same view the
+    // Reset button gives, instead of stopping at the edge of the pan limit.
+    let dragged = false, snapping = false;
+    map.on("dragend", () => { dragged = true; });
+    map.on("moveend", () => {
+      if (!dragged || snapping) return;
+      dragged = false;
+      const c = map.getCenter();
+      if (c.lat >= bounds[0][0] && c.lat <= bounds[1][0] && c.lng >= bounds[0][1] && c.lng <= bounds[1][1]) return;
+      snapping = true;
+      map.once("moveend", () => { snapping = false; });
+      map.fitBounds(bounds, { padding: [20, 20] });
+    });
   }
   // bounds grown by `frac` of their size on every side, so the city edge can be reached and the map can still be nudged
   function padBounds(b, frac) {
