@@ -131,7 +131,17 @@
     return [[b[0][0] - dy, b[0][1] - dx], [b[1][0] + dy, b[1][1] + dx]];
   }
 
-  const api = { load, incidents, title, span, lockExtent, padBounds };
+  // How a change against an earlier period reads everywhere on the site: an arrow and a sign in plain text, so it
+  // works without color (and carries no good-or-bad meaning): "▲ +12%", "▼ −8%", "No change". An earlier period with
+  // nothing in it gives "new" when something was reported now, and "–" when there is nothing to compare.
+  function pct(n, prior) {
+    if (prior == null) return "–";
+    if (!prior) return n ? "new" : "–";
+    const p = Math.round((100 * (n - prior)) / prior);
+    return p > 0 ? `▲ +${p}%` : p < 0 ? `▼ −${-p}%` : "No change";
+  }
+
+  const api = { load, incidents, title, span, lockExtent, padBounds, pct };
   if (typeof module !== "undefined" && module.exports) module.exports = api;      // so tests can load this file in Node
   else window.CRIME = api;
 })();

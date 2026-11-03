@@ -91,12 +91,7 @@
     return `<strong>${esc(describeCell(c))}</strong><br>${num(c.n)} offenses in the period${change}`;
   }
 
-  function pctText(n, prior) {
-    if (prior == null) return "–";
-    if (!prior) return n ? "new" : "–";
-    const p = Math.round((100 * (n - prior)) / prior);
-    return (p > 0 ? "+" : p < 0 ? "−" : "") + Math.abs(p) + "%";
-  }
+  const pctText = (n, prior) => CRIME.pct(n, prior);       // arrow + sign, same wording on every page
 
   function renderMap() {
     if (hexLayer) { map.removeLayer(hexLayer); hexLayer = null; }

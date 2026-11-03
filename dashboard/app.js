@@ -192,8 +192,8 @@
     if (!priorInfo) return ["–", "change vs. the previous period (not enough history)"];
     const p = priorInfo.count;
     if (!p) return ["–", `change vs. ${priorInfo.label} (none reported)`];
-    const pc = Math.round((100 * (n - p)) / p);
-    return [pc === 0 ? "No change" : (pc > 0 ? "+" : "−") + Math.abs(pc) + "%", `vs. ${priorInfo.label} (${p.toLocaleString()} offenses)`, pc === 0 ? "sm" : ""];
+    const t = CRIME.pct(n, p);
+    return [t, `vs. ${priorInfo.label} (${p.toLocaleString()} offenses)`, t === "No change" ? "sm" : ""];
   }
 
   // offenses per 1,000 residents (2020 census), for the selected neighborhood or ward, or the whole city
