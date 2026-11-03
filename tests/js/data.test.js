@@ -47,22 +47,22 @@ test("lockExtent sends any move that ends with the map center off the city back 
   assert.deepEqual(fits[0][1], { padding: [20, 20] });    // same padding as the Reset button
 });
 
-test("pct writes a change as an arrow and a sign, with no color needed", () => {
-  assert.equal(CRIME.pct(112, 100), "▲ +12%");
-  assert.equal(CRIME.pct(92, 100), "▼ −8%");
+test("pct writes a change as a sign and a number, with no color needed", () => {
+  assert.equal(CRIME.pct(112, 100), "+12%");
+  assert.equal(CRIME.pct(92, 100), "−8%");
   assert.equal(CRIME.pct(100, 100), "No change");
   assert.equal(CRIME.pct(1000, 999), "No change");        // 0.1% rounds to 0%
-  assert.equal(CRIME.pct(100, 99), "▲ +1%");
+  assert.equal(CRIME.pct(100, 99), "+1%");
 });
 
 test("pct shows a count, not a percentage, when the earlier period was small", () => {
   assert.equal(CRIME.MIN_BASE, 10);
-  assert.equal(CRIME.pct(6, 3), "▲ +3 offenses");
-  assert.equal(CRIME.pct(4, 3), "▲ +1 offense");
-  assert.equal(CRIME.pct(1, 9), "▼ −8 offenses");
+  assert.equal(CRIME.pct(6, 3), "+3 offenses");
+  assert.equal(CRIME.pct(4, 3), "+1 offense");
+  assert.equal(CRIME.pct(1, 9), "−8 offenses");
   assert.equal(CRIME.pct(3, 3), "No change");
-  assert.equal(CRIME.pct(12, 10), "▲ +20%");               // 10 is enough for a percentage
-  assert.equal(CRIME.pct(8, 9), "▼ −1 offense");
+  assert.equal(CRIME.pct(12, 10), "+20%");               // 10 is enough for a percentage
+  assert.equal(CRIME.pct(8, 9), "−1 offense");
 });
 
 test("pct copes with nothing to compare against", () => {
