@@ -12,6 +12,7 @@
 - On Hotspots, the Offenses, Per 1,000 and Change columns for wards and neighborhoods now sort both ways: click a column once for largest first, again for smallest first. Areas with no rate or no change always stay at the bottom.
 - The Methodology page notes that neighborhood names appear as the City spells them, without apostrophes (for example, "OFallon").
 - Pulling the map off the city and letting go now brings it back to the whole-city view (the same view as Reset), instead of stopping at the edge of the pan limit.
+- Charts: the "Show data table" buttons are gone to save space. Each chart still has its numbers as a table that screen readers can read (hidden from the screen).
 - Moving or dropping a pin no longer switches the map back to dots when you had chosen the heatmap (or another layer).
 
 ## 0.2.1

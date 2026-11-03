@@ -147,9 +147,12 @@
     }
   }
 
-  function fillTable(details, headers, rows) {
-    const table = details.querySelector("table");
+  // The data behind each chart, as a real table that is hidden from the screen but read by screen readers (it sits right
+  // after its chart). `box` is the wrapper element; its data-caption names the table.
+  function fillTable(box, headers, rows) {
+    const table = box.querySelector("table");
     table.replaceChildren();
+    table.createCaption().textContent = box.dataset.caption || "";
     const thead = table.createTHead().insertRow();
     headers.forEach((h) => { const th = document.createElement("th"); th.textContent = h; thead.appendChild(th); });
     const body = table.createTBody();
