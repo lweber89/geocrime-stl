@@ -16,4 +16,4 @@ The most useful thing you can add is the link from your browser's address bar. T
 
     pip install -e .
     python -m unittest discover -s tests          # Python tests
-    node --test tests/js/hotspots.test.js         # dashboard tests (Node 18+)
+    node --test tests/js/*.test.js                # dashboard tests, including a smoke test of the map page (Node 18+)

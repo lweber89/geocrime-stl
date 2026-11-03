@@ -19,6 +19,10 @@ It contains **no data**. It reads the feed in `../data/web` (see `../data/README
 | `crime.css` | Colours (offense-type palette) and the few crime-specific rules |
 | `favicon.svg` | Site icon: a white shield with a star on royal blue. The docs site uses a copy at `docs/assets/favicon.svg`; if you change this file, copy it there too (the deploy checks they match) |
 
+## Tests
+
+`node --test tests/js/*.test.js` runs the unit tests and a **smoke test of the map page** (`tests/js/smoke.test.js`). The smoke test runs the real `radius.js`, `geocode.js`, `data.js` and `app.js` against a stand-in page, a stand-in Leaflet and a small fake feed, and walks through address search, the distance slider, pin drag, drop-a-pin and clear. It catches scripts that throw (for example after a variable is removed), which `node --check` cannot. It is not a real browser, so it cannot catch layout problems. If you change the page's element ids or how `app.js` builds the map, update the stand-ins in that file. GitHub runs the same command on every pull request (`.github/workflows/tests.yml`).
+
 ## Publishing and monthly updates
 
 The site is published with GitHub Pages from `.github/workflows/docs.yml`: the package docs at the root and this
