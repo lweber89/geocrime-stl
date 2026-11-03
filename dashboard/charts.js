@@ -383,7 +383,7 @@
     const counts = new Map(); D.records.forEach((a) => counts.set(a.cat, (counts.get(a.cat) || 0) + 1));
     $("cat").innerHTML = '<option value="">All offense types</option>' + D.types.map((t) =>
       `<optgroup label="${esc(t)}">${D.cats[t].map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}</optgroup>`).join("");
-    $("sub").textContent = `${CRIME.span(D.months)} · Updated monthly.`;
+    $("sub").textContent = CRIME.dataNote(D.months);
     readState();
     const sync = wire();
     sync();

@@ -13,6 +13,7 @@
 - The Methodology page notes that neighborhood names appear as the City spells them, without apostrophes (for example, "OFallon").
 - Pulling the map off the city and letting go now brings it back to the whole-city view (the same view as Reset), instead of stopping at the edge of the pan limit.
 - Charts: the "Show data table" buttons are gone to save space. Each chart still has its numbers as a table that screen readers can read (hidden from the screen).
+- The line under each page title now starts with "Data available:" (for example "Data available: Jan 2024 – Sep 2026 · Updated monthly."), so it is no longer mistaken for the period you have chosen.
 - Moving or dropping a pin no longer switches the map back to dots when you had chosen the heatmap (or another layer).
 - Change figures now read as an arrow and a sign ("▲ +12%", "▼ −8%", "No change") in plain dark text on the map, Charts and Hotspots, the same everywhere. They carry no red or green, so they work for color-blind readers and do not suggest good or bad news. A change that rounds to 0% now says "No change" instead of "+0%" on Charts.
 

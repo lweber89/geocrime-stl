@@ -63,3 +63,8 @@ test("pct copes with nothing to compare against", () => {
   assert.equal(CRIME.pct(5, 0), "new");
   assert.equal(CRIME.pct(0, 0), "–");
 });
+
+test("dataNote says what data is available, so it is not read as the chosen period", () => {
+  const months = [{ m: "2024-01" }, { m: "2026-09" }];
+  assert.equal(CRIME.dataNote(months), "Data available: Jan 2024 – Sep 2026 · Updated monthly.");
+});
