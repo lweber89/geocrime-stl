@@ -321,7 +321,7 @@
     const prior = hasPrior ? D.records.filter((a) => a.date >= pFrom && a.date <= pTo && matchArea(a)).length : null;
     const change = prior == null ? ["–", "change vs. the previous period (not enough history)"]
       : !prior ? ["–", "change vs. the previous period (none reported then)"]
-      : [(n >= prior ? "+" : "−") + Math.abs(Math.round((100 * (n - prior)) / prior)) + "%", `vs. the previous ${pb.n} months (${num(prior)})`];
+      : [CRIME.pct(n, prior), `vs. the previous ${pb.n} months (${num(prior)})`];
     const tiles = [
       [num(n), `reported offenses, ${pb.n === D.months.length && period === "all" ? "all dates" : `last ${pb.n} months`}`],
       pop ? [(Math.round((10000 * n) / pop) / 10).toLocaleString(), `per 1,000 residents in this period (${num(pop)} people, 2020 census)`] : null,

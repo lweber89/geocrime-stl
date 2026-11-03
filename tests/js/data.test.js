@@ -49,3 +49,17 @@ test("lockExtent sends a drag that ends off the city back to the whole-city view
   assert.deepEqual(fits[0][0], city);
   assert.deepEqual(fits[0][1], { padding: [20, 20] });    // same padding as the Reset button
 });
+
+test("pct writes a change as an arrow and a sign, with no color needed", () => {
+  assert.equal(CRIME.pct(112, 100), "▲ +12%");
+  assert.equal(CRIME.pct(92, 100), "▼ −8%");
+  assert.equal(CRIME.pct(100, 100), "No change");
+  assert.equal(CRIME.pct(1000, 999), "No change");        // 0.1% rounds to 0%
+  assert.equal(CRIME.pct(100, 99), "▲ +1%");
+});
+
+test("pct copes with nothing to compare against", () => {
+  assert.equal(CRIME.pct(5, null), "–");
+  assert.equal(CRIME.pct(5, 0), "new");
+  assert.equal(CRIME.pct(0, 0), "–");
+});
