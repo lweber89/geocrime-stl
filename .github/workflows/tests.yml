@@ -1,0 +1,23 @@
+name: tests
+
+# Runs the website's JavaScript tests (unit tests plus the smoke test of the map page) on every pull request and on main.
+# They need only Node, no packages and no browser, and take a few seconds.
+on:
+    pull_request:
+    push:
+        branches:
+            - main
+
+permissions:
+    contents: read
+
+jobs:
+    js:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+            - name: Run the JavaScript tests
+              run: node --test tests/js/*.test.js
