@@ -133,10 +133,18 @@
 
   // How a change against an earlier period reads everywhere on the site: an arrow and a sign in plain text, so it
   // works without color (and carries no good-or-bad meaning): "▲ +12%", "▼ −8%", "No change". An earlier period with
-  // nothing in it gives "new" when something was reported now, and "–" when there is nothing to compare.
+  // nothing in it gives "new" when something was reported now, and "–" when there is nothing to compare. When the earlier
+  // period had fewer than MIN_BASE offenses a percentage swings wildly (3 to 6 is "+100%"), so the change is written as a
+  // count instead: "▲ +3 offenses".
+  const MIN_BASE = 10;
   function pct(n, prior) {
     if (prior == null) return "–";
     if (!prior) return n ? "new" : "–";
+    if (n === prior) return "No change";
+    if (prior < MIN_BASE) {
+      const d = Math.abs(n - prior), unit = d === 1 ? "offense" : "offenses";
+      return n > prior ? `▲ +${d} ${unit}` : `▼ −${d} ${unit}`;
+    }
     const p = Math.round((100 * (n - prior)) / prior);
     return p > 0 ? `▲ +${p}%` : p < 0 ? `▼ −${-p}%` : "No change";
   }
@@ -145,7 +153,7 @@
   // what data exists, so it is not mistaken for the period the person has chosen.
   const dataNote = (months) => `Data available: ${span(months)} · Updated monthly.`;
 
-  const api = { load, incidents, title, span, dataNote, lockExtent, padBounds, pct };
+  const api = { load, incidents, title, span, dataNote, lockExtent, padBounds, pct, MIN_BASE };
   if (typeof module !== "undefined" && module.exports) module.exports = api;      // so tests can load this file in Node
   else window.CRIME = api;
 })();
