@@ -141,7 +141,11 @@
     return p > 0 ? `▲ +${p}%` : p < 0 ? `▼ −${-p}%` : "No change";
   }
 
-  const api = { load, incidents, title, span, lockExtent, padBounds, pct };
+  // The line under each page title (the "These are reported offenses..." sentence follows it in the page itself). It says
+  // what data exists, so it is not mistaken for the period the person has chosen.
+  const dataNote = (months) => `Data available: ${span(months)} · Updated monthly.`;
+
+  const api = { load, incidents, title, span, dataNote, lockExtent, padBounds, pct };
   if (typeof module !== "undefined" && module.exports) module.exports = api;      // so tests can load this file in Node
   else window.CRIME = api;
 })();
