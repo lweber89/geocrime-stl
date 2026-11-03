@@ -99,36 +99,28 @@
     return `${name(months[0].m)} – ${name(months[months.length - 1].m)}`;
   };
 
-  // Keep a Leaflet map on the city: the person can zoom in anywhere but cannot zoom out past the whole-city view, and
-  // cannot drag the map far off the city. `bounds` is [[south, west], [north, east]]. The whole-city zoom depends on
-  // the size of the map box, so it is worked out again whenever the box changes size.
+  // Keep a Leaflet map on the city. The person can zoom in anywhere but cannot zoom out past the whole-city view, and if
+  // any move (a drag, the keyboard, a flick) ends with the middle of the map off the city, the map glides back to the
+  // whole-city view, the same view the Reset button gives. `bounds` is [[south, west], [north, east]]. There is no hard
+  // pan limit: one made a ward on the edge of the city impossible to center, because its view reaches past the limit.
+  // The whole-city zoom depends on the size of the map box, so it is worked out again whenever the box changes size.
   function lockExtent(map, bounds) {
     const fit = () => {
       const size = map.getSize();
       if (!size.x || !size.y) return;                       // box not laid out yet (hidden or zero height); try again on resize
       map.setMinZoom(map.getBoundsZoom(bounds));
     };
-    map.setMaxBounds(padBounds(bounds, 0.15));
     fit();
     map.on("resize", fit);
-    // Let go of the map with its center off the city and it glides back to the whole-city view, the same view the
-    // Reset button gives, instead of stopping at the edge of the pan limit.
-    let dragged = false, snapping = false;
-    map.on("dragend", () => { dragged = true; });
+    let snapping = false;
     map.on("moveend", () => {
-      if (!dragged || snapping) return;
-      dragged = false;
+      if (snapping) return;
       const c = map.getCenter();
       if (c.lat >= bounds[0][0] && c.lat <= bounds[1][0] && c.lng >= bounds[0][1] && c.lng <= bounds[1][1]) return;
       snapping = true;
       map.once("moveend", () => { snapping = false; });
       map.fitBounds(bounds, { padding: [20, 20] });
     });
-  }
-  // bounds grown by `frac` of their size on every side, so the city edge can be reached and the map can still be nudged
-  function padBounds(b, frac) {
-    const dy = (b[1][0] - b[0][0]) * frac, dx = (b[1][1] - b[0][1]) * frac;
-    return [[b[0][0] - dy, b[0][1] - dx], [b[1][0] + dy, b[1][1] + dx]];
   }
 
   // How a change against an earlier period reads everywhere on the site: an arrow and a sign in plain text, so it
@@ -153,7 +145,7 @@
   // what data exists, so it is not mistaken for the period the person has chosen.
   const dataNote = (months) => `Data available: ${span(months)} · Updated monthly.`;
 
-  const api = { load, incidents, title, span, dataNote, lockExtent, padBounds, pct, MIN_BASE };
+  const api = { load, incidents, title, span, dataNote, lockExtent, pct, MIN_BASE };
   if (typeof module !== "undefined" && module.exports) module.exports = api;      // so tests can load this file in Node
   else window.CRIME = api;
 })();
