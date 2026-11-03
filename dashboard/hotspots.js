@@ -201,7 +201,7 @@
     HOT.sortRows(rows, key, st.dir);
     const th = (k, t, cls = "") => {
       const on = st.sort === k, word = st.dir === "asc" ? "ascending" : "descending";
-      return `<th class="${cls}"${on ? ` aria-sort="${word}"` : ""}><button type="button" data-sort="${k}" aria-pressed="${on}" title="${on ? "Click to reverse the order" : "Sort by " + t.toLowerCase()}">${t}</button></th>`;
+      return `<th class="${cls} sortable"${on ? ` aria-sort="${word}"` : ""}><button type="button" data-sort="${k}" aria-pressed="${on}" title="${on ? "Click to reverse the order" : "Sort by " + t.toLowerCase()}">${t}</button></th>`;
     };
     const fmt = (x) => (Math.round(x * 10) / 10).toLocaleString();
     return `<table class="hot"><thead><tr><th>${isW ? "Ward" : "Neighborhood"}</th>${th("n", "Offenses", "r")}${th("rate", "Per 1,000", "r")}${th("change", "Change", "r")}</tr></thead><tbody>${

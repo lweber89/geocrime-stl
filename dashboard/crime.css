@@ -180,6 +180,11 @@ table.hot th, table.hot td { padding: 5px 4px; border-bottom: 1px solid var(--gr
 table.hot .r { text-align: right; font-variant-numeric: tabular-nums; }
 table.hot th button { font: inherit; font-weight: 600; background: none; border: 0; color: var(--ink-2); cursor: pointer; padding: 0; }
 table.hot th button[aria-pressed="true"] { color: var(--ink); }
+/* The sort arrow sits in a gutter that is always there, so choosing a column to sort by never changes any column's width. */
+table.hot th.sortable, table.hot td.r { padding-right: 1.3em; }
+table.hot th.sortable::after { content: "↓"; position: absolute; right: 0.3em; visibility: hidden; }
+table.hot th.sortable[aria-sort="ascending"]::after { content: "↑"; visibility: visible; }
+table.hot th.sortable[aria-sort="descending"]::after { content: "↓"; visibility: visible; }
 .hotpage .mapnote { max-width: calc(100% - 40px); }
 @media (max-width: 760px) {
   .hotpage .stage { height: auto; flex-direction: column; }
