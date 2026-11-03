@@ -113,7 +113,7 @@
 /* ---- charts page ---- */
 /* time of day: meaning-based colours (night dark, dawn orange, day yellow, dusk blue). Checked with the palette validator:
    colour-blind and normal-vision separation pass; the lightness/chroma bands and the yellow's contrast are the cost of
-   intuitive day/night colours, so every bar is also named by the legend, the tooltip and the data table. */
+   intuitive day/night colours, so every bar is also named by the legend, the tooltip and the hidden data table. */
 :root { --series: #26313f; --series-soft: #6f7f96; --tod-night: #1f2937; --tod-dawn: #e8833a; --tod-day: #f2c230; --tod-dusk: #3f6fd1; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --series: #9fb3cc; --series-soft: #9fb3cc; --tod-night: #7a889e; --tod-dusk: #5f8fe8; } }
 :root[data-theme="dark"] { --series: #9fb3cc; --series-soft: #9fb3cc; --tod-night: #7a889e; --tod-dusk: #5f8fe8; }
@@ -125,7 +125,7 @@
 .addrchip { gap: 8px; }
 .addrchip .btn { padding: 2px 8px; }
 .chartgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
-.chartcard { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; min-width: 0; }
+.chartcard { position: relative; margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; min-width: 0; }
 .chartcard.wide { grid-column: 1 / -1; }
 .chartcard h3 { margin: 0; font-size: 15px; }
 .chartcard figcaption p { margin: 2px 0 8px; font-size: 12.5px; }
@@ -148,11 +148,8 @@
 .cat-track { height: 14px; background: transparent; }
 .cat-track b { display: block; height: 100%; border-radius: 0 4px 4px 0; }
 .cat-n { text-align: right; font-variant-numeric: tabular-nums; }
-.tview { margin-top: 8px; font-size: 12.5px; }
-.tview summary { cursor: pointer; color: var(--ink-2); }
-.tview table { border-collapse: collapse; margin-top: 6px; width: 100%; }
-.tview th, .tview td { text-align: right; padding: 3px 8px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
-.tview th:first-child, .tview td:first-child { text-align: left; }
+/* the table behind each chart: off-screen, but still read by screen readers */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
 .tooltip { position: fixed; z-index: 2000; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--axis);
            border-radius: 8px; padding: 8px 10px; font-size: 12.5px; box-shadow: 0 4px 14px rgba(0,0,0,.2); min-width: 150px; }
 .tooltip[hidden] { display: none; }
