@@ -25,7 +25,7 @@
   const HOURS = ["12a", "1a", "2a", "3a", "4a", "5a", "6a", "7a", "8a", "9a", "10a", "11a", "12p", "1p", "2p", "3p", "4p", "5p", "6p", "7p", "8p", "9p", "10p", "11p"];
   const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-  let D, scoped = [], area = {}, period = "p12", other = new URLSearchParams();
+  let D, scoped = [], area = {}, when = "l12", panel, other = new URLSearchParams();
   const wardPop = new Map(), nbhdPop = new Map();
   let cityPop = 0;
 
@@ -45,21 +45,22 @@
     area = {};
     for (const k of AREA_FIELDS) area[k] = p.get(k) || "";
     area.fa = p.get("fa") === "1";
-    period = p.get("per") || "p12";
+    when = FILTERS.parse(location.hash).when || "l12";                    // reads when, and the older per, range and month
+    if (!WHEN.resolve(when, D.months.map((x) => x.m))) when = "l12";
     other = new URLSearchParams();                     // everything else (the map's period, filters...) is passed through untouched
-    p.forEach((v, k) => { if (!AREA_FIELDS.includes(k) && k !== "fa" && k !== "per") other.set(k, v); });
+    p.forEach((v, k) => { if (!AREA_FIELDS.includes(k) && !["fa", "per", "when", "range", "month"].includes(k)) other.set(k, v); });
   }
 
   function writeState() {
     const p = new URLSearchParams(other);
     for (const k of AREA_FIELDS) if (area[k] && !(k === "radius" && !area.pt)) p.set(k, area[k]);
     if (area.fa) p.set("fa", "1");
-    if (period !== "p12") p.set("per", period);
+    if (when !== "l12") p.set("when", when);
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
     const link = document.querySelector('a[data-nav="map"]');
     if (link) link.href = "./" + (p.toString() ? "#" + p : "");
     const hot = document.querySelector('a[data-nav="hotspots"]');
-    if (hot) hot.href = FILTERS.link("hotspots", { cat: area.cat, fa: area.fa, gb: CRIME.groupBOn(), when: period !== "p12" ? FILTERS.WHEN_OF_PER[period] : "" });
+    if (hot) hot.href = FILTERS.link("hotspots", { cat: area.cat, fa: area.fa, gb: CRIME.groupBOn(), when: when !== "l12" ? when : "" });
   }
 
   function describeArea() {
@@ -89,9 +90,8 @@
   }
 
   function periodBounds() {
-    const keys = D.months.map((x) => x.m), n = { p3: 3, p6: 6, p12: 12, p24: 24, all: keys.length }[period] || 12;
-    const used = Math.min(n, keys.length);
-    return { from: monStart(keys[keys.length - used]), to: monEnd(keys.at(-1)), n: used };
+    const r = WHEN.resolve(when, D.months.map((x) => x.m));
+    return { from: monStart(r.from), to: monEnd(r.to), n: r.n, months: r.months };
   }
 
   // ------------------------------------------------------------ small building blocks
@@ -164,7 +164,7 @@
   // ------------------------------------------------------------ chart 1: offenses per month, stacked by type
   function drawMonthly() {
     const box = $("c-monthly"), W = Math.max(280, box.clientWidth), H = 300, m = { l: 40, r: 6, t: 8, b: 36 };
-    const all = D.months.map((x) => x.m), keys = all.slice(-periodBounds().n), idx = new Map(keys.map((k, i) => [k, i]));   // the months of the chosen period
+    const keys = periodBounds().months, idx = new Map(keys.map((k, i) => [k, i]));   // the months of the chosen period
     const rows = keys.map(() => ({ Person: 0, Property: 0, Society: 0, Other: 0, total: 0 }));
     for (const a of scoped) { const i = idx.get(a.t.slice(0, 7)); if (i != null) { rows[i][a.type]++; rows[i].total++; } }
     const max = niceMax(Math.max(1, ...rows.map((r) => r.total)));
@@ -320,15 +320,16 @@
     const n = inPeriod.length, pct = (x) => (n ? Math.round((100 * x) / n) + "%" : "–");
     const pop = populationOfArea();
     const matchArea = areaMatcher();
-    // the same number of months immediately before the period, with the same area and filters
-    const pFrom = new Date(pb.from.getFullYear(), pb.from.getMonth() - pb.n, 1), pTo = new Date(pb.from.getTime() - 1);
-    const hasPrior = period !== "all" && pFrom >= monStart(D.months[0].m);
-    const prior = hasPrior ? D.records.filter((a) => a.date >= pFrom && a.date <= pTo && matchArea(a)).length : null;
+    // the comparison period (see when.js): the same months last year for Year to date, otherwise the months right before
+    const pp = WHEN.prior(when, D.months.map((x) => x.m)), ppSet = pp ? new Set(pp.months) : null;
+    const prior = pp ? D.records.filter((a) => ppSet.has(a.t.slice(0, 7)) && matchArea(a)).length : null;
     const change = prior == null ? ["–", "change vs. the previous period (not enough history)"]
-      : !prior ? ["–", "change vs. the previous period (none reported then)"]
-      : [CRIME.pct(n, prior), `vs. the previous ${pb.n} months (${num(prior)})`];
+      : !prior ? ["–", `change vs. ${pp.label} (none reported then)`]
+      : [CRIME.pct(n, prior), `vs. ${pp.label} (${num(prior)})`];
+    const r = WHEN.resolve(when, D.months.map((x) => x.m));
+    const words = r.kind === "all" ? "all dates" : r.kind === "preset" ? `last ${r.n} months` : r.kind === "ytd" ? `year to date, ${WHEN.dates(when, D.months.map((x) => x.m))}` : WHEN.dates(when, D.months.map((x) => x.m));
     const tiles = [
-      [num(n), `reported offenses, ${pb.n === D.months.length && period === "all" ? "all dates" : `last ${pb.n} months`}`],
+      [num(n), `reported offenses, ${words}`],
       pop ? [(Math.round((10000 * n) / pop) / 10).toLocaleString(), `per 1,000 residents in this period (${num(pop)} people, 2020 census)`] : null,
       change,
       [pct(inPeriod.filter((a) => a.type === "Person").length), "crimes against persons"],
@@ -348,7 +349,7 @@
     scoped = D.records.filter(areaMatcher());
     const pb = periodBounds(), inPeriod = scoped.filter((a) => a.date >= pb.from && a.date <= pb.to);
     $("areaTitle").textContent = describeArea();
-    $("cap-monthly").textContent = `By type of offense, ${monLabel(D.months.slice(-pb.n)[0].m)} – ${monLabel(D.months.at(-1).m)} (follows the period menu).`;
+    $("cap-monthly").textContent = `By type of offense, ${WHEN.dates(when, D.months.map((x) => x.m))} (follows the period menu).`;
     $("periodText").textContent = `${monLabel(monKey(pb.from))} – ${monLabel(monKey(pb.to))}`;
     $("addrChip").hidden = !area.pt;
     for (const id of ["ward", "nbhd"]) {                 // locked while a spot is chosen; "Clear" brings them back
@@ -361,14 +362,14 @@
   }
 
   function wire() {
-    const sync = () => { $("ward").value = area.ward; $("nbhd").value = area.nbhd; $("cat").value = area.cat; $("fa").checked = area.fa; $("per").value = period; };
+    panel = WHENPANEL.mount($("when"), { keys: D.months.map((x) => x.m), value: when, onChange: (w) => { when = w; renderAll(); } });
+    const sync = () => { $("ward").value = area.ward; $("nbhd").value = area.nbhd; $("cat").value = area.cat; $("fa").checked = area.fa; panel.set(when); };
     $("ward").addEventListener("change", () => { area.ward = $("ward").value; if (area.ward) { area.nbhd = ""; area.pt = area.lbl = ""; } sync(); renderAll(); });
     $("nbhd").addEventListener("change", () => { area.nbhd = $("nbhd").value; if (area.nbhd) { area.ward = ""; area.pt = area.lbl = ""; } sync(); renderAll(); });
     $("cat").addEventListener("change", () => { area.cat = $("cat").value; renderAll(); });
     $("fa").addEventListener("change", () => { area.fa = $("fa").checked; renderAll(); });
-    $("per").addEventListener("change", () => { period = $("per").value; renderAll(); });
     $("addrClear").addEventListener("click", () => { area.pt = area.lbl = ""; renderAll(); });
-    $("reset").addEventListener("click", () => { area = { ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", fa: false }; period = "p12"; sync(); renderAll(); });
+    $("reset").addEventListener("click", () => { area = { ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", fa: false }; when = "l12"; sync(); renderAll(); });
     let t; const redraw = () => { clearTimeout(t); t = setTimeout(() => { if (D) renderAll(); }, 120); };
     window.addEventListener("resize", redraw);
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw);
