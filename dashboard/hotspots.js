@@ -19,43 +19,42 @@
   const CATCH_ALL = "All Other Offenses"; // NIBRS catch-all: counted in "all", but not offered on its own
   const RAMP = ["#fff1d6", "#fdd49e", "#fc8d59", "#d7301f", "#7f0000"];           // same fifths as the map's ward and neighborhood shading
   const UP = ["#fc8d59", "#d7301f"], DOWN = ["#8db8e8", "#2b6cb0"], FLAT = "#d9d7cf";
-  const MAP_RANGE = { p3: "last3", p6: "last6", p12: "last12", p24: "all", all: "all" };
-  const PERIOD_N = { p3: 3, p6: 6, p12: 12, p24: 24 };
 
-  let D, map, hexLayer, hexByKey = new Map(), st = { cat: "", fa: false, per: "p12", tab: "hex", mode: "count", sort: "rate", dir: "desc" };
+  let panel, D, map, hexLayer, hexByKey = new Map(), st = { cat: "", fa: false, when: "l12", tab: "hex", mode: "count", sort: "rate", dir: "desc" };
   let view = null;                       // everything computed for the current filters
 
   // ------------------------------------------------------------ state in the page link
   function readState() {
     const p = new URLSearchParams(location.hash.slice(1));
     st.cat = p.get("cat") || ""; st.fa = p.get("fa") === "1";
-    st.per = PERIOD_N[p.get("per")] || p.get("per") === "all" ? p.get("per") : "p12";
+    st.when = FILTERS.parse(location.hash).when || "l12";                  // reads when, and the older per, range and month
+    if (!WHEN.resolve(st.when, D.months.map((x) => x.m))) st.when = "l12";
     st.tab = ["hex", "nbhd", "ward", "block"].includes(p.get("tab")) ? p.get("tab") : "hex";
     st.mode = ["count", "change"].includes(p.get("mode")) ? p.get("mode") : "count";
   }
   const shared = () => ({ cat: st.cat, fa: st.fa, gb: CRIME.groupBOn() });          // what the other pages understand
   function writeState() {
     const p = new URLSearchParams(FILTERS.hash("hotspots", shared()));
-    if (st.per !== "p12") p.set("per", st.per);
+    if (st.when !== "l12") p.set("when", st.when);
     if (st.tab !== "hex") p.set("tab", st.tab);
     if (st.mode !== "count") p.set("mode", st.mode);
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
     const map1 = document.querySelector('a[data-nav="map"]'), ch = document.querySelector('a[data-nav="charts"]');
     if (map1) map1.href = FILTERS.link("map", shared());
-    if (ch) ch.href = FILTERS.link("charts", { ...shared(), when: st.per !== "p12" ? FILTERS.WHEN_OF_PER[st.per] : "" });
+    if (ch) ch.href = FILTERS.link("charts", { ...shared(), when: st.when !== "l12" ? st.when : "" });
   }
-  const mapHash = (extra = {}) => "./#" + FILTERS.hash("map", shared(), extra);       // a link into the crime map that keeps the filters
+  const mapHash = (extra = {}, withWhen = false) => "./#" + FILTERS.hash("map", { ...shared(), when: withWhen ? st.when : "" }, extra);       // a link into the crime map that keeps the filters
 
   // ------------------------------------------------------------ numbers for the current filters
   function compute() {
     const keys = D.months.map((x) => x.m);
-    const n = st.per === "all" ? keys.length : Math.min(PERIOD_N[st.per], keys.length);
-    const months = keys.slice(keys.length - n);
-    const priorKeys = keys.length - 2 * n >= 0 ? keys.slice(keys.length - 2 * n, keys.length - n) : null;
+    const r = WHEN.resolve(st.when, keys), n = r.n, months = r.months;
+    const pr = WHEN.prior(st.when, keys), priorKeys = pr ? pr.months : null;       // Year to date is compared with the same months last year
+    const priorLabel = pr ? pr.label : `the previous ${n} months`;
     const recs = D.records.filter((a) => (!st.cat || a.cat === st.cat) && (!st.fa || a.firearm));
     const cells = HOT.bin(recs, { width: HEX_WIDTH });
     const meas = HOT.measure(cells, { months, prior: priorKeys });
-    view = { keys, n, months, priorKeys, recs, ...meas, inP: new Set(months), inQ: priorKeys ? new Set(priorKeys) : null };
+    view = { keys, n, months, priorKeys, priorLabel, recs, ...meas, inP: new Set(months), inQ: priorKeys ? new Set(priorKeys) : null };
   }
 
   // ------------------------------------------------------------ the hexagon map
@@ -79,7 +78,7 @@
   }
 
   function cellTip(c) {
-    const change = c.prior == null ? "" : `<br>${pctText(c.n, c.prior)} vs. the previous ${view.n} months (${num(c.prior)})`;
+    const change = c.prior == null ? "" : `<br>${pctText(c.n, c.prior)} vs. ${view.priorLabel} (${num(c.prior)})`;
     return `<strong>${esc(describeCell(c))}</strong><br>${num(c.n)} offenses in the period${change}`;
   }
 
@@ -123,7 +122,7 @@
         sw(c, i === 4 ? `${fmt(b[i])}+` : span(b[i], b[i + 1] - 1))).join("");
     } else {
       const lo = Math.max(2, Math.ceil(view.tau / 3));
-      h = `<div style="margin-bottom:4px"><strong>Change vs. the previous ${view.n} months</strong></div>`
+      h = `<div style="margin-bottom:4px"><strong>Change vs. ${view.priorLabel}</strong></div>`
         + sw(UP[1], `Up ${fmt(view.tau)}+`) + sw(UP[0], `Up ${span(lo, view.tau - 1)}`) + sw(FLAT, "About the same")
         + sw(DOWN[0], `Down ${span(lo, view.tau - 1)}`) + sw(DOWN[1], `Down ${fmt(view.tau)}+`);
     }
@@ -158,12 +157,12 @@
     if (st.mode === "count") {
       const arr = cells.filter((c) => c.n >= MIN_CELL).sort((a, b) => b.n - a.n).slice(0, 15);
       items.push(list("Most offenses", arr, (c) => `${num(c.n)}<small> ${pctText(c.n, c.prior)}</small>`,
-        `Hexagons with the most reported offenses in the period. The small figure is the change from the previous ${view.n} months.`));
+        `Hexagons with the most reported offenses in the period. The small figure is the change from ${view.priorLabel}.`));
     } else if (st.mode === "change") {
       if (!view.priorKeys) return '<p class="muted">There is not enough history to compare with an earlier period. Choose a shorter period.</p>';
       const pool = cells.filter((c) => c.prior != null && Math.max(c.n, c.prior) >= MIN_CELL);
       items.push(list("Biggest increases", pool.filter((c) => c.change > 0).sort((a, b) => b.change - a.change).slice(0, 8), (c) => `+${num(c.change)}<small> ${num(c.prior)} → ${num(c.n)}</small>`,
-        `Change in offenses compared with the previous ${view.n} months. Small numbers can swing a lot.`));
+        `Change in offenses compared with ${view.priorLabel}. Small numbers can swing a lot.`));
       items.push(list("Biggest decreases", pool.filter((c) => c.change < 0).sort((a, b) => a.change - b.change).slice(0, 8), (c) => `−${num(-c.change)}<small> ${num(c.prior)} → ${num(c.n)}</small>`));
     }
     return items.join("");
@@ -200,7 +199,7 @@
       rows.map((r) => `<tr><td>${rowLink(mapHash(isW ? { ward: r.name } : { nbhd: r.name }), r.label)}</td><td class="r">${num(r.n)}</td>
         <td class="r">${r.rate == null ? '<span class="muted" title="Fewer than ' + MIN_RATE_POP + ' residents">–</span>' : fmt(r.rate)}</td>
         <td class="r">${r.prior == null ? "–" : pctText(r.n, r.prior)}</td></tr>`).join("")}</tbody></table>
-      <p class="small muted">Per 1,000 residents, 2020 census${isW ? "" : "; neighborhoods with fewer than " + MIN_RATE_POP + " residents have no rate"}. Change is against the previous ${view.n} months. Click a name to see it on the crime map.</p>`;
+      <p class="small muted">Per 1,000 residents, 2020 census${isW ? "" : "; neighborhoods with fewer than " + MIN_RATE_POP + " residents have no rate"}. Change is against ${view.priorLabel}. Click a name to see it on the crime map.</p>`;
   }
 
   function blockList() {
@@ -220,7 +219,7 @@
     return `<ol class="hlist">${rows.map((b, i) => `<li class="hrow"><span class="hname"><span class="rank">${i + 1}</span> ${esc(HOT.title(b.addr))}<span class="muted small"> · ${esc(b.nbhd || "")}</span></span>
       <span class="hval">${num(b.n)}<small> ${num(b.inc.size)} incidents · ${view.inQ ? pctText(b.n, b.prior) : ""}</small></span>
       <span class="small muted hmain">Most common: ${esc(top(b.cats))}</span>
-      <a class="hgo" href="${esc(mapHash({ q: b.addr, range: MAP_RANGE[st.per] }))}">See on the map</a></li>`).join("")}</ol>
+      <a class="hgo" href="${esc(mapHash({ q: b.addr }, true))}">See on the map</a></li>`).join("")}</ol>
       <p class="small muted">Blocks with the most offenses (street address as reported). Stores, hospitals and other places that routinely report can rank high. Offenses whose location is withheld are not listed. "Most common" ignores the police catch-all category "All Other Offenses" unless it is the only one.</p>`;
   }
 
@@ -262,12 +261,12 @@
     if (st.cat && !top.includes(st.cat) && tally.has(st.cat)) top.push(st.cat);          // a category chosen on the map, not in the top list
     $("cat").innerHTML = '<option value="">All offense types</option>' + top.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
     if (!top.includes(st.cat)) st.cat = "";
-    $("cat").value = st.cat; $("fa").checked = st.fa; $("per").value = st.per;
+    panel = WHENPANEL.mount($("when"), { keys: D.months.map((x) => x.m), value: st.when, onChange: (w) => { st.when = w; render(); } });
+    $("cat").value = st.cat; $("fa").checked = st.fa;
     initMap();
     $("cat").addEventListener("change", () => { st.cat = $("cat").value; render(); });
     $("fa").addEventListener("change", () => { st.fa = $("fa").checked; render(); });
-    $("per").addEventListener("change", () => { st.per = $("per").value; render(); });
-    $("reset").addEventListener("click", () => { st = { ...st, cat: "", fa: false, per: "p12" }; $("cat").value = ""; $("fa").checked = false; $("per").value = "p12"; render(); });
+    $("reset").addEventListener("click", () => { st = { ...st, cat: "", fa: false, when: "l12" }; $("cat").value = ""; $("fa").checked = false; panel.set("l12"); render(); });
     document.querySelectorAll(".seg button[data-mode]").forEach((b) => b.addEventListener("click", () => { st.mode = b.dataset.mode; writeState(); renderMap(); renderList(); }));
     document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { st.tab = b.dataset.tab; writeState(); renderList(); }));
     $("list").addEventListener("click", (e) => {
