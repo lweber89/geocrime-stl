@@ -234,3 +234,16 @@ test("the What panel: a category, the violent crime shortcut and a hidden type g
   whatOpts.onChange({ cat: "", vc: false, hide: [], fa: false });
   await sleep(10);
 });
+
+test("searching an incident number maps it and zooms to it; clearing the box zooms back out", async () => {
+  const before = fitCalls.length;
+  getEl("q").value = "26-1030";                                   // a row in the stand-in feed (September, 8 Market-St area)
+  getEl("q").dispatchEvent({ type: "input" });
+  await sleep(300);
+  assert.ok(fitCalls.length > before, "the map was re-fitted");
+  assert.ok(spanLat(lastFit()) < 0.01, "to a small area around the match, not the whole city");
+  getEl("q").value = "";
+  getEl("q").dispatchEvent({ type: "input" });
+  await sleep(300);
+  assert.ok(spanLat(lastFit()) > 0.1, "an empty box goes back to the whole city");
+});

@@ -535,6 +535,14 @@
     }).addTo(map);
   }
 
+  // After a search (an incident number): fit the map to the dots found. Offenses with no dot (withheld or not mapped) are in the list only.
+  function zoomToMatches() {
+    const pts = filtered.filter((a) => a.lat != null && !a.masked);
+    if (!pts.length || pts.length > 300) return;                 // nothing to show, or too many to be a lookup: leave the map as it is
+    const lats = pts.map((a) => a.lat), lons = pts.map((a) => a.lon), pad = 0.0015;
+    map.fitBounds([[Math.min(...lats) - pad, Math.min(...lons) - pad], [Math.max(...lats) + pad, Math.max(...lons) + pad]], { padding: [20, 20], maxZoom: 17 });
+  }
+
   // Zoom to the chosen neighborhood or ward, or back out to the whole city.
   function zoomToScope() {
     if (center) {
@@ -639,6 +647,7 @@
     $("q").value = inc;
     when = D.months.some((x) => x.m === month) ? month : DEFAULT_WHEN; panel.set(when);
     apply();
+    zoomToMatches();
   }
 
   function downloadCsv() {
@@ -705,7 +714,7 @@
   // ------------------------------------------------------------ wiring
   function wire() {
     let t;
-    $("q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(apply, 200); });
+    $("q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => { apply(); if ($("q").value.trim()) zoomToMatches(); else zoomToScope(); }, 200); });
     // the ward and neighborhood menus choose one area: picking one clears the other, then zoom to it.
     // These must be registered BEFORE the apply listeners below so the filter sees only one area.
     $("ward").addEventListener("change", () => { if ($("ward").value) { $("nbhd").value = ""; clearAddress(); } zoomToScope(); });
