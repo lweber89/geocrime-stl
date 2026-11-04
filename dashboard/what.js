@@ -15,8 +15,9 @@
 (() => {
   "use strict";
 
+  // The type tick boxes (hide) are for the Group A types; arrest-only (Group B) offenses have their own tab and switch.
   const matches = (a, s) =>
-    (!s.vc || a.violent) && !(s.hide || []).includes(a.type) && (!s.cat || a.cat === s.cat) && (!s.fa || a.firearm);
+    (!s.vc || a.violent) && (a.group === "Group B" || !(s.hide || []).includes(a.type)) && (!s.cat || a.cat === s.cat) && (!s.fa || a.firearm);
 
   function label(s, types = []) {
     const hide = s.hide || [], shown = types.filter((t) => !hide.includes(t));

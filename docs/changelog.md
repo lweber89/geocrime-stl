@@ -4,6 +4,7 @@
 
 **Explorer (website only; not part of the pip package)**
 
+- In the What menu, arrest-only (Group B) offenses now have their own **Arrest-only** tab next to Person, Property and Society, instead of a tick box at the top. The tab holds the "Include arrest-only offenses" switch and, once it is on, lists their categories (trespass, disorderly conduct, drunk driving and so on) so one can be chosen like any other. The Person/Property/Society tabs now list only Group A categories, and unticking a type no longer hides arrest-only offenses.
 - In the What menu, **Violent crime** now stays on while you narrow it: click one of its (tinted) categories to see just that one within violent crime (for example rape without fondling), or untick a type to leave it out. Before, any click switched the shortcut off and applied the click on its own. Categories and types that violent crime does not cover are greyed out until you turn it off or choose All offenses.
 - One **What** button now holds the offense filters on every page, after When: quick choices (All offenses; **Violent crime**, the FBI definition), the offense types with a tick box each, the categories under each type with their counts, Firearm, and the arrest-only (Group B) switch. It replaces the category menu, the Firearm and Group B boxes and the Person/Property/Society/Other boxes. Charts and Hotspots now honor the type choices too, so the same offenses are counted on every page, and the choices travel in the page links.
 - On Hotspots, a chosen ward or neighborhood is outlined on the map, under the hexagons.
