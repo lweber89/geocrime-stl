@@ -3,7 +3,8 @@
 The dashboard (see ``dashboard/``) is a static site, so it cannot query a database. Instead the
 pipeline publishes small files it can download once and cache:
 
-    data/web/manifest.json     which months exist, row counts, "data through" date, cache-buster
+    data/web/manifest.json     which months exist, row counts, "data through" date, cache-buster, and the
+                               category table (NIBRS code, group, violent flag; see NIBRS_CATEGORIES)
     data/web/YYYY-MM.json      every offense for one month, with repeated strings stored once
 
 The feed is rebuilt in full from the master dataset every time (about a second), so late revisions
@@ -79,64 +80,83 @@ MASKED_CATEGORIES = (
 )
 MASK_GRID_DEG = 0.0025
 
-# NIBRS categories seen in the data when the masking list was last reviewed. A category outside this list is
-# reported by the build (log warning + manifest "newCategories") so someone can decide whether to mask it.
-KNOWN_CATEGORIES = frozenset((
-    'Aggravated Assault',
-    'All Other Larceny',
-    'All Other Offenses',
-    'Animal Cruelty',
-    'Arson',
-    'Assisting or Promoting Prostitution',
-    'Betting/Wagering',
-    'Burglary/Breaking and Entering',
-    'Counterfeiting/Forgery',
-    'Credit Card/Automatic Teller Machine Fraud',
-    'Criminal Sexual Contact',
-    'Curfew/Loitering/Vagrancy Violations',
-    'Destruction/Damage/Vandalism of Property',
-    'Disorderly Conduct',
-    'Driving Under the Influence',
-    'Drug Equipment Violations',
-    'Drug/Narcotic Violations',
-    'Embezzlement',
-    'False Pretense/Swindle/Confidence Game',
-    'Family Offenses, Nonviolent',
-    'Fondling',
-    'Hacking/Computer Invasion',
-    'Human Trafficking, Commercial Sex Acts',
-    'Identity Theft',
-    'Impersonation',
-    'Incest',
-    'Intimidation',
-    'Justifiable Homicide',
-    'Kidnapping/Abduction',
-    'Liquor Law Violations',
-    'Motor Vehicle Theft',
-    'Murder and Nonnegligent Manslaughter',
-    'Negligent Manslaughter',
-    'Operating/Promoting/Assisting Gambling',
-    'Pocket-picking',
-    'Pornography/Obscene Material',
-    'Prostitution',
-    'Purchasing Prostitution',
-    'Purse-snatching',
-    'Rape',
-    'Robbery',
-    'Shoplifting',
-    'Simple Assault',
-    'Sodomy',
-    'Statutory Rape',
-    'Stolen Property Offenses',
-    'Theft From Building',
-    'Theft From Coin-Operated Machine or Device',
-    'Theft From Motor Vehicle',
-    'Theft From Motor Vehicle Parts/Accessories',
-    'Trespass of Real Property',
-    'Weapons Law Violations',
-    'Welfare Fraud',
-    'Wire Fraud',
-))
+# One row per NIBRS offense category in the SLMPD data: (category, NIBRS code, group, violent).
+#
+# The group comes from the NIBRS code, not from the City's "CrimeAgainst" column:
+#   Persons / Property / Society = Group A, the crimes the FBI counts as crime ("crime against" as the
+#                                  NIBRS manual assigns it, so Robbery is a crime against property).
+#   Group B                      = arrest-only offenses (codes 90A-90Z: all other offenses, trespass, disorderly
+#                                  conduct, DUI ...). The dashboard leaves them out of headline totals and
+#                                  rankings unless the reader turns them on.
+# "violent" follows the FBI's violent crime definition (murder and nonnegligent manslaughter, rape, robbery,
+# aggravated assault), which in NIBRS codes is 09A, 11A, 11B, 11C, 120 and 13A. Fondling (11D), simple assault
+# (13B), intimidation (13C), kidnapping (100) and negligent manslaughter (09B) are not in it. Justifiable
+# homicide (09C) is kept under Persons, but it is not a crime and is not violent crime.
+# The list is published in the manifest ("categories") so the dashboard and the methodology page never disagree
+# with it. A category outside the list is reported by the build (log warning + manifest "newCategories") so
+# someone can decide how to classify it and whether to mask it.
+NIBRS_CATEGORIES = (
+    # Persons
+    ("Murder and Nonnegligent Manslaughter", "09A", "Persons", True),
+    ("Negligent Manslaughter", "09B", "Persons", False),
+    ("Justifiable Homicide", "09C", "Persons", False),
+    ("Kidnapping/Abduction", "100", "Persons", False),
+    ("Rape", "11A", "Persons", True),
+    ("Sodomy", "11B", "Persons", True),
+    ("Criminal Sexual Contact", "11D", "Persons", False),
+    ("Fondling", "11D", "Persons", False),
+    ("Aggravated Assault", "13A", "Persons", True),
+    ("Simple Assault", "13B", "Persons", False),
+    ("Intimidation", "13C", "Persons", False),
+    ("Incest", "36A", "Persons", False),
+    ("Statutory Rape", "36B", "Persons", False),
+    ("Human Trafficking, Commercial Sex Acts", "64A", "Persons", False),
+    # Property
+    ("Robbery", "120", "Property", True),
+    ("Arson", "200", "Property", False),
+    ("Burglary/Breaking and Entering", "220", "Property", False),
+    ("Pocket-picking", "23A", "Property", False),
+    ("Purse-snatching", "23B", "Property", False),
+    ("Shoplifting", "23C", "Property", False),
+    ("Theft From Building", "23D", "Property", False),
+    ("Theft From Coin-Operated Machine or Device", "23E", "Property", False),
+    ("Theft From Motor Vehicle", "23F", "Property", False),
+    ("Theft From Motor Vehicle Parts/Accessories", "23G", "Property", False),
+    ("All Other Larceny", "23H", "Property", False),
+    ("Motor Vehicle Theft", "240", "Property", False),
+    ("Counterfeiting/Forgery", "250", "Property", False),
+    ("False Pretense/Swindle/Confidence Game", "26A", "Property", False),
+    ("Credit Card/Automatic Teller Machine Fraud", "26B", "Property", False),
+    ("Impersonation", "26C", "Property", False),
+    ("Welfare Fraud", "26D", "Property", False),
+    ("Wire Fraud", "26E", "Property", False),
+    ("Identity Theft", "26F", "Property", False),
+    ("Hacking/Computer Invasion", "26G", "Property", False),
+    ("Embezzlement", "270", "Property", False),
+    ("Stolen Property Offenses", "280", "Property", False),
+    ("Destruction/Damage/Vandalism of Property", "290", "Property", False),
+    # Society
+    ("Drug/Narcotic Violations", "35A", "Society", False),
+    ("Drug Equipment Violations", "35B", "Society", False),
+    ("Pornography/Obscene Material", "370", "Society", False),
+    ("Betting/Wagering", "39A", "Society", False),
+    ("Operating/Promoting/Assisting Gambling", "39B", "Society", False),
+    ("Prostitution", "40A", "Society", False),
+    ("Assisting or Promoting Prostitution", "40B", "Society", False),
+    ("Purchasing Prostitution", "40C", "Society", False),
+    ("Weapons Law Violations", "520", "Society", False),
+    ("Animal Cruelty", "720", "Society", False),
+    # Group B (arrest-only)
+    ("Curfew/Loitering/Vagrancy Violations", "90B", "Group B", False),
+    ("Disorderly Conduct", "90C", "Group B", False),
+    ("Driving Under the Influence", "90D", "Group B", False),
+    ("Family Offenses, Nonviolent", "90F", "Group B", False),
+    ("Liquor Law Violations", "90G", "Group B", False),
+    ("Trespass of Real Property", "90J", "Group B", False),
+    ("All Other Offenses", "90Z", "Group B", False),
+)
+GROUPS = ("Persons", "Property", "Society", "Group B")
+KNOWN_CATEGORIES = frozenset(c[0] for c in NIBRS_CATEGORIES)
 
 BOUNDS_MARGIN_DEG = 0.02   # slack around the city's bounding box before a point counts as unmapped
 SNAP_MAX_M = 30            # geocoding jitter: snap an address to its most common point within this
@@ -434,6 +454,7 @@ def build_web_feed(
             "noWard": int(d["ward"].isna().sum()),
             "masked": int(d["masked"].sum()),
             "maskedCategories": list(MASKED_CATEGORIES),
+            "categories": [{"cat": c, "code": k, "group": g, "violent": int(v)} for c, k, g, v in NIBRS_CATEGORIES],
             "newCategories": d.attrs.get("new_categories", []),
             "months": [{"m": m, "n": int(counts[m])} for m in months],
         }

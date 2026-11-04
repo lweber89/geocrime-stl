@@ -14,11 +14,16 @@
 - The Methodology page notes that neighborhood names appear as the City spells them, without apostrophes (for example, "OFallon").
 - Pulling the map off the city and letting go now brings it back to the whole-city view (the same view as Reset), instead of stopping at the edge of the pan limit.
 - Charts: the "Show data table" buttons are gone to save space. Each chart still has its numbers as a table that screen readers can read (hidden from the screen).
+- **Arrest-only (Group B) offenses are now off by default.** NIBRS Group B offenses (trespass, disorderly conduct, drunk driving, curfew and loitering, liquor-law violations, nonviolent family offenses and "All Other Offenses") are recorded only when someone is arrested, so they reflect enforcement more than crime. They are about one in five of the offenses in the data, so the headline numbers, rankings and charts on every page are now lower than before. Tick "Arrest-only offenses (Group B)" (in the link as `gb=1`) to include them. The Methodology page explains the two groups.
 - The line under each page title now starts with "Data available:" (for example "Data available: Jan 2024 – Sep 2026 · Updated monthly."), so it is no longer mistaken for the period you have chosen.
 - When the earlier period had fewer than 10 offenses, a change is now shown as a count ("+3 offenses") instead of a percentage, so small numbers no longer look like big swings (3 to 6 was "+100%"). This applies on the map, Charts and Hotspots.
 - Zooming to a ward or neighborhood on the edge of the city (for example wards 4, 8 and 14) now centers it properly. A pan limit added earlier was pushing those off-center, so it is gone; a move that ends with the map off the city still returns to the whole-city view.
 - Moving or dropping a pin no longer switches the map back to dots when you had chosen the heatmap (or another layer).
 - Change figures are written the same way on the map, Charts and Hotspots: a sign and a number ("+12%", "−8%", "No change") in plain dark text, with no red or green, so they work for color-blind readers and do not suggest good or bad news. A change that rounds to 0% now says "No change" instead of "+0%" on Charts.
+
+**Package**
+
+- `web_export` now has one table of the NIBRS categories (`NIBRS_CATEGORIES`: category, NIBRS code, group, and whether it is part of the FBI's violent crime definition) and publishes it in `manifest.json` as `categories`. The group comes from the NIBRS code, so Group B (codes 90A-90Z) is separate from Persons, Property and Society. The feed rows are unchanged and the schema stays at 3; the dashboard falls back to showing everything if the table is missing.
 
 ## 0.2.1
 

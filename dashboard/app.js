@@ -87,6 +87,7 @@
     for (const k of FIELDS) if (f[k] && !(k === "range" && (f[k] === defaultRange || f[k] === "month")) && !(k === "radius" && f[k] === DEFAULT_RADIUS)) p.set(k, f[k]);
     if (f.fa) p.set("fa", "1");
     if (f.hide.length) p.set("hide", f.hide.join(","));
+    CRIME.carryGroupB(p);
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
     const charts = document.querySelector('a[data-nav="charts"]');       // the Charts page opens on the same area and filters
     if (charts) charts.href = "charts.html" + (p.toString() ? "#" + p : "");
@@ -753,6 +754,7 @@
 
   async function main() {
     D = await CRIME.load();
+    CRIME.bindGroupB($("gb"), D);
     D.records.forEach((a) => incCount.set(a.inc, (incCount.get(a.inc) || 0) + 1));
 
     const counts = new Map();

@@ -37,6 +37,7 @@
     const p = new URLSearchParams();
     if (st.cat) p.set("cat", st.cat);
     if (st.fa) p.set("fa", "1");
+    CRIME.carryGroupB(p);
     const shared = p.toString();                                    // what the other pages understand
     if (st.per !== "p12") p.set("per", st.per);
     if (st.tab !== "hex") p.set("tab", st.tab);
@@ -50,6 +51,7 @@
     const p = new URLSearchParams();
     if (st.cat) p.set("cat", st.cat);
     if (st.fa) p.set("fa", "1");
+    CRIME.carryGroupB(p);
     for (const [k, v] of Object.entries(extra)) if (v !== "" && v != null) p.set(k, v);
     return "./#" + p;
   };
@@ -259,6 +261,7 @@
 
   async function main() {
     D = await CRIME.load();
+    CRIME.bindGroupB($("gb"), D);
     D.records.forEach((a) => { a.m = a.t.slice(0, 7); });          // month key, used for all the counting
     $("sub").textContent = CRIME.dataNote(D.months);
     readState();
