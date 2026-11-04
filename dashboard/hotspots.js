@@ -290,7 +290,7 @@
       onClearAddress: () => { st.pt = st.lbl = st.radius = ""; render(); },
     });
     panel = WHENPANEL.mount($("when"), { keys: D.months.map((x) => x.m), value: st.when, onChange: (w) => { st.when = w; render(); } });
-    whatPanel = WHATPANEL.mount($("what"), { types: D.types, cats: D.cats, violent: WHAT.violentCats(D.records), value: st, groupB: CRIME.groupBOn(), onChange: (v) => { Object.assign(st, v); render(); } });
+    whatPanel = WHATPANEL.mount($("what"), { types: D.types, cats: D.cats, groupBCats: D.groupBCats, violent: WHAT.violentCats(D.records), value: st, groupB: CRIME.groupBOn(), onChange: (v) => { Object.assign(st, v); render(); } });
     CRIME.bindGroupB(whatPanel.groupBInput, D);
     initMap(); zoomToPlace();
     $("reset").addEventListener("click", () => { st = { ...st, ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", vc: false, hide: [], fa: false, when: "l12" }; wherePanel.set(st); whatPanel.set(st); zoomToPlace(); panel.set("l12"); render(); });

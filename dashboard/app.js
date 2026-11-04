@@ -53,7 +53,7 @@
   const syncWhat = () => { if (whatPanel) whatPanel.set(whatValue()); };
   function buildWhatPanel() {
     whatPanel = WHATPANEL.mount($("what"), {
-      types: D.types, cats: D.cats, violent: WHAT.violentCats(D.records), value: whatValue(), groupB: CRIME.groupBOn(), counts: () => whatCounts,
+      types: D.types, cats: D.cats, groupBCats: D.groupBCats, violent: WHAT.violentCats(D.records), value: whatValue(), groupB: CRIME.groupBOn(), counts: () => whatCounts,
       onChange: (v) => {
         $("cat").value = v.cat; $("vc").value = v.vc ? "1" : ""; $("fa").checked = v.fa;
         TYPES.forEach((t) => ($("t-" + t).checked = !v.hide.includes(t)));

@@ -3,7 +3,7 @@
  *   const D = await CRIME.load();                  // everything
  *   const D = await CRIME.load({ months: 2 });     // newest 2 months only (fast first paint)
  *
- * D = { records, byId, maxDate, through, completeThrough, months, types, cats, nbhds, districts }
+ * D = { groupBCats, records, byId, maxDate, through, completeThrough, months, types, cats, nbhds, districts }
  *
  * Each record (one row = one OFFENSE; an incident can have several offenses):
  *   id        unique row id, e.g. "2026-09-117"
@@ -104,6 +104,7 @@
 
     return {
       records, byId, maxDate, wards, nbhdShapes, city,
+      groupBCats: [...new Set((manifest.categories || []).filter((c) => c.group === "Group B").map((c) => c.cat))].sort(),   // the arrest-only categories, known even while they are left out
       includeGroupB: groupBOn,                         // false = Group B offenses were left out of `records`
       groupBLeftOut: everything.length - records.length,
       through: manifest.through,
