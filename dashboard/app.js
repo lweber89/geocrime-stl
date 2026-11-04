@@ -91,6 +91,8 @@
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
     const charts = document.querySelector('a[data-nav="charts"]');       // the Charts page opens on the same area and filters
     if (charts) charts.href = "charts.html" + (p.toString() ? "#" + p : "");
+    const hot = document.querySelector('a[data-nav="hotspots"]');          // Hotspots takes the category, firearm and (when it has a matching preset) the period
+    if (hot) hot.href = FILTERS.link("hotspots", FILTERS.parse(p.toString()));
   }
 
   function readHash() {

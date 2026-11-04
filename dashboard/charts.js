@@ -58,6 +58,8 @@
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
     const link = document.querySelector('a[data-nav="map"]');
     if (link) link.href = "./" + (p.toString() ? "#" + p : "");
+    const hot = document.querySelector('a[data-nav="hotspots"]');
+    if (hot) hot.href = FILTERS.link("hotspots", { cat: area.cat, fa: area.fa, gb: CRIME.groupBOn(), when: period !== "p12" ? FILTERS.WHEN_OF_PER[period] : "" });
   }
 
   function describeArea() {

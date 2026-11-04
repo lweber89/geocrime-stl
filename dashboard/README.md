@@ -15,6 +15,7 @@ It contains **no data**. It reads the feed in `../data/web` (see `../data/README
 | `index.html`, `app.js` | The crime map: filters, map, table |
 | `radius.js` | The distance choices for an address or pin (¼ to 1 mile in quarters), shared by the map and Charts; tested in `tests/js/radius.test.js` |
 | `data.js` | Loads the feed and gives every page the same clean records (`window.CRIME`) |
+| `filters.js` | The one list of filter names (Where, When, What) and the one way to read and write them in the page link (`window.FILTERS`); Hotspots uses it for its links to the other pages, and the Where, When and What panels will build on it (#38); tested in `tests/js/filters.test.js` |
 | `style.css` | Base layout and styles, adapted from the crash-map project (see Credits) |
 | `crime.css` | Colours (offense-type palette) and the few crime-specific rules |
 | `favicon.svg` | Site icon: a white shield with a star on royal blue. The docs site uses a copy at `docs/assets/favicon.svg`; if you change this file, copy it there too (the deploy checks they match) |
