@@ -85,6 +85,8 @@ const sandbox = {
 sandbox.WHENPANEL = { mount: (host, o) => { panelOpts = o; panelValue = o.value; return { set: (v) => { panelValue = v; }, setLimit: (m) => { panelLimit = m; }, close() {} }; } };
 let whereOpts = null, whereValue = null;                          // the Where panel is its own component too (where-panel.js)
 sandbox.WHEREPANEL = { mount: (host, o) => { whereOpts = o; whereValue = o.value; return { set: (v) => { whereValue = v; }, close() {} }; } };
+let whatOpts = null, whatValue = null;                           // and the What panel
+sandbox.WHATPANEL = { mount: (host, o) => { whatOpts = o; whatValue = o.value; return { set: (v) => { whatValue = v; }, close() {}, groupBInput: null }; } };
 getEl("radius").value = "0.5";                                   // the HTML default
 sandbox.window = sandbox;
 vm.createContext(sandbox);
@@ -211,4 +213,24 @@ test("the Where panel: a neighborhood replaces the ward, and an address locks bo
   await sleep(10);
   assert.equal(getEl("nbhd").value, "");
   assert.doesNotMatch(hashes.at(-1), /nbhd=/);
+});
+
+test("the What panel: a category, the violent crime shortcut and a hidden type go into the link and back", async () => {
+  whatOpts.onChange({ cat: "Larceny", vc: false, hide: [], fa: false });
+  await sleep(10);
+  assert.match(hashes.at(-1), /cat=Larceny/);
+  assert.equal(whatValue.cat, "Larceny", "the panel is told the choice");
+  whatOpts.onChange({ cat: "", vc: true, hide: [], fa: true });
+  await sleep(10);
+  assert.match(hashes.at(-1), /vc=1/);
+  assert.match(hashes.at(-1), /fa=1/);
+  assert.doesNotMatch(hashes.at(-1), /cat=/);
+  assert.equal(whatValue.vc, true);
+  whatOpts.onChange({ cat: "", vc: false, hide: ["Society"], fa: false });
+  await sleep(10);
+  assert.match(hashes.at(-1), /hide=Society/);
+  assert.doesNotMatch(hashes.at(-1), /vc=/);
+  assert.equal(JSON.stringify(whatValue.hide), '["Society"]');      // (arrays from the page sandbox are not reference-equal)
+  whatOpts.onChange({ cat: "", vc: false, hide: [], fa: false });
+  await sleep(10);
 });

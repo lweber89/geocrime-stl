@@ -4,6 +4,8 @@
 
 **Explorer (website only; not part of the pip package)**
 
+- One **What** button now holds the offense filters on every page, after When: quick choices (All offenses; **Violent crime**, the FBI definition), the offense types with a tick box each, the categories under each type with their counts, Firearm, and the arrest-only (Group B) switch. It replaces the category menu, the Firearm and Group B boxes and the Person/Property/Society/Other boxes. Charts and Hotspots now honor the type choices too, so the same offenses are counted on every page, and the choices travel in the page links.
+- On Hotspots, a chosen ward or neighborhood is outlined on the map, under the hexagons.
 - One **Where** button now holds the place filter on every page, ahead of When, replacing the separate ward and neighborhood menus. It has a grid of wards, a searchable list of neighborhoods, and shows the chosen address or pin with a Clear button. The map's address box is still the main way to look up an address. Choosing a ward clears the neighborhood and the other way round; an address or pin switches both off until cleared.
 - Hotspots can now be limited to one ward or neighborhood: the hexagons, blocks and counts follow it and the map zooms to it, while the ward and neighborhood rankings stay citywide. An address or pin carried over from the map is kept in the page links but not used on Hotspots, and a note says so. Links between the pages now carry the ward or neighborhood to Hotspots too.
 - On Hotspots, choosing a column to sort by no longer makes the neighboring columns shift sideways; the sort arrow now has a fixed space of its own.

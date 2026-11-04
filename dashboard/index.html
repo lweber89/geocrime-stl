@@ -40,18 +40,17 @@
 <section class="filters" aria-label="Filters">
   <span class="whenwrap" id="where"></span>
   <span class="whenwrap" id="when"></span>
+  <span class="whenwrap" id="what"></span>
   <input type="search" id="q" placeholder="Filter by street, offense or incident #" aria-label="Search">
   <select id="ward" aria-label="Ward" hidden><option value="">Any ward</option></select>
-  <select id="cat" aria-label="Offense category"><option value="">Any category</option></select>
+  <select id="cat" aria-label="Offense category" hidden><option value="">Any category</option></select>
   <select id="nbhd" aria-label="Neighborhood" hidden><option value="">Any neighborhood</option></select>
-  <label class="chip" title="Offenses flagged as involving a firearm"><input type="checkbox" id="fa"> Firearm</label>
-  <label class="chip" title="Group B offenses are arrest-only: trespass, disorderly conduct, drunk driving, curfew and liquor violations, and the catch-all 'all other offenses'. They are off by default and left out of every number on this page."><input type="checkbox" id="gb"> Arrest-only offenses (Group B)</label>
-  <span class="chipgroup" role="group" aria-label="Offense types">
-    <label class="chip" title="Crimes against persons: assault, robbery, homicide, sex offenses"><input type="checkbox" id="t-Person" checked><i class="dot" style="background:var(--type-person)"></i> Person</label>
-    <label class="chip" title="Crimes against property: theft, burglary, vandalism"><input type="checkbox" id="t-Property" checked><i class="dot" style="background:var(--type-property)"></i> Property</label>
-    <label class="chip" title="Crimes against society: weapons, drugs, trespass, disorderly conduct"><input type="checkbox" id="t-Society" checked><i class="dot" style="background:var(--type-society)"></i> Society</label>
-    <label class="chip" title="NIBRS 'All Other Offenses' catch-all"><input type="checkbox" id="t-Other" checked><i class="dot" style="background:var(--type-other)"></i> Other</label>
-  </span>
+  <input type="hidden" id="vc">
+  <input type="checkbox" id="fa" hidden>
+  <input type="checkbox" id="t-Person" checked hidden>
+  <input type="checkbox" id="t-Property" checked hidden>
+  <input type="checkbox" id="t-Society" checked hidden>
+  <input type="checkbox" id="t-Other" checked hidden>
   <button class="btn ghost" id="reset" type="button">Reset</button>
   <button class="btn ghost" id="listBtn" type="button" aria-expanded="false" aria-controls="listwrap">List</button>
   <button class="btn ghost" id="csvBtn" type="button" title="Download the offenses shown, as a spreadsheet (CSV)">Download CSV</button>
@@ -122,6 +121,8 @@
 <script src="when-panel.js"></script>
 <script src="where.js"></script>
 <script src="where-panel.js"></script>
+<script src="what.js"></script>
+<script src="what-panel.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

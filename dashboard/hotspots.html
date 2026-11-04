@@ -25,9 +25,7 @@
 <section class="filters" aria-label="Filters">
   <span class="whenwrap" id="where"></span>
   <span class="whenwrap" id="when"></span>
-  <select id="cat" aria-label="Offense category"><option value="">All offense types</option></select>
-  <label class="chip"><input type="checkbox" id="fa"> Firearm</label>
-  <label class="chip" title="Group B offenses are arrest-only: trespass, disorderly conduct, drunk driving, curfew and liquor violations, and the catch-all 'all other offenses'. They are off by default and left out of every number on this page."><input type="checkbox" id="gb"> Arrest-only offenses (Group B)</label>
+  <span class="whenwrap" id="what"></span>
   <button class="btn ghost" id="reset" type="button">Reset</button>
 </section>
 <p class="small muted" id="placeNote" hidden></p>
@@ -69,6 +67,8 @@
 <script src="when-panel.js"></script>
 <script src="where.js"></script>
 <script src="where-panel.js"></script>
+<script src="what.js"></script>
+<script src="what-panel.js"></script>
 <script src="hotspots-core.js"></script>
 <script src="hotspots.js"></script>
 </body>

@@ -270,3 +270,14 @@ table.hot th.sortable[aria-sort="descending"]::after { content: "↓"; visibilit
   .nbhdlist { max-height: 42vh; }
   .nbhdlist .btn { min-height: 40px; }
 }
+
+/* ---- the "What" panel (what-panel.js; shares the When panel's frame) ---- */
+.whatpanel { max-height: min(78vh, 620px); overflow: auto; min-width: min(30em, 92vw); }
+.whattype { margin: 8px 0 12px; }
+.whatcheck { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 3px 0; }
+.whattypehead { font-weight: 600; margin-bottom: 4px; }
+.whatpanel .whenpresets { flex-wrap: wrap; }
+.whatpanel .nbhdlist { max-height: none; overflow: visible; }
+.whatpanel .nbhdlist .btn[aria-pressed="true"], .whatpanel .whenpresets .btn[aria-pressed="true"] { background: var(--when); color: var(--when-ink); border-color: var(--when); font-weight: 600; }
+@media (max-width: 640px) { .whatpanel { max-height: none; } .whatpanel .nbhdlist .btn { min-height: 40px; } }
+.whatpanel .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
