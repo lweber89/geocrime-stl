@@ -364,8 +364,8 @@
     wherePanel = WHEREPANEL.mount($("where"), {
       wards: D.wards ? [...wardPop.keys()].sort((a, b) => a - b) : [], nbhds: D.nbhds, value: area,
       radiusLabel: () => RADIUS.label(area.radius),
-      addressHint: "Choose an address or drop a pin on the map.",
-      addressLink: { text: "Choose on the map", href: () => document.querySelector('a[data-nav="map"]').href },
+      addressHint: "Use the address box or the Drop a pin button on the map page.",
+      addressLink: { text: "Go to the map page", href: () => document.querySelector('a[data-nav="map"]').href },
       onChange: (v) => { area.ward = v.ward; area.nbhd = v.nbhd; renderAll(); },
       onClearAddress: () => { area.pt = area.lbl = ""; renderAll(); },
     });
