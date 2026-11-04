@@ -38,11 +38,12 @@
 <div class="addrmsg muted" id="addrMsg" role="status" aria-live="polite"></div>
 
 <section class="filters" aria-label="Filters">
-  <input type="search" id="q" placeholder="Filter by street, offense or incident #" aria-label="Search">
+  <span class="whenwrap" id="where"></span>
   <span class="whenwrap" id="when"></span>
-  <select id="ward" aria-label="Ward"><option value="">Any ward</option></select>
+  <input type="search" id="q" placeholder="Filter by street, offense or incident #" aria-label="Search">
+  <select id="ward" aria-label="Ward" hidden><option value="">Any ward</option></select>
   <select id="cat" aria-label="Offense category"><option value="">Any category</option></select>
-  <select id="nbhd" aria-label="Neighborhood"><option value="">Any neighborhood</option></select>
+  <select id="nbhd" aria-label="Neighborhood" hidden><option value="">Any neighborhood</option></select>
   <label class="chip" title="Offenses flagged as involving a firearm"><input type="checkbox" id="fa"> Firearm</label>
   <label class="chip" title="Group B offenses are arrest-only: trespass, disorderly conduct, drunk driving, curfew and liquor violations, and the catch-all 'all other offenses'. They are off by default and left out of every number on this page."><input type="checkbox" id="gb"> Arrest-only offenses (Group B)</label>
   <span class="chipgroup" role="group" aria-label="Offense types">
@@ -119,6 +120,8 @@
 <script src="filters.js"></script>
 <script src="when.js"></script>
 <script src="when-panel.js"></script>
+<script src="where.js"></script>
+<script src="where-panel.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

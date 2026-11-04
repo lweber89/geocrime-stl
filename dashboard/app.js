@@ -45,6 +45,24 @@
   }
 
   // The When button and its panel. Whole-city views are limited to six months of dots (see apply), which the panel enforces.
+  // The Where button. The hidden ward and neighborhood menus (#ward, #nbhd) still hold the choice, so every rule that reads
+  // them (filtering, shading, zoom, the link) is unchanged: the panel sets a menu and fires its change event.
+  let wherePanel = null;
+  const whereValue = () => ({ ward: $("ward").value, nbhd: $("nbhd").value, pt: $("pt").value, lbl: $("lbl").value });
+  const syncWhere = () => { if (wherePanel) wherePanel.set(whereValue()); };
+  function buildWherePanel() {
+    wherePanel = WHEREPANEL.mount($("where"), {
+      wards: D.wards ? D.wards.features.map((f) => String(f.properties.ward)).sort((a, b) => a - b) : [], nbhds: D.nbhds, value: whereValue(),
+      radiusLabel: () => RADIUS.label($("radius").value),
+      addressHint: "Use the address box above, or click the map to drop a pin.",
+      onChange: (v) => {
+        $("ward").value = v.ward; $("nbhd").value = v.nbhd;          // the panel sends the whole place: at most one of the two is set
+        $(v.nbhd ? "nbhd" : "ward").dispatchEvent(new Event("change"));
+      },
+      onClearAddress: () => { clearAddress(); apply(); zoomToScope(); },
+    });
+  }
+
   function buildWhenPanel() {
     panel = WHENPANEL.mount($("when"), {
       keys: D.months.map((x) => x.m), value: when,
@@ -170,6 +188,7 @@
     $("addrClear").hidden = !center;
     $("reportBtn").hidden = !center;
     $("radiusBox").hidden = !center;
+    syncWhere();
     renderAll();
     if (center) openReport(); else closePanel();
   }
@@ -752,7 +771,6 @@
       const nums = [...wardFeatures.keys()].sort((x, y) => x - y);
       $("ward").innerHTML = '<option value="">Any ward</option>' + nums.map((w) => `<option value="${w}">Ward ${w}</option>`).join("");
     } else {
-      $("ward").hidden = true;
       document.querySelector('.seg button[data-layer="wards"]').hidden = true;
     }
     if (D.nbhdShapes) D.nbhdShapes.features.forEach((ft) => nbhdFeatures.set(ft.properties.name, ft));
@@ -765,6 +783,7 @@
     // a neighborhood belongs to a ward if at least 10% of its offenses fall there (ignores stray geocoding)
     wn.forEach((m, w) => wardNbhds.set(w, new Set([...m].filter(([n, c]) => c >= 5 && c / total.get(n) >= 0.1).map(([n]) => n))));
 
+    buildWherePanel();
     buildWhenPanel();
     readHash();
     initMap();
