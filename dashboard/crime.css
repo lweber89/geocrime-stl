@@ -284,3 +284,10 @@ table.hot th.sortable[aria-sort="descending"]::after { content: "↓"; visibilit
 .whatpanel .whatcheck + .whenhead { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
 .whatpanel .dim { opacity: .45; }
 .whatpanel .whatbody .whenhint { margin: 8px 0 0; }
+.whentabs { display: flex; gap: 4px; margin-top: 12px; border-bottom: 1px solid var(--border); }
+.whentab { font: inherit; font-size: 13px; padding: 6px 12px; background: none; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-bottom: -1px; }
+.whentab[aria-selected="true"] { color: var(--ink); font-weight: 600; background: var(--surface); border-color: var(--border); border-bottom: 1px solid var(--surface); }
+.whentab.off { opacity: .5; }
+.whentab.struck { text-decoration: line-through; }   /* switched off by the person, not just left out of Violent crime */
+.whatpanel .whenhint + .whentabs, .whatpanel .whenpresets + .whentabs { margin-top: 12px; }
+@media (max-width: 640px) { .whentab { min-height: 44px; flex: 1; justify-content: center; } }

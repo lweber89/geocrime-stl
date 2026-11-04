@@ -40,6 +40,8 @@
     const top = h("div", { class: "whentop" });
     top.append(h("strong", { class: "whentitle" }, "Choose the offenses"), close);
     const quick = h("div", { class: "whenpresets" }), body = h("div", { class: "whatbody" });
+    const tabs = h("div", { class: "whentabs", role: "tablist", "aria-label": "Offense types" });
+    let active = null, lastVc = false;
     const note = h("p", { class: "whenhint muted small", hidden: "" }, "Violent crime covers the highlighted categories. * means only some offenses in that category count (see Methodology). Click a category or type to change the choice.");
     const fa = h("input", { type: "checkbox", id: id + "-fa" });
     const faRow = h("label", { class: "whatcheck", for: id + "-fa" });
@@ -53,7 +55,7 @@
       row.append(groupBInput, document.createTextNode(" Include arrest-only offenses (Group B; adds to the choice below)"));
       panel.append(row);
     }
-    panel.append(h("p", { class: "whenhead" }, "Quick choices"), quick, note, body);
+    panel.append(h("p", { class: "whenhead" }, "Quick choices"), quick, note, tabs, body);
     host.append(btn, panel);
 
     const emit = (next) => { value = { ...value, ...next }; render(); opts.onChange({ ...value }); };
@@ -73,30 +75,38 @@
         q("Violent crime (FBI definition)", value.vc, VIOLENT_NOTE, () => emit(WHAT.setViolent(value, !value.vc))));
       const counts = opts.counts ? opts.counts() : null;
       note.hidden = !value.vc;
-      body.replaceChildren(...types.map((t) => {
-        const list0 = cats[t] || [], vcN = value.vc && opts.violent ? list0.filter((c) => opts.violent.has(c)).length : null;
-        const on = vcN == null ? !(value.hide || []).includes(t) : vcN > 0, sec = h("div", { class: "whattype" + (vcN === 0 ? " dim" : "") });
-        const lab = h("label", { class: "whatcheck whattypehead" });
-        const cb = h("input", { type: "checkbox" }); cb.checked = on; cb.indeterminate = vcN != null && vcN > 0 && vcN < list0.length;
-        cb.addEventListener("change", () => emit(WHAT.toggleType(value, t, types, typeOfCat)));
-        const dot = h("i", { class: "dot", style: `background:var(--type-${t.toLowerCase()})` });
-        lab.append(cb, dot, document.createTextNode(" " + t));
-        const list = h("div", { class: "nbhdlist" });
-        for (const c of cats[t] || []) {
-          const n = counts ? ` (${(counts.get(c) || 0).toLocaleString()})` : "";
-          const cov = value.vc && opts.violent ? opts.violent.get(c) : null;       // while Violent crime is on, mark what it covers
-          const b = q(c + n + (cov === "part" ? " *" : ""), value.vc ? !!cov : value.cat === c, cov === "part" ? "Only some offenses in this category count as violent crime (for example rape, but not fondling)." : "", () => emit(WHAT.setCat(value, c, typeOfCat)));
-          if (value.vc && !cov) b.classList.add("dim");
-          list.append(b);
-        }
-        sec.append(lab, list);
-        return sec;
+      const cover = (t) => (value.vc && opts.violent ? (cats[t] || []).filter((c) => opts.violent.has(c)).length : null);
+      const isOn = (t) => (cover(t) == null ? !(value.hide || []).includes(t) : cover(t) > 0);
+      if (value.vc && !lastVc) active = types.find((t) => cover(t) > 0) || active;      // turning Violent crime on: open the first tab it covers
+      lastVc = value.vc;
+      if (!types.includes(active)) active = (value.cat && typeOfCat(value.cat)) || types.find(isOn) || types[0];
+      tabs.replaceChildren(...types.map((t) => {
+        const tb = h("button", { type: "button", role: "tab", class: "whentab" + (isOn(t) ? "" : " off") + ((value.hide || []).includes(t) ? " struck" : ""), "aria-selected": String(t === active), id: id + "-tab-" + t });
+        tb.append(h("i", { class: "dot", style: `background:var(--type-${t.toLowerCase()})` }), document.createTextNode(" " + t));
+        tb.addEventListener("click", () => { active = t; render(); });
+        return tb;
       }));
+      const t = active, list0 = cats[t] || [], vcN = cover(t);
+      const sec = h("div", { class: "whattype", role: "tabpanel", "aria-labelledby": id + "-tab-" + t });
+      const lab = h("label", { class: "whatcheck whattypehead" });
+      const cb = h("input", { type: "checkbox" }); cb.checked = isOn(t); cb.indeterminate = vcN != null && vcN > 0 && vcN < list0.length;
+      cb.addEventListener("change", () => emit(WHAT.toggleType(value, t, types, typeOfCat)));
+      lab.append(cb, document.createTextNode(` Include ${t} offenses`));
+      const list = h("div", { class: "nbhdlist" });
+      for (const c of list0) {
+        const n = counts ? ` (${(counts.get(c) || 0).toLocaleString()})` : "";
+        const cov = value.vc && opts.violent ? opts.violent.get(c) : null;       // while Violent crime is on, mark what it covers
+        const b = q(c + n + (cov === "part" ? " *" : ""), value.vc ? !!cov : value.cat === c, cov === "part" ? "Only some offenses in this category count as violent crime (for example rape, but not fondling)." : "", () => emit(WHAT.setCat(value, c, typeOfCat)));
+        if (value.vc && !cov) b.classList.add("dim");
+        list.append(b);
+      }
+      sec.append(lab, list);
+      body.replaceChildren(sec);
       fa.checked = !!value.fa;
     }
 
     function openPanel() {
-      panel.hidden = false; btn.setAttribute("aria-expanded", "true"); render();
+      active = null; panel.hidden = false; btn.setAttribute("aria-expanded", "true"); render();
       panel.classList.remove("whenright");
       if (panel.getBoundingClientRect().right > document.documentElement.clientWidth - 8) panel.classList.add("whenright");
     }
