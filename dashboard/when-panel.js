@@ -75,9 +75,10 @@
       yEl.textContent = String(year);
       prev.disabled = year <= y0; next.disabled = year >= y1;
       const inRange = new Set(cur ? cur.months : []);
+      const ends = new Set(pick ? [pick] : cur ? [cur.from, cur.to] : []);      // the first and last month get a check mark and a solid fill
       const row = WHEN.grid(keys).find((g) => g.year === year);
       grid.replaceChildren(...(row ? row.months : []).map((m) => {
-        const b = h("button", { type: "button", class: "btn ghost", "aria-pressed": String(pick ? m.key === pick : inRange.has(m.key)) }, m.name);
+        const b = h("button", { type: "button", class: "btn ghost" + (ends.has(m.key) ? " end" : ""), "aria-pressed": String(pick ? m.key === pick : inRange.has(m.key)) }, m.name);
         b.setAttribute("aria-label", WHEN.monLabel(m.key));
         if (!m.has) { b.disabled = true; b.title = "No data for this month"; }
         b.addEventListener("click", () => {
