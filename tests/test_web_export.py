@@ -259,3 +259,30 @@ class CategoryTableTests(unittest.TestCase):
         self.assertEqual(len(manifest["categories"]), len(self.rows))
         robbery = next(c for c in manifest["categories"] if c["cat"] == "Robbery")
         self.assertEqual(robbery, {"cat": "Robbery", "code": "120", "group": "Property", "violent": 1})
+
+class MaskedOffenseTextTests(unittest.TestCase):
+    """Domestic violence and similar offenses are found by their description, whatever their NIBRS category."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.out = Path(self._tmp.name) / "web"
+
+    def test_description_masks_across_categories_but_plain_rows_stay_visible(self):
+        df = make_df(months=("2026-01",), per_month=6)
+        df["nibrs_cat"] = ["Aggravated Assault", "Simple Assault", "Intimidation", "Simple Assault", "Simple Assault", "Fraud"]
+        df["offense"] = ["Domestic Assault - 2nd Degree", "DOMESTIC ASSAULT - 4TH DEGREE - 1ST OR 2ND OFFENSE (1),(5)",
+                         "domestic assault - 3rd degree", "ABUSE OR NEGLECT OF A CHILD - NO SEXUAL CONTACT",
+                         "ASSAULT - 4TH DEGREE", "FINANCIAL EXPLOITATION OF ELDERLY/DISABLED PERSON"]
+        df["nibrs_cat"] = df["nibrs_cat"].replace("Fraud", "False Pretense/Swindle/Confidence Game")
+        manifest = build_web_feed(df, self.out, force=True)
+        f = json.loads((self.out / "2026-01.json").read_text(encoding="utf-8"))
+        self.assertEqual([r[13] for r in f["r"]], [1, 1, 1, 1, 0, 1])
+        self.assertEqual([r[4] == "" for r in f["r"]], [True, True, True, True, False, True])
+        self.assertEqual(manifest["masked"], 5)
+        self.assertEqual(len(f["r"]), 6, "masked rows stay in the counts")
+
+    def test_manifest_lists_the_terms_for_the_methodology_page(self):
+        manifest = build_web_feed(make_df(), self.out)
+        self.assertEqual(len(manifest["maskedOffenses"]), 3)
+        self.assertTrue(any("Domestic" in s for s in manifest["maskedOffenses"]))
