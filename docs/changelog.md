@@ -4,6 +4,7 @@
 
 **Explorer (website only; not part of the pip package)**
 
+- In the What menu, **Violent crime** now stays on while you narrow it: click one of its (tinted) categories to see just that one within violent crime (for example rape without fondling), or untick a type to leave it out. Before, any click switched the shortcut off and applied the click on its own. Categories and types that violent crime does not cover are greyed out until you turn it off or choose All offenses.
 - One **What** button now holds the offense filters on every page, after When: quick choices (All offenses; **Violent crime**, the FBI definition), the offense types with a tick box each, the categories under each type with their counts, Firearm, and the arrest-only (Group B) switch. It replaces the category menu, the Firearm and Group B boxes and the Person/Property/Society/Other boxes. Charts and Hotspots now honor the type choices too, so the same offenses are counted on every page, and the choices travel in the page links.
 - On Hotspots, a chosen ward or neighborhood is outlined on the map, under the hexagons.
 - The map's search box is now "Find an incident #": it finds the incident, draws it and zooms to it (clear the box to zoom back out). Street and offense searching is gone from the box; use the address box and the What menu.

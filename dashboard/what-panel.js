@@ -42,17 +42,18 @@
     const quick = h("div", { class: "whenpresets" }), body = h("div", { class: "whatbody" });
     const tabs = h("div", { class: "whentabs", role: "tablist", "aria-label": "Offense types" });
     let active = null, lastVc = false;
-    const note = h("p", { class: "whenhint muted small", hidden: "" }, "Violent crime covers the highlighted categories. * means only some offenses in that category count (see Methodology). Click a category or type to change the choice.");
+    const note = h("p", { class: "whenhint muted small", hidden: "" }, "Violent crime covers the tinted categories. Click one to narrow to it, or untick a type to leave it out. * means only some offenses in that category count (see Methodology).");
     const fa = h("input", { type: "checkbox", id: id + "-fa" });
     const faRow = h("label", { class: "whatcheck", for: id + "-fa" });
     faRow.append(fa, document.createTextNode(" Firearm only (narrows the choice below)"));
     panel.append(top, faRow);                                   // the two switches go first: they are easy to miss further down
 
-    let groupBInput = null;
+    let groupBInput = null, groupBRow = null, groupBText = null;
     if (opts.groupB != null) {
       groupBInput = h("input", { type: "checkbox", id: id + "-gb" });
       const row = h("label", { class: "whatcheck", for: id + "-gb", title: "Group B offenses are arrest-only: trespass, disorderly conduct, drunk driving, curfew and liquor violations, and the catch-all 'all other offenses'. They are off by default and left out of every number." });
-      row.append(groupBInput, document.createTextNode(" Include arrest-only offenses (Group B; adds to the choice below)"));
+      groupBText = document.createTextNode(""); groupBRow = row;
+      row.append(groupBInput, groupBText);
       panel.append(row);
     }
     panel.append(h("p", { class: "whenhead" }, "Quick choices"), quick, note, tabs, body);
@@ -76,7 +77,7 @@
       const counts = opts.counts ? opts.counts() : null;
       note.hidden = !value.vc;
       const cover = (t) => (value.vc && opts.violent ? (cats[t] || []).filter((c) => opts.violent.has(c)).length : null);
-      const isOn = (t) => (cover(t) == null ? !(value.hide || []).includes(t) : cover(t) > 0);
+      const isOn = (t) => !(value.hide || []).includes(t) && (cover(t) == null || cover(t) > 0);
       if (value.vc && !lastVc) active = types.find((t) => cover(t) > 0) || active;      // turning Violent crime on: open the first tab it covers
       lastVc = value.vc;
       if (!types.includes(active)) active = (value.cat && typeOfCat(value.cat)) || types.find(isOn) || types[0];
@@ -90,19 +91,26 @@
       const sec = h("div", { class: "whattype", role: "tabpanel", "aria-labelledby": id + "-tab-" + t });
       const lab = h("label", { class: "whatcheck whattypehead" });
       const cb = h("input", { type: "checkbox" }); cb.checked = isOn(t); cb.indeterminate = vcN != null && vcN > 0 && vcN < list0.length;
-      cb.addEventListener("change", () => emit(WHAT.toggleType(value, t, types, typeOfCat)));
+      cb.disabled = vcN === 0;
+      cb.addEventListener("change", () => emit(WHAT.toggleType(value, t, value.vc && opts.violent ? types.filter((x) => cover(x) > 0) : types, typeOfCat)));
       lab.append(cb, document.createTextNode(` Include ${t} offenses`));
       const list = h("div", { class: "nbhdlist" });
       for (const c of list0) {
         const n = counts ? ` (${(counts.get(c) || 0).toLocaleString()})` : "";
         const cov = value.vc && opts.violent ? opts.violent.get(c) : null;       // while Violent crime is on, mark what it covers
-        const b = q(c + n + (cov === "part" ? " *" : ""), value.vc ? !!cov : value.cat === c, cov === "part" ? "Only some offenses in this category count as violent crime (for example rape, but not fondling)." : "", () => emit(WHAT.setCat(value, c, typeOfCat)));
-        if (value.vc && !cov) b.classList.add("dim");
+        const live = !value.vc || !opts.violent || (cov && isOn(t));              // a category outside the violent set, or of a type left out, cannot be chosen
+        const b = q(c + n + (cov === "part" ? " *" : ""), value.cat === c, cov === "part" ? "Only some offenses in this category count as violent crime (for example rape, but not fondling)." : "", () => emit(WHAT.setCat(value, c, typeOfCat, opts.violent)));
+        if (value.vc && opts.violent) { if (live) b.classList.add("covered"); else { b.classList.add("dim"); b.disabled = true; } }
         list.append(b);
       }
       sec.append(lab, list);
       body.replaceChildren(sec);
       fa.checked = !!value.fa;
+      if (groupBInput) {                                       // no arrest-only offense is violent crime, so the switch would do nothing
+        groupBInput.disabled = !!value.vc;
+        groupBRow.classList.toggle("dim", !!value.vc);
+        groupBText.nodeValue = value.vc ? " Include arrest-only offenses (Group B): not part of violent crime" : " Include arrest-only offenses (Group B; adds to the choice below)";
+      }
     }
 
     function openPanel() {

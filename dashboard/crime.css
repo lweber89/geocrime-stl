@@ -291,3 +291,4 @@ table.hot th.sortable[aria-sort="descending"]::after { content: "↓"; visibilit
 .whentab.struck { text-decoration: line-through; }   /* switched off by the person, not just left out of Violent crime */
 .whatpanel .whenhint + .whentabs, .whatpanel .whenpresets + .whentabs { margin-top: 12px; }
 @media (max-width: 640px) { .whentab { min-height: 44px; flex: 1; justify-content: center; } }
+.whatpanel .btn.covered:not([aria-pressed="true"]) { background: color-mix(in srgb, var(--when) 20%, var(--surface)); border-color: var(--when); }
