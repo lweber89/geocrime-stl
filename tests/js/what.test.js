@@ -73,3 +73,9 @@ test("violentCats says which categories the shortcut covers, and which only in p
   assert.equal(m.get("Sex Offenses"), "part");
   assert.equal(m.has("Larceny"), false);
 });
+
+test("the type tick boxes leave arrest-only (Group B) offenses alone", () => {
+  const b = rec({ type: "Society", cat: "Trespass", violent: false, group: "Group B" });
+  assert.ok(WHAT.matches(b, { ...none, hide: ["Society"] }), "Group B is not hidden by unticking Society");
+  assert.ok(!WHAT.matches(rec({ type: "Society", group: "Group A" }), { ...none, hide: ["Society"] }));
+});
