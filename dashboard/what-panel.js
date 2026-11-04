@@ -10,8 +10,8 @@
  *   });
  *   panel.set(value);  panel.groupBInput               // the Group B checkbox, for CRIME.bindGroupB (it reloads the page)
  *
- * Quick choices (All offenses, Violent crime), the offense types (tick to show, untick to hide) with their categories
- * underneath (click one to see only that category), then Firearm and the arrest-only switch. Same frame as the When
+ * The two switches first (Firearm only; the arrest-only Group B switch), then quick choices (All offenses, Violent crime)
+ * and the offense types (tick to show, untick to hide) with their categories underneath (click one to see only that one). Same frame as the When
  * and Where panels: opens under the button, fills the screen on a phone, Escape or a click outside closes it.
  */
 (() => {
@@ -41,16 +41,17 @@
     const quick = h("div", { class: "whenpresets" }), body = h("div", { class: "whatbody" });
     const fa = h("input", { type: "checkbox", id: id + "-fa" });
     const faRow = h("label", { class: "whatcheck", for: id + "-fa" });
-    faRow.append(fa, document.createTextNode(" Firearm only"));
-    panel.append(top, h("p", { class: "whenhead" }, "Quick choices"), quick, body, faRow);
+    faRow.append(fa, document.createTextNode(" Firearm only (narrows the choice below)"));
+    panel.append(top, faRow);                                   // the two switches go first: they are easy to miss further down
 
     let groupBInput = null;
     if (opts.groupB != null) {
       groupBInput = h("input", { type: "checkbox", id: id + "-gb" });
       const row = h("label", { class: "whatcheck", for: id + "-gb", title: "Group B offenses are arrest-only: trespass, disorderly conduct, drunk driving, curfew and liquor violations, and the catch-all 'all other offenses'. They are off by default and left out of every number." });
-      row.append(groupBInput, document.createTextNode(" Include arrest-only offenses (Group B)"));
+      row.append(groupBInput, document.createTextNode(" Include arrest-only offenses (Group B; adds to the choice below)"));
       panel.append(row);
     }
+    panel.append(h("p", { class: "whenhead" }, "Quick choices"), quick, body);
     host.append(btn, panel);
 
     const emit = (next) => { value = { ...value, ...next }; render(); opts.onChange({ ...value }); };
