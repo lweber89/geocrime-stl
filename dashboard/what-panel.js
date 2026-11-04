@@ -48,11 +48,12 @@
     faRow.append(fa, document.createTextNode(" Firearm only (narrows the choice below)"));
     panel.append(top, faRow);                                   // the two switches go first: they are easy to miss further down
 
-    let groupBInput = null;
+    let groupBInput = null, groupBRow = null, groupBText = null;
     if (opts.groupB != null) {
       groupBInput = h("input", { type: "checkbox", id: id + "-gb" });
       const row = h("label", { class: "whatcheck", for: id + "-gb", title: "Group B offenses are arrest-only: trespass, disorderly conduct, drunk driving, curfew and liquor violations, and the catch-all 'all other offenses'. They are off by default and left out of every number." });
-      row.append(groupBInput, document.createTextNode(" Include arrest-only offenses (Group B; adds to the choice below)"));
+      groupBText = document.createTextNode(""); groupBRow = row;
+      row.append(groupBInput, groupBText);
       panel.append(row);
     }
     panel.append(h("p", { class: "whenhead" }, "Quick choices"), quick, note, tabs, body);
@@ -105,6 +106,11 @@
       sec.append(lab, list);
       body.replaceChildren(sec);
       fa.checked = !!value.fa;
+      if (groupBInput) {                                       // no arrest-only offense is violent crime, so the switch would do nothing
+        groupBInput.disabled = !!value.vc;
+        groupBRow.classList.toggle("dim", !!value.vc);
+        groupBText.nodeValue = value.vc ? " Include arrest-only offenses (Group B): not part of violent crime" : " Include arrest-only offenses (Group B; adds to the choice below)";
+      }
     }
 
     function openPanel() {
