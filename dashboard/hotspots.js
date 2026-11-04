@@ -284,8 +284,8 @@
     wherePanel = WHEREPANEL.mount($("where"), {
       wards: D.wards ? D.wards.features.map((f) => String(f.properties.ward)).sort((a, b) => a - b) : [], nbhds: D.nbhds, value: st,
       radiusLabel: () => RADIUS.label(st.radius),
-      addressHint: "Hotspots shows a ward or neighborhood. For an address or pin, use the map.",
-      addressLink: { text: "Choose on the map", href: () => document.querySelector('a[data-nav="map"]').href },
+      addressHint: "Hotspots shows a ward or neighborhood. For an address, use the address box or the Drop a pin button on the map page.",
+      addressLink: { text: "Go to the map page", href: () => document.querySelector('a[data-nav="map"]').href },
       onChange: (v) => { st.ward = v.ward; st.nbhd = v.nbhd; render(); zoomToPlace(); },
       onClearAddress: () => { st.pt = st.lbl = st.radius = ""; render(); },
     });

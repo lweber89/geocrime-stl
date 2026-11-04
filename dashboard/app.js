@@ -69,7 +69,7 @@
     wherePanel = WHEREPANEL.mount($("where"), {
       wards: D.wards ? D.wards.features.map((f) => String(f.properties.ward)).sort((a, b) => a - b) : [], nbhds: D.nbhds, value: whereValue(),
       radiusLabel: () => RADIUS.label($("radius").value),
-      addressHint: "Use the address box above, or click the map to drop a pin.",
+      addressHint: "Use the address box above, or the Drop a pin button.",
       onChange: (v) => {
         $("ward").value = v.ward; $("nbhd").value = v.nbhd;          // the panel sends the whole place: at most one of the two is set
         $(v.nbhd ? "nbhd" : "ward").dispatchEvent(new Event("change"));
