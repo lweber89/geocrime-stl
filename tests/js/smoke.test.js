@@ -83,6 +83,8 @@ const sandbox = {
   getComputedStyle: () => ({ getPropertyValue: () => "#123456" }), URL, Blob, requestAnimationFrame: (f) => f(),
 };
 sandbox.WHENPANEL = { mount: (host, o) => { panelOpts = o; panelValue = o.value; return { set: (v) => { panelValue = v; }, setLimit: (m) => { panelLimit = m; }, close() {} }; } };
+let whereOpts = null, whereValue = null;                          // the Where panel is its own component too (where-panel.js)
+sandbox.WHEREPANEL = { mount: (host, o) => { whereOpts = o; whereValue = o.value; return { set: (v) => { whereValue = v; }, close() {} }; } };
 getEl("radius").value = "0.5";                                   // the HTML default
 sandbox.window = sandbox;
 vm.createContext(sandbox);
@@ -186,12 +188,27 @@ test("the When panel: a chosen period goes into the link, and a whole-city view 
 });
 
 test("with a ward chosen, a long period is allowed and the panel's limit is lifted", async () => {
-  getEl("ward").value = "5";
-  getEl("ward").dispatchEvent({ type: "change" });
+  whereOpts.onChange({ ward: "5", nbhd: "" });                   // what the Where panel does when Ward 5 is chosen
+  assert.equal(getEl("ward").value, "5");
+  assert.deepEqual({ ward: whereValue.ward, nbhd: whereValue.nbhd }, { ward: "5", nbhd: "" }, "the panel is told the new place");
   await sleep(10);
   assert.equal(panelLimit, null, "the whole-city limit does not apply to a ward");
   panelOpts.onChange("l12");
   await sleep(10);
   assert.match(hashes.at(-1), /when=l12/);
   assert.match(hashes.at(-1), /ward=5/);
+});
+
+test("the Where panel: a neighborhood replaces the ward, and an address locks both", async () => {
+  whereOpts.onChange({ ward: "", nbhd: "Soulard" });             // choosing a neighborhood while Ward 5 is on: the panel clears the ward itself
+  await sleep(10);
+  assert.equal(getEl("nbhd").value, "Soulard");
+  assert.equal(getEl("ward").value, "", "one area at a time");
+  assert.equal(whereValue.nbhd, "Soulard");
+  assert.match(hashes.at(-1), /nbhd=Soulard/);
+  assert.doesNotMatch(hashes.at(-1), /ward=/);
+  whereOpts.onChange({ ward: "", nbhd: "" });                    // clicking the chosen neighborhood again
+  await sleep(10);
+  assert.equal(getEl("nbhd").value, "");
+  assert.doesNotMatch(hashes.at(-1), /nbhd=/);
 });

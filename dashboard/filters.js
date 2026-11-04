@@ -20,11 +20,11 @@
   "use strict";
 
   const WHERE = ["ward", "nbhd", "pt", "lbl", "radius"];
-  // What each page understands. Hotspots has no place filters yet; the map and Charts understand them all.
+  // What each page understands. Hotspots filters by ward and neighborhood only; it carries an address or pin through its links but does not filter by it.
   const PAGE = {
     map: { file: "./", keys: [...WHERE, "q", "cat", "fa", "hide", "gb"] },
     charts: { file: "charts.html", keys: [...WHERE, "cat", "fa", "gb"] },
-    hotspots: { file: "hotspots.html", keys: ["cat", "fa", "gb"] },
+    hotspots: { file: "hotspots.html", keys: [...WHERE, "cat", "fa", "gb"] },
   };
 
   const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;

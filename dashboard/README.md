@@ -17,6 +17,8 @@ It contains **no data**. It reads the feed in `../data/web` (see `../data/README
 | `data.js` | Loads the feed and gives every page the same clean records (`window.CRIME`) |
 | `when.js` | Turns a period (`when`) into months, labels and its comparison period; Year to date is compared with the same months of the previous year; tested in `tests/js/when.test.js` |
 | `when-panel.js` | The "When" button and its panel (quick choices and a month grid), the same on every page (`window.WHENPANEL`) |
+| `where.js` | The rules for the place filter: one ward or neighborhood at a time, an address or pin switches both off, the button's wording (`window.WHERE`) |
+| `where-panel.js` | The "Where" button and its panel (ward buttons, a neighborhood search and list, the address or pin and its Clear button), the same on every page (`window.WHEREPANEL`) |
 | `filters.js` | The one list of filter names (Where, When, What) and the one way to read and write them in the page link (`window.FILTERS`); Hotspots uses it for its links to the other pages, and the Where, When and What panels will build on it (#38); tested in `tests/js/filters.test.js` |
 | `style.css` | Base layout and styles, adapted from the crash-map project (see Credits) |
 | `crime.css` | Colours (offense-type palette) and the few crime-specific rules |

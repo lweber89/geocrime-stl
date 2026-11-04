@@ -22,13 +22,11 @@
 </header>
 
 <section class="filters" aria-label="Choose what the charts show">
-  <select id="ward" aria-label="Ward"><option value="">Any ward</option></select>
-  <select id="nbhd" aria-label="Neighborhood"><option value="">Any neighborhood</option></select>
-  <span class="chip addrchip" id="addrChip" hidden>Address area <button class="btn ghost" id="addrClear" type="button">Clear</button> <a href="./" data-nav="map">Change on the map</a></span>
+  <span class="whenwrap" id="where"></span>
+  <span class="whenwrap" id="when"></span>
   <select id="cat" aria-label="Offense category"><option value="">All offense types</option></select>
   <label class="chip"><input type="checkbox" id="fa"> Firearm</label>
   <label class="chip" title="Group B offenses are arrest-only: trespass, disorderly conduct, drunk driving, curfew and liquor violations, and the catch-all 'all other offenses'. They are off by default and left out of every number on this page."><input type="checkbox" id="gb"> Arrest-only offenses (Group B)</label>
-  <span class="whenwrap" id="when"></span>
   <button class="btn ghost" id="reset" type="button">Reset</button>
 </section>
 
@@ -87,6 +85,8 @@
 <script src="filters.js"></script>
 <script src="when.js"></script>
 <script src="when-panel.js"></script>
+<script src="where.js"></script>
+<script src="where-panel.js"></script>
 <script src="charts.js"></script>
 </body>
 </html>

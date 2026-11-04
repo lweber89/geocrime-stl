@@ -25,7 +25,7 @@
   const HOURS = ["12a", "1a", "2a", "3a", "4a", "5a", "6a", "7a", "8a", "9a", "10a", "11a", "12p", "1p", "2p", "3p", "4p", "5p", "6p", "7p", "8p", "9p", "10p", "11p"];
   const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-  let D, scoped = [], area = {}, when = "l12", panel, other = new URLSearchParams();
+  let D, scoped = [], area = {}, when = "l12", panel, wherePanel, other = new URLSearchParams();
   const wardPop = new Map(), nbhdPop = new Map();
   let cityPop = 0;
 
@@ -57,10 +57,9 @@
     if (area.fa) p.set("fa", "1");
     if (when !== "l12") p.set("when", when);
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
-    const link = document.querySelector('a[data-nav="map"]');
-    if (link) link.href = "./" + (p.toString() ? "#" + p : "");
+    document.querySelectorAll('a[data-nav="map"]').forEach((link) => { link.href = "./" + (p.toString() ? "#" + p : ""); });
     const hot = document.querySelector('a[data-nav="hotspots"]');
-    if (hot) hot.href = FILTERS.link("hotspots", { cat: area.cat, fa: area.fa, gb: CRIME.groupBOn(), when: when !== "l12" ? when : "" });
+    if (hot) hot.href = FILTERS.link("hotspots", { ward: area.ward, nbhd: area.nbhd, pt: area.pt, lbl: area.lbl, radius: area.radius, cat: area.cat, fa: area.fa, gb: CRIME.groupBOn(), when: when !== "l12" ? when : "" });
   }
 
   function describeArea() {
@@ -351,11 +350,7 @@
     $("areaTitle").textContent = describeArea();
     $("cap-monthly").textContent = `By type of offense, ${WHEN.dates(when, D.months.map((x) => x.m))} (follows the period menu).`;
     $("periodText").textContent = `${monLabel(monKey(pb.from))} – ${monLabel(monKey(pb.to))}`;
-    $("addrChip").hidden = !area.pt;
-    for (const id of ["ward", "nbhd"]) {                 // locked while a spot is chosen; "Clear" brings them back
-      $(id).disabled = !!area.pt;
-      $(id).title = area.pt ? "Clear the address to choose a ward or neighborhood." : "";
-    }
+    wherePanel.set(area);                                // the panel locks ward and neighborhood while a spot is chosen
     drawTiles(inPeriod, pb);
     drawMonthly(); drawYoY(); drawCategories(inPeriod); drawTiming(inPeriod);
     $("empty").hidden = scoped.length > 0;
@@ -363,12 +358,17 @@
 
   function wire() {
     panel = WHENPANEL.mount($("when"), { keys: D.months.map((x) => x.m), value: when, onChange: (w) => { when = w; renderAll(); } });
-    const sync = () => { $("ward").value = area.ward; $("nbhd").value = area.nbhd; $("cat").value = area.cat; $("fa").checked = area.fa; panel.set(when); };
-    $("ward").addEventListener("change", () => { area.ward = $("ward").value; if (area.ward) { area.nbhd = ""; area.pt = area.lbl = ""; } sync(); renderAll(); });
-    $("nbhd").addEventListener("change", () => { area.nbhd = $("nbhd").value; if (area.nbhd) { area.ward = ""; area.pt = area.lbl = ""; } sync(); renderAll(); });
+    wherePanel = WHEREPANEL.mount($("where"), {
+      wards: D.wards ? [...wardPop.keys()].sort((a, b) => a - b) : [], nbhds: D.nbhds, value: area,
+      radiusLabel: () => RADIUS.label(area.radius),
+      addressHint: "Choose an address or drop a pin on the map.",
+      addressLink: { text: "Choose on the map", href: () => document.querySelector('a[data-nav="map"]').href },
+      onChange: (v) => { area.ward = v.ward; area.nbhd = v.nbhd; renderAll(); },
+      onClearAddress: () => { area.pt = area.lbl = ""; renderAll(); },
+    });
+    const sync = () => { wherePanel.set(area); $("cat").value = area.cat; $("fa").checked = area.fa; panel.set(when); };
     $("cat").addEventListener("change", () => { area.cat = $("cat").value; renderAll(); });
     $("fa").addEventListener("change", () => { area.fa = $("fa").checked; renderAll(); });
-    $("addrClear").addEventListener("click", () => { area.pt = area.lbl = ""; renderAll(); });
     $("reset").addEventListener("click", () => { area = { ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", fa: false }; when = "l12"; sync(); renderAll(); });
     let t; const redraw = () => { clearTimeout(t); t = setTimeout(() => { if (D) renderAll(); }, 120); };
     window.addEventListener("resize", redraw);
@@ -382,8 +382,6 @@
     D.wards && D.wards.features.forEach((f) => { wardPop.set(String(f.properties.ward), f.properties.pop); cityPop += f.properties.pop; });
     D.nbhdShapes && D.nbhdShapes.features.forEach((f) => nbhdPop.set(f.properties.name, f.properties.pop));
     const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-    $("ward").innerHTML = '<option value="">Any ward</option>' + [...wardPop.keys()].sort((a, b) => a - b).map((w) => `<option value="${w}">Ward ${w}</option>`).join("");
-    $("nbhd").innerHTML = '<option value="">Any neighborhood</option>' + D.nbhds.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
     const counts = new Map(); D.records.forEach((a) => counts.set(a.cat, (counts.get(a.cat) || 0) + 1));
     $("cat").innerHTML = '<option value="">All offense types</option>' + D.types.map((t) =>
       `<optgroup label="${esc(t)}">${D.cats[t].map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}</optgroup>`).join("");

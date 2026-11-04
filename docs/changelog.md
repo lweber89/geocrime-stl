@@ -4,6 +4,8 @@
 
 **Explorer (website only; not part of the pip package)**
 
+- One **Where** button now holds the place filter on every page, ahead of When, replacing the separate ward and neighborhood menus. It has a grid of wards, a searchable list of neighborhoods, and shows the chosen address or pin with a Clear button. The map's address box is still the main way to look up an address. Choosing a ward clears the neighborhood and the other way round; an address or pin switches both off until cleared.
+- Hotspots can now be limited to one ward or neighborhood: the hexagons, blocks and counts follow it and the map zooms to it, while the ward and neighborhood rankings stay citywide. An address or pin carried over from the map is kept in the page links but not used on Hotspots, and a note says so. Links between the pages now carry the ward or neighborhood to Hotspots too.
 - On Hotspots, choosing a column to sort by no longer makes the neighboring columns shift sideways; the sort arrow now has a fixed space of its own.
 - The "reported offenses, not a measure of how safe a place is" box under each page title is gone; its sentence now sits in the title line, and the rest is on the Methodology page (which now also notes that times are often rounded to the hour and that hexagon and block counts are not adjusted for population).
 - The documentation site (this one) now uses the same shield icon in the browser tab as the Explorer.

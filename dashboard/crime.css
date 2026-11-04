@@ -254,3 +254,19 @@ table.hot th.sortable[aria-sort="descending"]::after { content: "↓"; visibilit
   .whenpanel.whenright { left: 0; right: 0; }
   .whenpresets .btn, .whengrid .btn { min-height: 44px; }
 }
+
+/* ---- the "Where" panel (where-panel.js; shares the When panel's frame) ---- */
+.whenv { max-width: 18em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wardgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.wardgrid .btn, .nbhdlist .btn { font-size: 13px; padding: 5px 8px; }
+.wardgrid .btn[aria-pressed="true"], .nbhdlist .btn[aria-pressed="true"] { background: var(--when); color: var(--when-ink); border-color: var(--when); font-weight: 600; }
+.wherepanel .btn:disabled { opacity: .4; }
+.nbhdsearch { width: 100%; box-sizing: border-box; font: inherit; padding: 7px 10px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.nbhdlist { display: flex; flex-wrap: wrap; gap: 6px; max-height: 190px; overflow: auto; padding: 2px; }
+.addrrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.addrnow { font-weight: 600; }
+@media (max-width: 640px) {
+  .wardgrid .btn { min-height: 44px; }
+  .nbhdlist { max-height: 42vh; }
+  .nbhdlist .btn { min-height: 40px; }
+}
