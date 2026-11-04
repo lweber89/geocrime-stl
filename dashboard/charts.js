@@ -25,7 +25,7 @@
   const HOURS = ["12a", "1a", "2a", "3a", "4a", "5a", "6a", "7a", "8a", "9a", "10a", "11a", "12p", "1p", "2p", "3p", "4p", "5p", "6p", "7p", "8p", "9p", "10p", "11p"];
   const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-  let D, scoped = [], area = {}, when = "l12", panel, wherePanel, other = new URLSearchParams();
+  let D, scoped = [], area = {}, when = "l12", panel, wherePanel, whatPanel, other = new URLSearchParams();
   const wardPop = new Map(), nbhdPop = new Map();
   let cityPop = 0;
 
@@ -44,22 +44,25 @@
     const p = new URLSearchParams(location.hash.slice(1));
     area = {};
     for (const k of AREA_FIELDS) area[k] = p.get(k) || "";
-    area.fa = p.get("fa") === "1";
+    area.fa = p.get("fa") === "1"; area.vc = p.get("vc") === "1";
+    area.hide = (p.get("hide") || "").split(",").filter((t) => D.types.includes(t));
     when = FILTERS.parse(location.hash).when || "l12";                    // reads when, and the older per, range and month
     if (!WHEN.resolve(when, D.months.map((x) => x.m))) when = "l12";
     other = new URLSearchParams();                     // everything else (the map's period, filters...) is passed through untouched
-    p.forEach((v, k) => { if (!AREA_FIELDS.includes(k) && !["fa", "per", "when", "range", "month"].includes(k)) other.set(k, v); });
+    p.forEach((v, k) => { if (!AREA_FIELDS.includes(k) && !["fa", "vc", "hide", "per", "when", "range", "month"].includes(k)) other.set(k, v); });
   }
 
   function writeState() {
     const p = new URLSearchParams(other);
     for (const k of AREA_FIELDS) if (area[k] && !(k === "radius" && !area.pt)) p.set(k, area[k]);
     if (area.fa) p.set("fa", "1");
+    if (area.vc) p.set("vc", "1");
+    if (area.hide.length) p.set("hide", area.hide.join(","));
     if (when !== "l12") p.set("when", when);
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
     document.querySelectorAll('a[data-nav="map"]').forEach((link) => { link.href = "./" + (p.toString() ? "#" + p : ""); });
     const hot = document.querySelector('a[data-nav="hotspots"]');
-    if (hot) hot.href = FILTERS.link("hotspots", { ward: area.ward, nbhd: area.nbhd, pt: area.pt, lbl: area.lbl, radius: area.radius, cat: area.cat, fa: area.fa, gb: CRIME.groupBOn(), when: when !== "l12" ? when : "" });
+    if (hot) hot.href = FILTERS.link("hotspots", { ward: area.ward, nbhd: area.nbhd, pt: area.pt, lbl: area.lbl, radius: area.radius, cat: area.cat, vc: area.vc, hide: area.hide, fa: area.fa, gb: CRIME.groupBOn(), when: when !== "l12" ? when : "" });
   }
 
   function describeArea() {
@@ -85,7 +88,7 @@
       near = (a) => a.lat != null && ((a.lat - la) * 110540) ** 2 + ((a.lon - lo) * kx) ** 2 <= m2;
     }
     return (a) => (!near || near(a)) && (!area.ward || a.ward === area.ward) && (!area.nbhd || a.nbhd === area.nbhd)
-      && (!area.cat || a.cat === area.cat) && (!area.fa || a.firearm);
+      && WHAT.matches(a, area);
   }
 
   function periodBounds() {
@@ -366,10 +369,13 @@
       onChange: (v) => { area.ward = v.ward; area.nbhd = v.nbhd; renderAll(); },
       onClearAddress: () => { area.pt = area.lbl = ""; renderAll(); },
     });
-    const sync = () => { wherePanel.set(area); $("cat").value = area.cat; $("fa").checked = area.fa; panel.set(when); };
-    $("cat").addEventListener("change", () => { area.cat = $("cat").value; renderAll(); });
-    $("fa").addEventListener("change", () => { area.fa = $("fa").checked; renderAll(); });
-    $("reset").addEventListener("click", () => { area = { ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", fa: false }; when = "l12"; sync(); renderAll(); });
+    whatPanel = WHATPANEL.mount($("what"), {
+      types: D.types, cats: D.cats, violent: WHAT.violentCats(D.records), value: area, groupB: CRIME.groupBOn(),
+      onChange: (v) => { Object.assign(area, v); renderAll(); },
+    });
+    CRIME.bindGroupB(whatPanel.groupBInput, D);
+    const sync = () => { wherePanel.set(area); whatPanel.set(area); panel.set(when); };
+    $("reset").addEventListener("click", () => { area = { ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", vc: false, hide: [], fa: false }; when = "l12"; sync(); renderAll(); });
     let t; const redraw = () => { clearTimeout(t); t = setTimeout(() => { if (D) renderAll(); }, 120); };
     window.addEventListener("resize", redraw);
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw);
@@ -378,13 +384,9 @@
 
   async function main() {
     D = await CRIME.load();
-    CRIME.bindGroupB($("gb"), D);
     D.wards && D.wards.features.forEach((f) => { wardPop.set(String(f.properties.ward), f.properties.pop); cityPop += f.properties.pop; });
     D.nbhdShapes && D.nbhdShapes.features.forEach((f) => nbhdPop.set(f.properties.name, f.properties.pop));
     const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-    const counts = new Map(); D.records.forEach((a) => counts.set(a.cat, (counts.get(a.cat) || 0) + 1));
-    $("cat").innerHTML = '<option value="">All offense types</option>' + D.types.map((t) =>
-      `<optgroup label="${esc(t)}">${D.cats[t].map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}</optgroup>`).join("");
     $("sub").textContent = CRIME.dataNote(D.months);
     readState();
     const sync = wire();

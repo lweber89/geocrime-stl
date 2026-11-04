@@ -26,7 +26,7 @@
   const incCount = new Map();
 
   // ------------------------------------------------------------ filters
-  const FIELDS = ["q", "ward", "nbhd", "pt", "lbl", "radius", "cat"];   // pt = "lat,lon" of a searched address
+  const FIELDS = ["q", "ward", "nbhd", "pt", "lbl", "radius", "cat", "vc"];   // pt = "lat,lon" of a searched address
 
   // ---- date ranges: calendar months, because the City publishes whole months (no "last 7 days")
   const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -47,6 +47,21 @@
   // The When button and its panel. Whole-city views are limited to six months of dots (see apply), which the panel enforces.
   // The Where button. The hidden ward and neighborhood menus (#ward, #nbhd) still hold the choice, so every rule that reads
   // them (filtering, shading, zoom, the link) is unchanged: the panel sets a menu and fires its change event.
+  // The What button, the same way: the hidden #cat, #vc, #fa and type checkboxes (#t-Person ...) hold the choice.
+  let whatPanel = null, whatCounts = null;
+  const whatValue = () => ({ cat: $("cat").value, vc: $("vc").value === "1", hide: TYPES.filter((t) => !$("t-" + t).checked), fa: $("fa").checked });
+  const syncWhat = () => { if (whatPanel) whatPanel.set(whatValue()); };
+  function buildWhatPanel() {
+    whatPanel = WHATPANEL.mount($("what"), {
+      types: D.types, cats: D.cats, violent: WHAT.violentCats(D.records), value: whatValue(), groupB: CRIME.groupBOn(), counts: () => whatCounts,
+      onChange: (v) => {
+        $("cat").value = v.cat; $("vc").value = v.vc ? "1" : ""; $("fa").checked = v.fa;
+        TYPES.forEach((t) => ($("t-" + t).checked = !v.hide.includes(t)));
+        $("cat").dispatchEvent(new Event("change"));
+      },
+    });
+    CRIME.bindGroupB(whatPanel.groupBInput, D);
+  }
   let wherePanel = null;
   const whereValue = () => ({ ward: $("ward").value, nbhd: $("nbhd").value, pt: $("pt").value, lbl: $("lbl").value });
   const syncWhere = () => { if (wherePanel) wherePanel.set(whereValue()); };
@@ -116,7 +131,7 @@
   }
 
   function resetControls() {
-    for (const k of ["q", "ward", "cat", "nbhd", "pt", "lbl", "address"]) $(k).value = "";
+    for (const k of ["q", "ward", "cat", "vc", "nbhd", "pt", "lbl", "address"]) $(k).value = "";
     $("radius").value = DEFAULT_RADIUS;
     setAddrMsg("");
     $("fa").checked = false;
@@ -164,6 +179,7 @@
       if (f.hide.includes(a.type)) return false;
       if (withCat && f.cat && a.cat !== f.cat) return false;
       if (withNbhd && f.nbhd && a.nbhd !== f.nbhd) return false;
+      if (f.vc && !a.violent) return false;
       if (f.fa && !a.firearm) return false;
       return !terms.length || terms.every((t) => a.text.includes(t));
     };
@@ -171,8 +187,7 @@
     // the numbers in the category menu: offenses of each category in the chosen period and area (ignoring the category choice itself)
     const catCounts = new Map();
     for (const a of D.records) if (a.date >= from && a.date <= to && matches(a, true, true, true, false)) catCounts.set(a.cat, (catCounts.get(a.cat) || 0) + 1);
-    for (const o of $("cat").options) if (o.value) o.textContent = `${o.value} (${(catCounts.get(o.value) || 0).toLocaleString()})`;
-    $("cat").title = "The number beside each category is how many offenses it has in the period and area you have chosen.";
+    whatCounts = catCounts;                              // shown beside each category in the What panel
     filtered = D.records.filter((a) => a.date >= from && a.date <= to && matches(a));
     // counts for the ward and neighborhood maps ignore the ward and neighborhood filters, so every area stays on the map
     wardCounts = new Map(); nbhdCounts = new Map();
@@ -188,7 +203,7 @@
     $("addrClear").hidden = !center;
     $("reportBtn").hidden = !center;
     $("radiusBox").hidden = !center;
-    syncWhere();
+    syncWhere(); syncWhat();
     renderAll();
     if (center) openReport(); else closePanel();
   }
@@ -755,7 +770,6 @@
 
   async function main() {
     D = await CRIME.load();
-    CRIME.bindGroupB($("gb"), D);
     D.records.forEach((a) => incCount.set(a.inc, (incCount.get(a.inc) || 0) + 1));
 
     const counts = new Map();
@@ -784,6 +798,7 @@
     wn.forEach((m, w) => wardNbhds.set(w, new Set([...m].filter(([n, c]) => c >= 5 && c / total.get(n) >= 0.1).map(([n]) => n))));
 
     buildWherePanel();
+    buildWhatPanel();
     buildWhenPanel();
     readHash();
     initMap();

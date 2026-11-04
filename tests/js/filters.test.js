@@ -44,8 +44,8 @@ test("parse keeps what a page owns (tab, mode, sort) apart from the shared filte
 
 test("hash writes only what the page understands, and nothing empty", () => {
   const s = FILTERS.parse("#ward=5&cat=Robbery&fa=1&gb=1&q=main&hide=Other");
-  assert.equal(FILTERS.hash("hotspots", s), "ward=5&cat=Robbery&fa=1&gb=1");
-  assert.equal(FILTERS.hash("charts", s), "ward=5&cat=Robbery&fa=1&gb=1");
+  assert.equal(FILTERS.hash("hotspots", s), "ward=5&cat=Robbery&fa=1&hide=Other&gb=1");
+  assert.equal(FILTERS.hash("charts", s), "ward=5&cat=Robbery&fa=1&hide=Other&gb=1");
   assert.equal(FILTERS.hash("map", s), "ward=5&q=main&cat=Robbery&fa=1&hide=Other&gb=1");
   assert.equal(FILTERS.hash("map", { ...none }), "");
 });
@@ -80,9 +80,18 @@ test("a link read and written again keeps its filters, and moves the period to `
 
 test("the map's and Charts' links to Hotspots carry the place, category, firearm, Group B and the period", () => {
   const fromMap = (h) => FILTERS.link("hotspots", FILTERS.parse(h));
-  assert.equal(fromMap("cat=Robbery&fa=1&ward=5&hide=Other&range=last6"), "hotspots.html#ward=5&cat=Robbery&fa=1&when=l6");
+  assert.equal(fromMap("cat=Robbery&fa=1&ward=5&hide=Other&range=last6"), "hotspots.html#ward=5&cat=Robbery&fa=1&hide=Other&when=l6");
   assert.equal(fromMap("cat=Arson&gb=1"), "hotspots.html#cat=Arson&gb=1", "no period in the link, no period written");
   assert.equal(fromMap("ward=5&range=ytd"), "hotspots.html#ward=5&when=ytd");
   assert.equal(fromMap("range=all"), "hotspots.html#when=all");
   assert.equal(FILTERS.link("hotspots", { cat: "Robbery", fa: true, gb: false, when: "l3" }), "hotspots.html#cat=Robbery&fa=1&when=l3");
+});
+
+test("the violent crime shortcut (vc) is read and written like the other switches, on every page", () => {
+  const s = FILTERS.parse("#vc=1&ward=5&hide=Society");
+  assert.equal(s.vc, true);
+  for (const page of ["map", "charts", "hotspots"]) assert.match(FILTERS.hash(page, s), /(^|&)vc=1(&|$)/);
+  assert.equal(FILTERS.parse("#cat=Robbery").vc, false);
+  assert.doesNotMatch(FILTERS.hash("map", FILTERS.parse("#cat=Robbery")), /vc=/);
+  assert.equal(FILTERS.parse("#vc=1&tab=ward").other.has("vc"), false);
 });

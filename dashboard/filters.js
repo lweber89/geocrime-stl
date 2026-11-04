@@ -3,7 +3,7 @@
  * The Explorer has three kinds of filter, and every page link carries them the same way:
  *   Where   ward, nbhd, pt ("lat,lon" of an address or pin), lbl (its label), radius
  *   When    one shared period, written `when` here (see below)
- *   What    cat (offense category), fa (firearm), hide (offense types switched off), gb (Group B on), q (search text)
+ *   What    cat (offense category), vc (violent crime shortcut), fa (firearm), hide (offense types switched off), gb (Group B on), q (search text)
  * Anything else in a link (tab, mode, sort ...) belongs to one page and is passed through untouched as `other`.
  *
  * `when` values (the same words on every page):
@@ -20,11 +20,12 @@
   "use strict";
 
   const WHERE = ["ward", "nbhd", "pt", "lbl", "radius"];
-  // What each page understands. Hotspots filters by ward and neighborhood only; it carries an address or pin through its links but does not filter by it.
+  const WHAT = ["cat", "vc", "fa", "hide", "gb"];            // vc = the FBI violent crime shortcut; hide = offense types switched off
+  // What each page understands. Every page filters by What; Hotspots filters by ward and neighborhood only and carries an address or pin through its links without filtering by it.
   const PAGE = {
-    map: { file: "./", keys: [...WHERE, "q", "cat", "fa", "hide", "gb"] },
-    charts: { file: "charts.html", keys: [...WHERE, "cat", "fa", "gb"] },
-    hotspots: { file: "hotspots.html", keys: [...WHERE, "cat", "fa", "gb"] },
+    map: { file: "./", keys: [...WHERE, "q", ...WHAT] },
+    charts: { file: "charts.html", keys: [...WHERE, ...WHAT] },
+    hotspots: { file: "hotspots.html", keys: [...WHERE, ...WHAT] },
   };
 
   const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -55,7 +56,7 @@
     const known = new Set([...PAGE.map.keys, "when", "range", "month", "per"]);
     const other = new URLSearchParams();
     p.forEach((v, k) => { if (!known.has(k)) other.set(k, v); });
-    const s = { when: whenOf(p), other, fa: p.get("fa") === "1", gb: p.get("gb") === "1",
+    const s = { when: whenOf(p), other, fa: p.get("fa") === "1", vc: p.get("vc") === "1", gb: p.get("gb") === "1",
                 hide: (p.get("hide") || "").split(",").filter(Boolean) };
     for (const k of [...WHERE, "q", "cat"]) s[k] = p.get(k) || "";
     return s;
@@ -67,7 +68,7 @@
     const def = PAGE[page], p = new URLSearchParams();
     for (const k of def.keys) {
       const v = s[k];
-      if (k === "fa" || k === "gb") { if (v) p.set(k, "1"); }
+      if (k === "fa" || k === "gb" || k === "vc") { if (v) p.set(k, "1"); }
       else if (k === "hide") { if (v && v.length) p.set(k, v.join(",")); }
       else if (v) p.set(k, v);
     }

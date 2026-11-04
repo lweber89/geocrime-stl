@@ -19,6 +19,8 @@ It contains **no data**. It reads the feed in `../data/web` (see `../data/README
 | `when-panel.js` | The "When" button and its panel (quick choices and a month grid), the same on every page (`window.WHENPANEL`) |
 | `where.js` | The rules for the place filter: one ward or neighborhood at a time, an address or pin switches both off, the button's wording (`window.WHERE`) |
 | `where-panel.js` | The "Where" button and its panel (ward buttons, a neighborhood search and list, the address or pin and its Clear button), the same on every page (`window.WHEREPANEL`) |
+| `what.js` | The rules for the What filter: one category, the violent crime shortcut or a list of switched-off types, plus firearm (`window.WHAT`) |
+| `what-panel.js` | The "What" button and its panel (quick choices, offense types with their categories, Firearm, the arrest-only switch), the same on every page (`window.WHATPANEL`) |
 | `filters.js` | The one list of filter names (Where, When, What) and the one way to read and write them in the page link (`window.FILTERS`); Hotspots uses it for its links to the other pages, and the Where, When and What panels will build on it (#38); tested in `tests/js/filters.test.js` |
 | `style.css` | Base layout and styles, adapted from the crash-map project (see Credits) |
 | `crime.css` | Colours (offense-type palette) and the few crime-specific rules |

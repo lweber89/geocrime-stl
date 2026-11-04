@@ -270,3 +270,24 @@ table.hot th.sortable[aria-sort="descending"]::after { content: "↓"; visibilit
   .nbhdlist { max-height: 42vh; }
   .nbhdlist .btn { min-height: 40px; }
 }
+
+/* ---- the "What" panel (what-panel.js; shares the When panel's frame) ---- */
+.whatpanel { max-height: min(78vh, 620px); overflow: auto; min-width: min(30em, 92vw); }
+.whattype { margin: 8px 0 12px; }
+.whatcheck { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 3px 0; }
+.whattypehead { font-weight: 600; margin-bottom: 4px; }
+.whatpanel .whenpresets { flex-wrap: wrap; }
+.whatpanel .nbhdlist { max-height: none; overflow: visible; }
+.whatpanel .nbhdlist .btn[aria-pressed="true"], .whatpanel .whenpresets .btn[aria-pressed="true"] { background: var(--when); color: var(--when-ink); border-color: var(--when); font-weight: 600; }
+@media (max-width: 640px) { .whatpanel { max-height: none; } .whatpanel .nbhdlist .btn { min-height: 40px; } }
+.whatpanel .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.whatpanel .whatcheck + .whenhead { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+.whatpanel .dim { opacity: .45; }
+.whatpanel .whatbody .whenhint { margin: 8px 0 0; }
+.whentabs { display: flex; gap: 4px; margin-top: 12px; border-bottom: 1px solid var(--border); }
+.whentab { font: inherit; font-size: 13px; padding: 6px 12px; background: none; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-bottom: -1px; }
+.whentab[aria-selected="true"] { color: var(--ink); font-weight: 600; background: var(--surface); border-color: var(--border); border-bottom: 1px solid var(--surface); }
+.whentab.off { opacity: .5; }
+.whentab.struck { text-decoration: line-through; }   /* switched off by the person, not just left out of Violent crime */
+.whatpanel .whenhint + .whentabs, .whatpanel .whenpresets + .whentabs { margin-top: 12px; }
+@media (max-width: 640px) { .whentab { min-height: 44px; flex: 1; justify-content: center; } }

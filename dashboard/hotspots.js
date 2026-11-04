@@ -15,19 +15,19 @@
   const HEX_WIDTH = 250;                 // metres, flat to flat
   const MIN_CELL = 5;                    // cells with fewer offenses in the period are left blank
   const MIN_RATE_POP = 500;              // neighborhoods with fewer residents get a count but no rate
-  const TOP_CATEGORIES = 20;             // the offense menu offers "all" plus this many of the most common categories
   const CATCH_ALL = "All Other Offenses"; // NIBRS catch-all: counted in "all", but not offered on its own
   const RAMP = ["#fff1d6", "#fdd49e", "#fc8d59", "#d7301f", "#7f0000"];           // same fifths as the map's ward and neighborhood shading
   const UP = ["#fc8d59", "#d7301f"], DOWN = ["#8db8e8", "#2b6cb0"], FLAT = "#d9d7cf";
 
-  let panel, wherePanel, D, map, hexLayer, hexByKey = new Map(), st = { ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", fa: false, when: "l12", tab: "hex", mode: "count", sort: "rate", dir: "desc" };
+  let placeLayer = null, panel, wherePanel, whatPanel, D, map, hexLayer, hexByKey = new Map(), st = { vc: false, hide: [], ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", fa: false, when: "l12", tab: "hex", mode: "count", sort: "rate", dir: "desc" };
   let view = null;                       // everything computed for the current filters
 
   // ------------------------------------------------------------ state in the page link
   function readState() {
     const p = new URLSearchParams(location.hash.slice(1));
-    st.cat = p.get("cat") || ""; st.fa = p.get("fa") === "1";
     const f = FILTERS.parse(location.hash);
+    st.cat = f.cat; st.fa = f.fa; st.vc = f.vc; st.hide = f.hide.filter((t) => D.types.includes(t));
+    if (st.cat && !D.records.some((a) => a.cat === st.cat)) st.cat = "";
     for (const k of ["ward", "nbhd", "pt", "lbl", "radius"]) st[k] = f[k];
     if (st.ward && !(D.wards && D.wards.features.some((x) => String(x.properties.ward) === st.ward))) st.ward = "";
     if (st.nbhd && !D.nbhds.includes(st.nbhd)) st.nbhd = "";
@@ -37,7 +37,7 @@
     st.tab = ["hex", "nbhd", "ward", "block"].includes(p.get("tab")) ? p.get("tab") : "hex";
     st.mode = ["count", "change"].includes(p.get("mode")) ? p.get("mode") : "count";
   }
-  const shared = () => ({ ward: st.ward, nbhd: st.nbhd, pt: st.pt, lbl: st.lbl, radius: st.radius, cat: st.cat, fa: st.fa, gb: CRIME.groupBOn() });          // what the other pages understand
+  const shared = () => ({ ward: st.ward, nbhd: st.nbhd, pt: st.pt, lbl: st.lbl, radius: st.radius, cat: st.cat, vc: st.vc, hide: st.hide, fa: st.fa, gb: CRIME.groupBOn() });          // what the other pages understand
   function writeState() {
     const p = new URLSearchParams(FILTERS.hash("hotspots", shared()));
     if (st.when !== "l12") p.set("when", st.when);
@@ -62,7 +62,7 @@
     const r = WHEN.resolve(st.when, keys), n = r.n, months = r.months;
     const pr = WHEN.prior(st.when, keys), priorKeys = pr ? pr.months : null;       // Year to date is compared with the same months last year
     const priorLabel = pr ? pr.label : `the previous ${n} months`;
-    const cityRecs = D.records.filter((a) => (!st.cat || a.cat === st.cat) && (!st.fa || a.firearm));
+    const cityRecs = D.records.filter((a) => WHAT.matches(a, st));
     const recs = st.ward || st.nbhd ? cityRecs.filter((a) => WHERE.matches(a, st)) : cityRecs;      // the hexagons, blocks and counts follow the place; the ward and neighborhood rankings stay citywide
     const cells = HOT.bin(recs, { width: HEX_WIDTH });
     const meas = HOT.measure(cells, { months, prior: priorKeys });
@@ -116,6 +116,7 @@
       hexByKey.set(c.key, { poly, c });
       drawn++;
     }
+    if (placeLayer) placeLayer.bringToBack();          // the outline is only a reference: it sits under the hexagons, which let it show through
     legend(drawn);
     $("legnote").textContent = $("rangeNote").textContent = `${monLabel(view.months[0])} – ${monLabel(view.months.at(-1))} · ${num(view.recs.filter((a) => view.inP.has(a.m)).length)} offenses`;
     $("mapnote").textContent = st.mode === "change" && !view.priorKeys
@@ -243,7 +244,7 @@
 
   function render() {
     writeState();
-    wherePanel.set(st);
+    wherePanel.set(st); whatPanel && whatPanel.set(st);
     const note = $("placeNote");
     note.hidden = !st.pt;
     note.textContent = st.pt ? `Hotspots shows the whole city, or one ward or neighborhood. The spot you chose on the map (${st.lbl || "a pin"}) is kept for your links. Clear it in Where to pick a ward or neighborhood here.` : "";
@@ -268,22 +269,18 @@
   function zoomToPlace() {
     const feats = st.ward ? D.wards && D.wards.features.filter((f) => String(f.properties.ward) === st.ward)
       : st.nbhd ? D.nbhdShapes && D.nbhdShapes.features.filter((f) => f.properties.name === st.nbhd) : null;
-    map.fitBounds(feats && feats.length ? L.geoJSON({ type: "FeatureCollection", features: feats }).getBounds() : CITY_BOUNDS, { padding: [20, 20] });
+    if (placeLayer) { map.removeLayer(placeLayer); placeLayer = null; }
+    if (feats && feats.length) {                       // draw the edge of the chosen place (renderMap keeps it under the hexagons)
+      placeLayer = L.geoJSON({ type: "FeatureCollection", features: feats }, { interactive: false, style: { color: css("--ink"), weight: 3, opacity: 0.9, fill: false } }).addTo(map);
+    }
+    map.fitBounds(placeLayer ? placeLayer.getBounds() : CITY_BOUNDS, { padding: [20, 20] });
   }
 
   async function main() {
     D = await CRIME.load();
-    CRIME.bindGroupB($("gb"), D);
     D.records.forEach((a) => { a.m = a.t.slice(0, 7); });          // month key, used for all the counting
     $("sub").textContent = CRIME.dataNote(D.months);
     readState();
-    // "All" plus the most common categories (the catch-all is counted in "All" but not listed on its own)
-    const tally = new Map();
-    for (const r of D.records) tally.set(r.cat, (tally.get(r.cat) || 0) + 1);
-    const top = [...tally].filter(([c]) => c !== CATCH_ALL).sort((x, y) => y[1] - x[1]).slice(0, TOP_CATEGORIES).map(([c]) => c);
-    if (st.cat && !top.includes(st.cat) && tally.has(st.cat)) top.push(st.cat);          // a category chosen on the map, not in the top list
-    $("cat").innerHTML = '<option value="">All offense types</option>' + top.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
-    if (!top.includes(st.cat)) st.cat = "";
     wherePanel = WHEREPANEL.mount($("where"), {
       wards: D.wards ? D.wards.features.map((f) => String(f.properties.ward)).sort((a, b) => a - b) : [], nbhds: D.nbhds, value: st,
       radiusLabel: () => RADIUS.label(st.radius),
@@ -293,11 +290,10 @@
       onClearAddress: () => { st.pt = st.lbl = st.radius = ""; render(); },
     });
     panel = WHENPANEL.mount($("when"), { keys: D.months.map((x) => x.m), value: st.when, onChange: (w) => { st.when = w; render(); } });
-    $("cat").value = st.cat; $("fa").checked = st.fa;
+    whatPanel = WHATPANEL.mount($("what"), { types: D.types, cats: D.cats, violent: WHAT.violentCats(D.records), value: st, groupB: CRIME.groupBOn(), onChange: (v) => { Object.assign(st, v); render(); } });
+    CRIME.bindGroupB(whatPanel.groupBInput, D);
     initMap(); zoomToPlace();
-    $("cat").addEventListener("change", () => { st.cat = $("cat").value; render(); });
-    $("fa").addEventListener("change", () => { st.fa = $("fa").checked; render(); });
-    $("reset").addEventListener("click", () => { st = { ...st, ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", fa: false, when: "l12" }; wherePanel.set(st); zoomToPlace(); $("cat").value = ""; $("fa").checked = false; panel.set("l12"); render(); });
+    $("reset").addEventListener("click", () => { st = { ...st, ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", vc: false, hide: [], fa: false, when: "l12" }; wherePanel.set(st); whatPanel.set(st); zoomToPlace(); panel.set("l12"); render(); });
     document.querySelectorAll(".seg button[data-mode]").forEach((b) => b.addEventListener("click", () => { st.mode = b.dataset.mode; writeState(); renderMap(); renderList(); }));
     document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { st.tab = b.dataset.tab; writeState(); renderList(); }));
     $("list").addEventListener("click", (e) => {
