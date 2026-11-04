@@ -234,10 +234,13 @@ table.hot th.sortable[aria-sort="descending"]::after { content: "↓"; visibilit
 .whenhead:first-of-type { margin-top: 0; }
 .whenpresets { display: flex; flex-wrap: wrap; gap: 6px; }
 .whenpresets .btn, .whengrid .btn, .whenyear .btn { font-size: 13px; padding: 5px 10px; }
-/* chosen: the quick choice and the two end months are solid; the months between are a light tint; the ends also carry a check mark */
-.whenpresets .btn[aria-pressed="true"], .whengrid .btn.end[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
-.whengrid .btn[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); border-color: var(--accent); color: var(--ink); }
-.whengrid .btn.end[aria-pressed="true"]::before { content: "\2713\00a0"; }
+/* chosen: the quick choice and the two end months are solid blue; the months between are a light blue tint; unavailable months are dashed.
+   The panel has its own blue so the choice stands out from the neutral page chrome. */
+.whenpanel { --when: #266fcf; --when-ink: #fff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .whenpanel { --when: #3987e5; --when-ink: #06101f; } }
+:root[data-theme="dark"] .whenpanel { --when: #3987e5; --when-ink: #06101f; }
+.whenpresets .btn[aria-pressed="true"], .whengrid .btn.end[aria-pressed="true"] { background: var(--when); color: var(--when-ink); border-color: var(--when); font-weight: 600; }
+.whengrid .btn[aria-pressed="true"] { background: color-mix(in srgb, var(--when) 20%, var(--surface)); border-color: var(--when); color: var(--ink); }
 .whengrid .btn:disabled { border-style: dashed; background: transparent; opacity: 1; color: var(--muted); }
 .whenyear { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .whengrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
