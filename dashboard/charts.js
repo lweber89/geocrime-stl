@@ -375,6 +375,7 @@
 
   async function main() {
     D = await CRIME.load();
+    CRIME.bindGroupB($("gb"), D);
     D.wards && D.wards.features.forEach((f) => { wardPop.set(String(f.properties.ward), f.properties.pop); cityPop += f.properties.pop; });
     D.nbhdShapes && D.nbhdShapes.features.forEach((f) => nbhdPop.set(f.properties.name, f.properties.pop));
     const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

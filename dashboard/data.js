@@ -12,7 +12,9 @@
  *   lat, lon  numbers, or null when unmapped
  *   addr, loc raw address and a Title Case label
  *   type      "Person" | "Property" | "Society" | "Other"
- *   cat       NIBRS category (53 values)
+ *   cat       NIBRS category (54 values)
+ *   group     "Persons" | "Property" | "Society" | "Group B" (arrest-only), from the manifest's category table (null if the feed has none)
+ *   violent   true for the FBI's violent crime offenses (murder, rape, robbery, aggravated assault)
  *   off       specific offense text
  *   nbhd, district
  *   ward      "1"-"14" (City wards, 2023 boundaries) or null
@@ -31,13 +33,16 @@
     return res.json();
   }
 
-  function normalize(file) {
+  function normalize(file, table = new Map()) {
     const { m, d, r } = file;
     return r.map((row, i) => {
       const [inc, t, lat, lon, addr, ty, ca, of, nb, district, fa, est, wd, mk] = row;
+      const cat = d.cat[ca], info = table.get(cat);
       const a = {
         id: `${m}-${i}`, inc, t, lat, lon, addr,
-        type: d.type[ty], cat: d.cat[ca], off: d.off[of], nbhd: d.nbhd[nb],
+        type: d.type[ty], cat, off: d.off[of], nbhd: d.nbhd[nb],
+        group: info ? info.group : null,          // NIBRS group from the code; a brand-new category has none yet and is shown
+        violent: !!(info && info.violent),
         district, firearm: fa === 1,
         ward: wd >= 0 ? d.ward[wd] : null,        // "1"-"14", or null when the point has no ward
         masked: mk === 1,                     // sensitive offense: no address, coarse location, never drawn as a dot
@@ -50,13 +55,34 @@
     });
   }
 
+  // Group B offenses (arrest-only: trespass, disorderly conduct, DUI, "all other offenses"...) are left out of every
+  // number, ranking and list unless the page link says gb=1. Changing the choice reloads the page, because the
+  // records are filtered once, as they load.
+  const groupBInLink = () => typeof location !== "undefined" && new URLSearchParams(location.hash.slice(1)).get("gb") === "1";
+  let groupBOn = groupBInLink();
+  const carryGroupB = (p) => { if (groupBOn) p.set("gb", "1"); return p; };       // keep the choice when a page rewrites its link
+  function setGroupB(on) {
+    const p = new URLSearchParams(location.hash.slice(1));
+    if (on) p.set("gb", "1"); else p.delete("gb");
+    history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
+    location.reload();
+  }
+  function bindGroupB(input, D) {
+    if (!input) return;
+    input.checked = D.includeGroupB;
+    input.addEventListener("change", () => setGroupB(input.checked));
+  }
+
   async function load(opts = {}) {
     const manifest = await getJSON("data/manifest.json?v=" + Date.now());
     let list = manifest.months.map((x) => x.m);
     if (opts.months && opts.months !== "all") list = list.slice(-opts.months);
 
     const files = await Promise.all(list.map((m) => getJSON(`data/${m}.json?v=${manifest.built}`)));
-    const records = files.flatMap(normalize);
+    const table = new Map((manifest.categories || []).map((c) => [c.cat, c]));
+    const everything = files.flatMap((f) => normalize(f, table));
+    groupBOn = opts.includeGroupB != null ? !!opts.includeGroupB : groupBInLink();
+    const records = groupBOn ? everything : everything.filter((a) => a.group !== "Group B");
 
     let wards = null;                                    // ward outlines + population (absent in older feeds)
     try { wards = await getJSON("data/wards.geojson?v=" + manifest.built); } catch (e) { /* optional */ }
@@ -78,6 +104,8 @@
 
     return {
       records, byId, maxDate, wards, nbhdShapes, city,
+      includeGroupB: groupBOn,                         // false = Group B offenses were left out of `records`
+      groupBLeftOut: everything.length - records.length,
       through: manifest.through,
       completeThrough: manifest.completeThrough,
       months: manifest.months,
@@ -145,7 +173,7 @@
   // what data exists, so it is not mistaken for the period the person has chosen.
   const dataNote = (months) => `Data available: ${span(months)} · Updated monthly.`;
 
-  const api = { load, incidents, title, span, dataNote, lockExtent, pct, MIN_BASE };
+  const api = { load, incidents, title, span, dataNote, lockExtent, pct, MIN_BASE, carryGroupB, bindGroupB };
   if (typeof module !== "undefined" && module.exports) module.exports = api;      // so tests can load this file in Node
   else window.CRIME = api;
 })();

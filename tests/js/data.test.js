@@ -75,3 +75,67 @@ test("dataNote says what data is available, so it is not read as the chosen peri
   const months = [{ m: "2024-01" }, { m: "2026-09" }];
   assert.equal(CRIME.dataNote(months), "Data available: Jan 2024 – Sep 2026 · Updated monthly.");
 });
+
+// ---- Group B (arrest-only) offenses: left out unless the link says gb=1 ----
+const feed = (withTable) => {
+  const manifest = {
+    built: "1", through: "2026-09-30", completeThrough: "2026-09", months: [{ m: "2026-09", n: 4 }],
+    ...(withTable ? { categories: [
+      { cat: "Robbery", code: "120", group: "Property", violent: 1 },
+      { cat: "Simple Assault", code: "13B", group: "Persons", violent: 0 },
+      { cat: "Trespass of Real Property", code: "90J", group: "Group B", violent: 0 },
+      { cat: "All Other Offenses", code: "90Z", group: "Group B", violent: 0 },
+    ] } : {}),
+  };
+  const month = {
+    m: "2026-09",
+    d: { type: ["Property", "Person", "Society"], cat: ["Robbery", "Simple Assault", "Trespass of Real Property", "All Other Offenses"],
+         off: ["x"], nbhd: ["Downtown"], ward: ["1"] },
+    r: [[1, "2026-09-01T10:00", 38.6, -90.2, "1 MAIN ST", 0, 0, 0, 0, "1", 0, 0, 0, 0],
+        [2, "2026-09-02T10:00", 38.6, -90.2, "2 MAIN ST", 1, 1, 0, 0, "1", 0, 0, 0, 0],
+        [3, "2026-09-03T10:00", 38.6, -90.2, "3 MAIN ST", 2, 2, 0, 0, "1", 0, 0, 0, 0],
+        [4, "2026-09-04T10:00", 38.6, -90.2, "4 MAIN ST", 2, 3, 0, 0, "1", 0, 0, 0, 0]],
+  };
+  return async (url) => ({ ok: true, json: async () => (url.includes("manifest") ? manifest : url.includes("2026-09") ? month : {}) });
+};
+const withFeed = async (withTable, hash, opts) => {
+  global.fetch = feed(withTable); global.location = { hash }; 
+  try { return await CRIME.load(opts); } finally { delete global.fetch; delete global.location; }
+};
+
+test("Group B offenses are left out by default, and the page says how many", async () => {
+  const D = await withFeed(true, "");
+  assert.deepEqual(D.records.map((a) => a.cat), ["Robbery", "Simple Assault"]);
+  assert.equal(D.includeGroupB, false);
+  assert.equal(D.groupBLeftOut, 2);
+  assert.ok(!D.cats.Society, "no category menu entry for a group that is left out");
+});
+
+test("gb=1 in the link brings Group B back, and rows keep their ids", async () => {
+  const D = await withFeed(true, "#gb=1");
+  assert.equal(D.records.length, 4);
+  assert.equal(D.includeGroupB, true);
+  assert.equal(D.records[2].id, "2026-09-2");
+  const off = await withFeed(true, "");
+  assert.equal(off.records[1].id, "2026-09-1", "ids do not depend on the choice");
+});
+
+test("each row carries its NIBRS group and the FBI violent flag", async () => {
+  const D = await withFeed(true, "#gb=1");
+  assert.deepEqual(D.records.map((a) => [a.group, a.violent]), [["Property", true], ["Persons", false], ["Group B", false], ["Group B", false]]);
+});
+
+test("a feed without the category table (or a brand-new category) still shows everything", async () => {
+  const D = await withFeed(false, "");
+  assert.equal(D.records.length, 4);
+  assert.ok(D.records.every((a) => a.group === null && a.violent === false));
+});
+
+test("carryGroupB keeps the choice in a rewritten link only when it is on", async () => {
+  await withFeed(true, "#gb=1");
+  const p = new URLSearchParams(); CRIME.carryGroupB(p);
+  assert.equal(p.get("gb"), "1");
+  await withFeed(true, "");
+  const q = new URLSearchParams(); CRIME.carryGroupB(q);
+  assert.equal(q.has("gb"), false);
+});

@@ -225,3 +225,37 @@ class MaskingTests(unittest.TestCase):
     def test_masked_categories_are_all_known(self):
         from geocrime_stl.utils.web_export import KNOWN_CATEGORIES, MASKED_CATEGORIES
         self.assertTrue(set(MASKED_CATEGORIES) <= KNOWN_CATEGORIES)
+
+
+class CategoryTableTests(unittest.TestCase):
+    """The NIBRS lookup table that the manifest publishes (group and violent flag per category)."""
+
+    def setUp(self):
+        from geocrime_stl.utils.web_export import NIBRS_CATEGORIES
+        self.rows = NIBRS_CATEGORIES
+
+    def test_every_category_appears_once_and_is_known(self):
+        from geocrime_stl.utils.web_export import KNOWN_CATEGORIES
+        names = [r[0] for r in self.rows]
+        self.assertEqual(len(names), len(set(names)))
+        self.assertEqual(set(names), KNOWN_CATEGORIES)
+
+    def test_group_b_is_exactly_the_90x_codes(self):
+        for cat, code, group, _ in self.rows:
+            self.assertEqual(group == "Group B", code.startswith("90"), cat)
+
+    def test_groups_are_the_four_published_groups(self):
+        from geocrime_stl.utils.web_export import GROUPS
+        self.assertEqual({r[2] for r in self.rows}, set(GROUPS))
+
+    def test_violent_crime_is_the_fbi_definition(self):
+        violent = {code for _, code, _, v in self.rows if v}
+        self.assertEqual(violent, {"09A", "11A", "11B", "120", "13A"})  # 11C is not in the SLMPD data
+        self.assertTrue(all(g in ("Persons", "Property") for _, _, g, v in self.rows if v))
+
+    def test_manifest_publishes_the_table(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = build_web_feed(make_df(), Path(tmp) / "web")
+        self.assertEqual(len(manifest["categories"]), len(self.rows))
+        robbery = next(c for c in manifest["categories"] if c["cat"] == "Robbery")
+        self.assertEqual(robbery, {"cat": "Robbery", "code": "120", "group": "Property", "violent": 1})
