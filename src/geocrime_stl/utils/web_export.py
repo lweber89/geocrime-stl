@@ -19,7 +19,7 @@ File format, one row per offense::
             typeIdx, catIdx, offenseIdx, nbhdIdx, district, firearm(0/1), estTime(0/1),
             wardIdx (-1 = no ward), masked(0/1)], ...]}
 
-Masked rows (see MASKED_CATEGORIES) have no street address and only a coarse location.
+Masked rows (see MASKED_CATEGORIES and MASKED_OFFENSE_TERMS) have no street address and only a coarse location.
 
 It also writes ``city.geojson``, ``wards.geojson`` and ``neighborhoods.geojson`` (outlines with 2020 census population)
 for maps.
@@ -35,6 +35,7 @@ import argparse
 import json
 import logging
 import math
+import re
 import shutil
 import statistics
 import sys
@@ -158,6 +159,18 @@ NIBRS_CATEGORIES = (
 GROUPS = ("Persons", "Property", "Society", "Group B")
 KNOWN_CATEGORIES = frozenset(c[0] for c in NIBRS_CATEGORIES)
 
+# Offenses that are sensitive because of the relationship or the victim, not the NIBRS category: domestic assault is
+# filed under Aggravated Assault, Simple Assault and Intimidation, so the category cannot find it. These are matched
+# (case-insensitive) against the offense description the City publishes, for example "DOMESTIC ASSAULT - 3RD DEGREE",
+# "ABUSE OR NEGLECT OF A CHILD ..." and "FINANCIAL EXPLOITATION OF ELDERLY/DISABLED PERSON". They are masked exactly
+# like MASKED_CATEGORIES. (match, plain-language label); the manifest publishes both for the methodology page.
+MASKED_OFFENSE_TERMS = (
+    ("DOMESTIC", "Domestic violence offenses (domestic assault and similar, in any category)"),
+    ("ABUSE OR NEGLECT", "Abuse or neglect of a child or of a vulnerable person"),
+    ("ELDERLY", "Offenses against elderly people (for example financial exploitation)"),
+)
+_MASKED_OFFENSE_RE = re.compile("|".join(re.escape(t) for t, _ in MASKED_OFFENSE_TERMS))
+
 BOUNDS_MARGIN_DEG = 0.02   # slack around the city's bounding box before a point counts as unmapped
 SNAP_MAX_M = 30            # geocoding jitter: snap an address to its most common point within this
 MAX_ROW_DROP = 0.05        # refuse a feed that has >5% fewer rows than the one it would replace
@@ -254,7 +267,8 @@ def _prepare(df: pd.DataFrame) -> pd.DataFrame:
     d["lat"], d["lon"], moved = _snap_to_address_mode(d["addr"], d["lat"], d["lon"])
     logger.info("%d rows snapped to their address's most common point", moved)
 
-    d["masked"] = d["cat"].isin(MASKED_CATEGORIES).astype(int)
+    sensitive_text = d["off"].str.upper().str.contains(_MASKED_OFFENSE_RE, na=False)
+    d["masked"] = (d["cat"].isin(MASKED_CATEGORIES) | sensitive_text).astype(int)
     mk = d["masked"] == 1
     d.loc[mk, "addr"] = ""
     for col in ("lat", "lon"):
@@ -455,6 +469,7 @@ def build_web_feed(
             "masked": int(d["masked"].sum()),
             "maskedCategories": list(MASKED_CATEGORIES),
             "categories": [{"cat": c, "code": k, "group": g, "violent": int(v)} for c, k, g, v in NIBRS_CATEGORIES],
+            "maskedOffenses": [label for _, label in MASKED_OFFENSE_TERMS],
             "newCategories": d.attrs.get("new_categories", []),
             "months": [{"m": m, "n": int(counts[m])} for m in months],
         }

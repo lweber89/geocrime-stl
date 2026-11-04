@@ -13,9 +13,9 @@
     $("unmapped").textContent = num(m.unmapped);
     $("maskedN").textContent = num(m.masked || 0);
     const list = $("masked");
-    list.replaceChildren(...(m.maskedCategories || []).map((c) => { const li = document.createElement("li"); li.textContent = c; return li; }));
+    list.replaceChildren(...[...(m.maskedCategories || []), ...(m.maskedOffenses || [])].map((c) => { const li = document.createElement("li"); li.textContent = c; return li; }));
   }).catch(() => {
     for (const id of ["through", "size", "unmapped", "maskedN"]) $(id).textContent = "(not available)";
-    $("masked").textContent = "Rape, Sodomy, Criminal Sexual Contact, Fondling, Statutory Rape, Incest, Human Trafficking, Family Offenses (Nonviolent), and Kidnapping/Abduction.";
+    $("masked").textContent = "Rape, Sodomy, Criminal Sexual Contact, Fondling, Statutory Rape, Incest, Human Trafficking, Family Offenses (Nonviolent), Kidnapping/Abduction, and domestic violence, child abuse or neglect, and offenses against elderly people (found by the offense description).";
   });
 })();
