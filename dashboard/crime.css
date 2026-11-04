@@ -221,3 +221,36 @@ table.hot th.sortable[aria-sort="descending"]::after { content: "↓"; visibilit
 /* the site name, shown above each page's own heading */
 .brand { display: block; margin: 0 0 2px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); text-decoration: none; }
 .brand:hover, .brand:focus-visible { color: var(--ink); text-decoration: underline; }
+
+/* ---- the "When" button and its panel (when-panel.js) ---- */
+.whenwrap { position: relative; display: inline-block; }
+.whenbtn { display: inline-flex; gap: 8px; align-items: baseline; }
+.whenk { font-weight: 600; }
+.whenv { color: var(--ink); }
+.whenpanel { position: absolute; z-index: 1200; top: calc(100% + 6px); left: 0; width: min(340px, 92vw); padding: 12px 14px 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 28px rgba(0, 0, 0, .22); }
+.whenpanel[hidden] { display: none; }
+.whenhead { margin: 10px 0 6px; font-weight: 600; font-size: 13px; }
+.whenhead:first-of-type { margin-top: 0; }
+.whenpresets { display: flex; flex-wrap: wrap; gap: 6px; }
+.whenpresets .btn, .whengrid .btn, .whenyear .btn { font-size: 13px; padding: 5px 10px; }
+/* chosen: the quick choice and the two end months are solid blue; the months between are a light blue tint; unavailable months are dashed.
+   The panel has its own blue so the choice stands out from the neutral page chrome. */
+.whenpanel { --when: #266fcf; --when-ink: #fff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .whenpanel { --when: #3987e5; --when-ink: #06101f; } }
+:root[data-theme="dark"] .whenpanel { --when: #3987e5; --when-ink: #06101f; }
+.whenpresets .btn[aria-pressed="true"], .whengrid .btn.end[aria-pressed="true"] { background: var(--when); color: var(--when-ink); border-color: var(--when); font-weight: 600; }
+.whengrid .btn[aria-pressed="true"] { background: color-mix(in srgb, var(--when) 20%, var(--surface)); border-color: var(--when); color: var(--ink); }
+.whengrid .btn:disabled { border-style: dashed; background: transparent; opacity: 1; color: var(--muted); }
+.whenyear { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.whengrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.whenhint { margin: 8px 0 0; min-height: 1.3em; font-size: 12.5px; }
+.whenpanel.whenright { left: auto; right: 0; }
+.whentop { display: none; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.whenclose { display: inline-block; }
+@media (max-width: 640px) {
+  .whenpanel { position: fixed; inset: 0; width: auto; border-radius: 0; overflow: auto; padding: 16px; }
+  .whentop { display: flex; }
+  .whenpanel.whenright { left: 0; right: 0; }
+  .whenpresets .btn, .whengrid .btn { min-height: 44px; }
+}

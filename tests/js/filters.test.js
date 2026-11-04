@@ -50,21 +50,19 @@ test("hash writes only what the page understands, and nothing empty", () => {
   assert.equal(FILTERS.hash("map", { ...none }), "");
 });
 
-test("the period travels in the names each page reads", () => {
-  const s = { ...none, when: "l6" };
-  assert.equal(FILTERS.hash("map", s), "range=last6");
-  assert.equal(FILTERS.hash("charts", s), "per=p6");
-  assert.equal(FILTERS.hash("hotspots", { ...none, when: "l24" }), "per=p24");
-  assert.equal(FILTERS.hash("map", { ...none, when: "l24" }), "range=all", "the map has no 24-month preset");
-  assert.equal(FILTERS.hash("map", { ...none, when: "2026-03" }), "month=2026-03");
-  assert.equal(FILTERS.hash("charts", { ...none, when: "2026-03" }), "", "Charts cannot show one month yet; nothing is written");
+test("every page writes the period as `when`, and leaves out one it does not understand", () => {
+  for (const page of ["map", "charts", "hotspots"]) {
+    assert.equal(FILTERS.hash(page, { ...none, when: "l6" }), "when=l6", page);
+    assert.equal(FILTERS.hash(page, { ...none, when: "2026-03..2026-09" }), "when=2026-03..2026-09", page);
+    assert.equal(FILTERS.hash(page, { ...none, when: "banana" }), "", page);
+  }
 });
 
 test("link joins the page file and the fragment, with no # when there is nothing to carry", () => {
   assert.equal(FILTERS.link("map", none), "./");
   assert.equal(FILTERS.link("map", { ...none, cat: "Robbery", fa: true }), "./#cat=Robbery&fa=1");
   assert.equal(FILTERS.link("charts", none), "charts.html");
-  assert.equal(FILTERS.link("charts", { ...none, cat: "Robbery", when: "l3" }), "charts.html#cat=Robbery&per=p3");
+  assert.equal(FILTERS.link("charts", { ...none, cat: "Robbery", when: "l3" }), "charts.html#cat=Robbery&when=l3");
   assert.equal(FILTERS.link("hotspots", { ...none, gb: true }), "hotspots.html#gb=1");
 });
 
@@ -74,17 +72,17 @@ test("extra values are added to a link and empty ones are skipped (the Hotspots 
   assert.deepEqual([...new URLSearchParams(h)].map(([k]) => k), ["cat", "pt", "lbl", "radius"]);
 });
 
-test("a link read and written again keeps its filters (round trip through the map names)", () => {
-  const h = "ward=5&q=main&cat=Robbery&fa=1&hide=Other&gb=1&range=last6";
-  const s = FILTERS.parse(h);
-  assert.deepEqual(new URLSearchParams(FILTERS.hash("map", { ...s })), new URLSearchParams("ward=5&q=main&cat=Robbery&fa=1&hide=Other&gb=1&range=last6"));
+test("a link read and written again keeps its filters, and moves the period to `when`", () => {
+  const s = FILTERS.parse("ward=5&q=main&cat=Robbery&fa=1&hide=Other&gb=1&range=last6");
+  const out = [...new URLSearchParams(FILTERS.hash("map", s))].map(([k, v]) => k + "=" + v).sort();
+  assert.deepEqual(out, ["cat=Robbery", "fa=1", "gb=1", "hide=Other", "q=main", "ward=5", "when=l6"]);
 });
 
-test("the map's and Charts' links to Hotspots carry the category, firearm, Group B and a matching period", () => {
+test("the map's and Charts' links to Hotspots carry the category, firearm, Group B and the period", () => {
   const fromMap = (h) => FILTERS.link("hotspots", FILTERS.parse(h));
-  assert.equal(fromMap("cat=Robbery&fa=1&ward=5&hide=Other&range=last6"), "hotspots.html#cat=Robbery&fa=1&per=p6");
-  assert.equal(fromMap("cat=Arson&gb=1"), "hotspots.html#cat=Arson&gb=1", "the map's default period (latest month) has no Hotspots preset");
-  assert.equal(fromMap("ward=5&range=ytd"), "hotspots.html", "Year to date has no Hotspots preset yet");
-  assert.equal(fromMap("range=all"), "hotspots.html#per=all");
-  assert.equal(FILTERS.link("hotspots", { cat: "Robbery", fa: true, gb: false, when: "l3" }), "hotspots.html#cat=Robbery&fa=1&per=p3");
+  assert.equal(fromMap("cat=Robbery&fa=1&ward=5&hide=Other&range=last6"), "hotspots.html#cat=Robbery&fa=1&when=l6");
+  assert.equal(fromMap("cat=Arson&gb=1"), "hotspots.html#cat=Arson&gb=1", "no period in the link, no period written");
+  assert.equal(fromMap("ward=5&range=ytd"), "hotspots.html#when=ytd");
+  assert.equal(fromMap("range=all"), "hotspots.html#when=all");
+  assert.equal(FILTERS.link("hotspots", { cat: "Robbery", fa: true, gb: false, when: "l3" }), "hotspots.html#cat=Robbery&fa=1&when=l3");
 });

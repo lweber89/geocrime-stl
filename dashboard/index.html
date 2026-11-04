@@ -39,8 +39,7 @@
 
 <section class="filters" aria-label="Filters">
   <input type="search" id="q" placeholder="Filter by street, offense or incident #" aria-label="Search">
-  <select id="range" aria-label="Time period"></select>
-  <select id="month" aria-label="Pick a single month"></select>
+  <span class="whenwrap" id="when"></span>
   <select id="ward" aria-label="Ward"><option value="">Any ward</option></select>
   <select id="cat" aria-label="Offense category"><option value="">Any category</option></select>
   <select id="nbhd" aria-label="Neighborhood"><option value="">Any neighborhood</option></select>
@@ -118,6 +117,8 @@
 <script src="geocode.js"></script>
 <script src="data.js"></script>
 <script src="filters.js"></script>
+<script src="when.js"></script>
+<script src="when-panel.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

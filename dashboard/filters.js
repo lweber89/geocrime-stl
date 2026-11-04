@@ -9,8 +9,8 @@
  * `when` values (the same words on every page):
  *   l3, l6, l12, l24   the latest 3, 6, 12 or 24 months      ytd   this year so far      all   every month we have
  *   latest             the latest month                       2026-09   one month        2026-03..2026-09   a span of months
- * Each page still writes its own older names for the period (the map: range and month; Hotspots and Charts: per),
- * and this file converts both ways, so every older link keeps working.
+ * Every page writes `when`. The older names (the map's range and month; Hotspots' and Charts' per) are still read and
+ * converted, so every older link keeps working.
  *
  *   const s = FILTERS.parse(location.hash);          // { ward, nbhd, pt, lbl, radius, cat, q, fa, hide, gb, when, other }
  *   FILTERS.hash("charts", s)                        // the link fragment the Charts page understands, e.g. "ward=5&cat=Robbery&per=p6"
@@ -22,15 +22,13 @@
   const WHERE = ["ward", "nbhd", "pt", "lbl", "radius"];
   // What each page understands. Hotspots has no place filters yet; the map and Charts understand them all.
   const PAGE = {
-    map: { file: "./", keys: [...WHERE, "q", "cat", "fa", "hide", "gb"], period: "range" },
-    charts: { file: "charts.html", keys: [...WHERE, "cat", "fa", "gb"], period: "per" },
-    hotspots: { file: "hotspots.html", keys: ["cat", "fa", "gb"], period: "per" },
+    map: { file: "./", keys: [...WHERE, "q", "cat", "fa", "hide", "gb"] },
+    charts: { file: "charts.html", keys: [...WHERE, "cat", "fa", "gb"] },
+    hotspots: { file: "hotspots.html", keys: ["cat", "fa", "gb"] },
   };
 
   const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
-  const RANGE_OF_WHEN = { l3: "last3", l6: "last6", l12: "last12", l24: "all", ytd: "ytd", all: "all" };  // the map has no 24-month preset
   const WHEN_OF_RANGE = { last3: "l3", last6: "l6", last12: "l12", ytd: "ytd", all: "all" };
-  const PER_OF_WHEN = { l3: "p3", l6: "p6", l12: "p12", l24: "p24", all: "all" };
   const WHEN_OF_PER = { p3: "l3", p6: "l6", p12: "l12", p24: "l24", all: "all" };
 
   // Is this a `when` value we understand? Returns it, or "" for anything unknown or hand-edited.
@@ -73,12 +71,7 @@
       else if (k === "hide") { if (v && v.length) p.set(k, v.join(",")); }
       else if (v) p.set(k, v);
     }
-    if (s.when) {
-      if (def.period === "range") {
-        if (MONTH.test(s.when)) p.set("month", s.when);
-        else if (RANGE_OF_WHEN[s.when]) p.set("range", RANGE_OF_WHEN[s.when]);
-      } else if (PER_OF_WHEN[s.when]) p.set("per", PER_OF_WHEN[s.when]);
-    }
+    if (s.when && cleanWhen(s.when)) p.set("when", s.when);
     for (const [k, v] of Object.entries(extra)) if (v !== "" && v != null) p.set(k, v);
     return p.toString();
   }
@@ -86,7 +79,7 @@
   const page = (name) => PAGE[name].file;
   const link = (name, s, extra) => { const h = hash(name, s, extra); return PAGE[name].file + (h ? "#" + h : ""); };
 
-  const api = { parse, hash, link, page, cleanWhen, WHERE, WHEN_OF_PER, PER_OF_WHEN };
+  const api = { parse, hash, link, page, cleanWhen, WHERE };
   if (typeof module !== "undefined" && module.exports) module.exports = api;      // so tests can load this file in Node
   else window.FILTERS = api;
 })();
