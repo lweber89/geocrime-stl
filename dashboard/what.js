@@ -46,9 +46,19 @@
     return { ...s, vc: false, hide: next, cat: dropCat ? "" : s.cat };
   }
 
+  // Which categories the violent crime shortcut covers, from the offenses themselves: Map category -> "all" or "part"
+  // (a category can hold both: sex offenses include rape, which counts, and fondling, which does not).
+  function violentCats(records) {
+    const n = new Map();
+    for (const a of records) { const c = n.get(a.cat) || { v: 0, all: 0 }; c.all++; if (a.violent) c.v++; n.set(a.cat, c); }
+    const out = new Map();
+    for (const [cat, c] of n) if (c.v) out.set(cat, c.v === c.all ? "all" : "part");
+    return out;
+  }
+
   const clear = (s) => ({ ...s, cat: "", vc: false, hide: [], fa: false });
 
-  const api = { matches, label, setViolent, setCat, toggleType, clear };
+  const api = { matches, label, setViolent, setCat, toggleType, violentCats, clear };
   if (typeof module !== "undefined" && module.exports) module.exports = api;      // so tests can load this file in Node
   else window.WHAT = api;
 })();

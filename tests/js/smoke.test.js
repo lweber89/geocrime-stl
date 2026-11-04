@@ -90,7 +90,7 @@ sandbox.WHATPANEL = { mount: (host, o) => { whatOpts = o; whatValue = o.value; r
 getEl("radius").value = "0.5";                                   // the HTML default
 sandbox.window = sandbox;
 vm.createContext(sandbox);
-for (const f of ["radius.js", "geocode.js", "data.js", "filters.js", "when.js", "app.js"]) vm.runInContext(fs.readFileSync(path.join(DIR, f), "utf8"), sandbox, { filename: f });
+for (const f of ["radius.js", "geocode.js", "data.js", "filters.js", "when.js", "what.js", "app.js"]) vm.runInContext(fs.readFileSync(path.join(DIR, f), "utf8"), sandbox, { filename: f });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const lastFit = () => fitCalls[fitCalls.length - 1];

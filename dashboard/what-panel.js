@@ -4,6 +4,7 @@
  *     types: ["Person", "Property", "Society"],        // D.types
  *     cats: { Person: ["Robbery", ...], ... },         // D.cats: categories by type, most common first
  *     value: { cat, vc, hide, fa },                    // the current choice (see what.js)
+ *     violent: Map | null,                             // WHAT.violentCats(records): shown on the menu while Violent crime is chosen
  *     counts: () => Map | null,                        // optional: offenses per category right now, shown beside each name
  *     groupB: false,                                   // is the arrest-only (Group B) switch on? Omit to leave the switch out
  *     onChange: ({ cat, vc, hide, fa }) => {},
@@ -39,6 +40,7 @@
     const top = h("div", { class: "whentop" });
     top.append(h("strong", { class: "whentitle" }, "Choose the offenses"), close);
     const quick = h("div", { class: "whenpresets" }), body = h("div", { class: "whatbody" });
+    const note = h("p", { class: "whenhint muted small", hidden: "" }, "Violent crime covers the highlighted categories. * means only some offenses in that category count (see Methodology). Click a category or type to change the choice.");
     const fa = h("input", { type: "checkbox", id: id + "-fa" });
     const faRow = h("label", { class: "whatcheck", for: id + "-fa" });
     faRow.append(fa, document.createTextNode(" Firearm only (narrows the choice below)"));
@@ -51,7 +53,7 @@
       row.append(groupBInput, document.createTextNode(" Include arrest-only offenses (Group B; adds to the choice below)"));
       panel.append(row);
     }
-    panel.append(h("p", { class: "whenhead" }, "Quick choices"), quick, body);
+    panel.append(h("p", { class: "whenhead" }, "Quick choices"), quick, note, body);
     host.append(btn, panel);
 
     const emit = (next) => { value = { ...value, ...next }; render(); opts.onChange({ ...value }); };
@@ -70,17 +72,22 @@
         q("All offenses", all, "", () => emit({ ...WHAT.clear(value), fa: value.fa })),
         q("Violent crime (FBI definition)", value.vc, VIOLENT_NOTE, () => emit(WHAT.setViolent(value, !value.vc))));
       const counts = opts.counts ? opts.counts() : null;
+      note.hidden = !value.vc;
       body.replaceChildren(...types.map((t) => {
-        const on = !(value.hide || []).includes(t), sec = h("div", { class: "whattype" });
+        const list0 = cats[t] || [], vcN = value.vc && opts.violent ? list0.filter((c) => opts.violent.has(c)).length : null;
+        const on = vcN == null ? !(value.hide || []).includes(t) : vcN > 0, sec = h("div", { class: "whattype" + (vcN === 0 ? " dim" : "") });
         const lab = h("label", { class: "whatcheck whattypehead" });
-        const cb = h("input", { type: "checkbox" }); cb.checked = on;
+        const cb = h("input", { type: "checkbox" }); cb.checked = on; cb.indeterminate = vcN != null && vcN > 0 && vcN < list0.length;
         cb.addEventListener("change", () => emit(WHAT.toggleType(value, t, types, typeOfCat)));
         const dot = h("i", { class: "dot", style: `background:var(--type-${t.toLowerCase()})` });
         lab.append(cb, dot, document.createTextNode(" " + t));
         const list = h("div", { class: "nbhdlist" });
         for (const c of cats[t] || []) {
           const n = counts ? ` (${(counts.get(c) || 0).toLocaleString()})` : "";
-          list.append(q(c + n, value.cat === c, "", () => emit(WHAT.setCat(value, c, typeOfCat))));
+          const cov = value.vc && opts.violent ? opts.violent.get(c) : null;       // while Violent crime is on, mark what it covers
+          const b = q(c + n + (cov === "part" ? " *" : ""), value.vc ? !!cov : value.cat === c, cov === "part" ? "Only some offenses in this category count as violent crime (for example rape, but not fondling)." : "", () => emit(WHAT.setCat(value, c, typeOfCat)));
+          if (value.vc && !cov) b.classList.add("dim");
+          list.append(b);
         }
         sec.append(lab, list);
         return sec;

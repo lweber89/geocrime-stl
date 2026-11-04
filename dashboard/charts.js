@@ -370,7 +370,7 @@
       onClearAddress: () => { area.pt = area.lbl = ""; renderAll(); },
     });
     whatPanel = WHATPANEL.mount($("what"), {
-      types: D.types, cats: D.cats, value: area, groupB: CRIME.groupBOn(),
+      types: D.types, cats: D.cats, violent: WHAT.violentCats(D.records), value: area, groupB: CRIME.groupBOn(),
       onChange: (v) => { Object.assign(area, v); renderAll(); },
     });
     CRIME.bindGroupB(whatPanel.groupBInput, D);

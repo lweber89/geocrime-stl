@@ -51,3 +51,11 @@ test("switching a type off drops a category of that type and violent crime; the 
 test("clear resets everything", () => {
   assert.deepEqual(WHAT.clear({ cat: "x", vc: true, hide: ["Person"], fa: true }), none);
 });
+
+test("violentCats says which categories the shortcut covers, and which only in part", () => {
+  const r = (cat, violent) => ({ cat, violent });
+  const m = WHAT.violentCats([r("Robbery", true), r("Robbery", true), r("Sex Offenses", true), r("Sex Offenses", false), r("Larceny", false)]);
+  assert.equal(m.get("Robbery"), "all");
+  assert.equal(m.get("Sex Offenses"), "part");
+  assert.equal(m.has("Larceny"), false);
+});
