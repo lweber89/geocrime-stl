@@ -79,3 +79,12 @@ test("a link read and written again keeps its filters (round trip through the ma
   const s = FILTERS.parse(h);
   assert.deepEqual(new URLSearchParams(FILTERS.hash("map", { ...s })), new URLSearchParams("ward=5&q=main&cat=Robbery&fa=1&hide=Other&gb=1&range=last6"));
 });
+
+test("the map's and Charts' links to Hotspots carry the category, firearm, Group B and a matching period", () => {
+  const fromMap = (h) => FILTERS.link("hotspots", FILTERS.parse(h));
+  assert.equal(fromMap("cat=Robbery&fa=1&ward=5&hide=Other&range=last6"), "hotspots.html#cat=Robbery&fa=1&per=p6");
+  assert.equal(fromMap("cat=Arson&gb=1"), "hotspots.html#cat=Arson&gb=1", "the map's default period (latest month) has no Hotspots preset");
+  assert.equal(fromMap("ward=5&range=ytd"), "hotspots.html", "Year to date has no Hotspots preset yet");
+  assert.equal(fromMap("range=all"), "hotspots.html#per=all");
+  assert.equal(FILTERS.link("hotspots", { cat: "Robbery", fa: true, gb: false, when: "l3" }), "hotspots.html#cat=Robbery&fa=1&per=p3");
+});
