@@ -20,19 +20,24 @@
   const RAMP = ["#fff1d6", "#fdd49e", "#fc8d59", "#d7301f", "#7f0000"];           // same fifths as the map's ward and neighborhood shading
   const UP = ["#fc8d59", "#d7301f"], DOWN = ["#8db8e8", "#2b6cb0"], FLAT = "#d9d7cf";
 
-  let panel, D, map, hexLayer, hexByKey = new Map(), st = { cat: "", fa: false, when: "l12", tab: "hex", mode: "count", sort: "rate", dir: "desc" };
+  let panel, wherePanel, D, map, hexLayer, hexByKey = new Map(), st = { ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", fa: false, when: "l12", tab: "hex", mode: "count", sort: "rate", dir: "desc" };
   let view = null;                       // everything computed for the current filters
 
   // ------------------------------------------------------------ state in the page link
   function readState() {
     const p = new URLSearchParams(location.hash.slice(1));
     st.cat = p.get("cat") || ""; st.fa = p.get("fa") === "1";
+    const f = FILTERS.parse(location.hash);
+    for (const k of ["ward", "nbhd", "pt", "lbl", "radius"]) st[k] = f[k];
+    if (st.ward && !(D.wards && D.wards.features.some((x) => String(x.properties.ward) === st.ward))) st.ward = "";
+    if (st.nbhd && !D.nbhds.includes(st.nbhd)) st.nbhd = "";
+    if (st.pt) st.ward = st.nbhd = "";                                     // an address or pin wins, as on the other pages (it is carried, not used here)
     st.when = FILTERS.parse(location.hash).when || "l12";                  // reads when, and the older per, range and month
     if (!WHEN.resolve(st.when, D.months.map((x) => x.m))) st.when = "l12";
     st.tab = ["hex", "nbhd", "ward", "block"].includes(p.get("tab")) ? p.get("tab") : "hex";
     st.mode = ["count", "change"].includes(p.get("mode")) ? p.get("mode") : "count";
   }
-  const shared = () => ({ cat: st.cat, fa: st.fa, gb: CRIME.groupBOn() });          // what the other pages understand
+  const shared = () => ({ ward: st.ward, nbhd: st.nbhd, pt: st.pt, lbl: st.lbl, radius: st.radius, cat: st.cat, fa: st.fa, gb: CRIME.groupBOn() });          // what the other pages understand
   function writeState() {
     const p = new URLSearchParams(FILTERS.hash("hotspots", shared()));
     if (st.when !== "l12") p.set("when", st.when);
@@ -44,7 +49,12 @@
     if (map1) map1.href = FILTERS.link("map", carried);
     if (ch) ch.href = FILTERS.link("charts", carried);
   }
-  const mapHash = (extra = {}, withWhen = false) => "./#" + FILTERS.hash("map", { ...shared(), when: withWhen ? st.when : "" }, extra);       // a link into the crime map that keeps the filters
+  // A link into the crime map that keeps the filters. A row that names its own ward, neighborhood or spot replaces the place.
+  const mapHash = (extra = {}, withWhen = false) => {
+    const own = extra.ward || extra.nbhd || extra.pt, s = { ...shared(), when: withWhen ? st.when : "" };
+    if (own) Object.assign(s, { ward: "", nbhd: "", pt: "", lbl: "", radius: "" });
+    return "./#" + FILTERS.hash("map", s, extra);
+  };       // a link into the crime map that keeps the filters
 
   // ------------------------------------------------------------ numbers for the current filters
   function compute() {
@@ -52,10 +62,11 @@
     const r = WHEN.resolve(st.when, keys), n = r.n, months = r.months;
     const pr = WHEN.prior(st.when, keys), priorKeys = pr ? pr.months : null;       // Year to date is compared with the same months last year
     const priorLabel = pr ? pr.label : `the previous ${n} months`;
-    const recs = D.records.filter((a) => (!st.cat || a.cat === st.cat) && (!st.fa || a.firearm));
+    const cityRecs = D.records.filter((a) => (!st.cat || a.cat === st.cat) && (!st.fa || a.firearm));
+    const recs = st.ward || st.nbhd ? cityRecs.filter((a) => WHERE.matches(a, st)) : cityRecs;      // the hexagons, blocks and counts follow the place; the ward and neighborhood rankings stay citywide
     const cells = HOT.bin(recs, { width: HEX_WIDTH });
     const meas = HOT.measure(cells, { months, prior: priorKeys });
-    view = { keys, n, months, priorKeys, priorLabel, recs, ...meas, inP: new Set(months), inQ: priorKeys ? new Set(priorKeys) : null };
+    view = { keys, n, months, priorKeys, priorLabel, recs, cityRecs, ...meas, inP: new Set(months), inQ: priorKeys ? new Set(priorKeys) : null };
   }
 
   // ------------------------------------------------------------ the hexagon map
@@ -173,7 +184,7 @@
     const isW = kind === "ward", feats = isW ? D.wards : D.nbhdShapes;
     if (!feats) return null;
     const cur = new Map(), prev = new Map();
-    for (const a of view.recs) {
+    for (const a of view.cityRecs) {
       const k = isW ? a.ward : a.nbhd;
       if (!k) continue;
       if (view.inP.has(a.m)) cur.set(k, (cur.get(k) || 0) + 1);
@@ -232,6 +243,10 @@
 
   function render() {
     writeState();
+    wherePanel.set(st);
+    const note = $("placeNote");
+    note.hidden = !st.pt;
+    note.textContent = st.pt ? `Hotspots shows the whole city, or one ward or neighborhood. The spot you chose on the map (${st.lbl || "a pin"}) is kept for your links. Clear it in Where to pick a ward or neighborhood here.` : "";
     compute();
     renderMap();
     renderList();
@@ -249,6 +264,13 @@
     if (D.city) L.geoJSON(D.city, { interactive: false, style: { color: css("--outline"), weight: 2.5, opacity: 0.85, fill: false } }).addTo(map);
   }
 
+  // Fit the map to the chosen ward or neighborhood, or back to the whole city.
+  function zoomToPlace() {
+    const feats = st.ward ? D.wards && D.wards.features.filter((f) => String(f.properties.ward) === st.ward)
+      : st.nbhd ? D.nbhdShapes && D.nbhdShapes.features.filter((f) => f.properties.name === st.nbhd) : null;
+    map.fitBounds(feats && feats.length ? L.geoJSON({ type: "FeatureCollection", features: feats }).getBounds() : CITY_BOUNDS, { padding: [20, 20] });
+  }
+
   async function main() {
     D = await CRIME.load();
     CRIME.bindGroupB($("gb"), D);
@@ -262,12 +284,20 @@
     if (st.cat && !top.includes(st.cat) && tally.has(st.cat)) top.push(st.cat);          // a category chosen on the map, not in the top list
     $("cat").innerHTML = '<option value="">All offense types</option>' + top.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
     if (!top.includes(st.cat)) st.cat = "";
+    wherePanel = WHEREPANEL.mount($("where"), {
+      wards: D.wards ? D.wards.features.map((f) => String(f.properties.ward)).sort((a, b) => a - b) : [], nbhds: D.nbhds, value: st,
+      radiusLabel: () => RADIUS.label(st.radius),
+      addressHint: "Hotspots shows a ward or neighborhood. For an address or pin, use the map.",
+      addressLink: { text: "Choose on the map", href: () => document.querySelector('a[data-nav="map"]').href },
+      onChange: (v) => { st.ward = v.ward; st.nbhd = v.nbhd; render(); zoomToPlace(); },
+      onClearAddress: () => { st.pt = st.lbl = st.radius = ""; render(); },
+    });
     panel = WHENPANEL.mount($("when"), { keys: D.months.map((x) => x.m), value: st.when, onChange: (w) => { st.when = w; render(); } });
     $("cat").value = st.cat; $("fa").checked = st.fa;
-    initMap();
+    initMap(); zoomToPlace();
     $("cat").addEventListener("change", () => { st.cat = $("cat").value; render(); });
     $("fa").addEventListener("change", () => { st.fa = $("fa").checked; render(); });
-    $("reset").addEventListener("click", () => { st = { ...st, cat: "", fa: false, when: "l12" }; $("cat").value = ""; $("fa").checked = false; panel.set("l12"); render(); });
+    $("reset").addEventListener("click", () => { st = { ...st, ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", fa: false, when: "l12" }; wherePanel.set(st); zoomToPlace(); $("cat").value = ""; $("fa").checked = false; panel.set("l12"); render(); });
     document.querySelectorAll(".seg button[data-mode]").forEach((b) => b.addEventListener("click", () => { st.mode = b.dataset.mode; writeState(); renderMap(); renderList(); }));
     document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { st.tab = b.dataset.tab; writeState(); renderList(); }));
     $("list").addEventListener("click", (e) => {
