@@ -33,28 +33,18 @@
     st.tab = ["hex", "nbhd", "ward", "block"].includes(p.get("tab")) ? p.get("tab") : "hex";
     st.mode = ["count", "change"].includes(p.get("mode")) ? p.get("mode") : "count";
   }
+  const shared = () => ({ cat: st.cat, fa: st.fa, gb: CRIME.groupBOn() });          // what the other pages understand
   function writeState() {
-    const p = new URLSearchParams();
-    if (st.cat) p.set("cat", st.cat);
-    if (st.fa) p.set("fa", "1");
-    CRIME.carryGroupB(p);
-    const shared = p.toString();                                    // what the other pages understand
+    const p = new URLSearchParams(FILTERS.hash("hotspots", shared()));
     if (st.per !== "p12") p.set("per", st.per);
     if (st.tab !== "hex") p.set("tab", st.tab);
     if (st.mode !== "count") p.set("mode", st.mode);
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
     const map1 = document.querySelector('a[data-nav="map"]'), ch = document.querySelector('a[data-nav="charts"]');
-    if (map1) map1.href = "./" + (shared ? "#" + shared : "");
-    if (ch) ch.href = "charts.html" + (shared || st.per !== "p12" ? "#" + new URLSearchParams([...new URLSearchParams(shared), ...(st.per !== "p12" ? [["per", st.per]] : [])]) : "");
+    if (map1) map1.href = FILTERS.link("map", shared());
+    if (ch) ch.href = FILTERS.link("charts", { ...shared(), when: st.per !== "p12" ? FILTERS.WHEN_OF_PER[st.per] : "" });
   }
-  const mapHash = (extra = {}) => {                                  // a link into the crime map that keeps the filters
-    const p = new URLSearchParams();
-    if (st.cat) p.set("cat", st.cat);
-    if (st.fa) p.set("fa", "1");
-    CRIME.carryGroupB(p);
-    for (const [k, v] of Object.entries(extra)) if (v !== "" && v != null) p.set(k, v);
-    return "./#" + p;
-  };
+  const mapHash = (extra = {}) => "./#" + FILTERS.hash("map", shared(), extra);       // a link into the crime map that keeps the filters
 
   // ------------------------------------------------------------ numbers for the current filters
   function compute() {

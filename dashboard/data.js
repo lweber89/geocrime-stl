@@ -173,7 +173,7 @@
   // what data exists, so it is not mistaken for the period the person has chosen.
   const dataNote = (months) => `Data available: ${span(months)} · Updated monthly.`;
 
-  const api = { load, incidents, title, span, dataNote, lockExtent, pct, MIN_BASE, carryGroupB, bindGroupB };
+  const api = { load, incidents, title, span, dataNote, lockExtent, pct, MIN_BASE, carryGroupB, bindGroupB, groupBOn: () => groupBOn };
   if (typeof module !== "undefined" && module.exports) module.exports = api;      // so tests can load this file in Node
   else window.CRIME = api;
 })();
