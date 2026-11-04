@@ -40,8 +40,9 @@
     if (st.mode !== "count") p.set("mode", st.mode);
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
     const map1 = document.querySelector('a[data-nav="map"]'), ch = document.querySelector('a[data-nav="charts"]');
-    if (map1) map1.href = FILTERS.link("map", shared());
-    if (ch) ch.href = FILTERS.link("charts", { ...shared(), when: st.when !== "l12" ? st.when : "" });
+    const carried = { ...shared(), when: st.when !== "l12" ? st.when : "" };            // Hotspots opens on 12 months; any other period travels with the link
+    if (map1) map1.href = FILTERS.link("map", carried);
+    if (ch) ch.href = FILTERS.link("charts", carried);
   }
   const mapHash = (extra = {}, withWhen = false) => "./#" + FILTERS.hash("map", { ...shared(), when: withWhen ? st.when : "" }, extra);       // a link into the crime map that keeps the filters
 
