@@ -64,7 +64,8 @@ for (let i = 0; i < 40; i++) rows.push([`26-${1000 + i}`, `2026-09-${String(1 + 
   38.625 + (i % 8) * 0.002, -90.195 + (i % 5) * 0.002, `${100 + i} MARKET ST`, i % 3, i % 3, i % 3, i % 2, 1, i % 2, 0, i % 2 ? 6 : 5, 0]);
 const dict = { type: ["Person", "Property", "Society"], cat: ["Aggravated Assault", "Larceny", "Weapons Law Violations"], off: ["A", "B", "C"], nbhd: ["Downtown", "Soulard"], ward: ["5", "6"] };
 const feed = {
-  "data/manifest.json": { built: "t", through: "2026-09-30", completeThrough: "2026-09-30", months: [{ m: "2026-08" }, { m: "2026-09" }] },
+  "data/manifest.json": { built: "t", through: "2026-09-30", completeThrough: "2026-09-30", months: ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09"].map((m) => ({ m })) },
+  ...Object.fromEntries(["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07"].map((m) => [`data/${m}.json`, { m, d: dict, r: [] }])),   // older, empty months: enough history for the six-month limit
   "data/2026-08.json": { m: "2026-08", d: dict, r: rows.slice(0, 20) },
   "data/2026-09.json": { m: "2026-09", d: dict, r: rows.slice(20) },
 };
@@ -74,15 +75,18 @@ const fetchStub = async (url) => {
 };
 
 // ---------- run the real scripts ----------
+const hashes = [];                                                // every address-bar update the page makes
+let panelOpts = null, panelValue = null, panelLimit = null;         // the When panel is its own tested component; here it is a stand-in
 const sandbox = {
   document, L, fetch: fetchStub, console, setTimeout, clearTimeout, URLSearchParams, Event, Date, Math, JSON,
-  history: { replaceState() {} }, location: { hash: "", pathname: "/dashboard/" }, navigator: {}, matchMedia: () => ({ matches: false }),
+  history: { replaceState: (a, b, url) => { hashes.push(String(url)); } }, location: { hash: "", pathname: "/dashboard/" }, navigator: {}, matchMedia: () => ({ matches: false }),
   getComputedStyle: () => ({ getPropertyValue: () => "#123456" }), URL, Blob, requestAnimationFrame: (f) => f(),
 };
+sandbox.WHENPANEL = { mount: (host, o) => { panelOpts = o; panelValue = o.value; return { set: (v) => { panelValue = v; }, setLimit: (m) => { panelLimit = m; }, close() {} }; } };
 getEl("radius").value = "0.5";                                   // the HTML default
 sandbox.window = sandbox;
 vm.createContext(sandbox);
-for (const f of ["radius.js", "geocode.js", "data.js", "filters.js", "app.js"]) vm.runInContext(fs.readFileSync(path.join(DIR, f), "utf8"), sandbox, { filename: f });
+for (const f of ["radius.js", "geocode.js", "data.js", "filters.js", "when.js", "app.js"]) vm.runInContext(fs.readFileSync(path.join(DIR, f), "utf8"), sandbox, { filename: f });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const lastFit = () => fitCalls[fitCalls.length - 1];
@@ -94,7 +98,7 @@ let span05;                                                       // map span at
 
 test("the page loads with the short data note and no point chosen", async () => {
   await sleep(100);
-  assert.equal(getEl("sub").textContent, "Data available: Aug 2026 – Sep 2026 · Updated monthly.");
+  assert.equal(getEl("sub").textContent, "Data available: Jan 2026 – Sep 2026 · Updated monthly.");
   assert.equal(getEl("radiusBox").hidden, true, "distance control starts hidden");
   assert.equal(getEl("addrMsg").textContent, "", "status line starts empty");
 });
@@ -165,4 +169,29 @@ test("Clear address hides the distance control again", async () => {
   getEl("addrClear").click();
   await sleep(10);
   assert.equal(getEl("radiusBox").hidden, true);
+});
+
+test("the When panel: a chosen period goes into the link, and a whole-city view is held to six months", async () => {
+  assert.equal(panelLimit, 6, "the panel is told about the whole-city limit");
+  panelOpts.onChange("l12");
+  await sleep(10);
+  assert.equal(panelValue, "l6", "twelve months citywide falls back to six");
+  assert.match(getEl("mapnote").textContent, /Showing the last 6 months/);
+  assert.match(getEl("rangeNote").textContent, /^Apr 1, 2026/);
+  assert.match(hashes.at(-1), /when=l6/);
+  panelOpts.onChange("latest");
+  await sleep(10);
+  assert.doesNotMatch(hashes.at(-1), /when=/, "the default period is not written to the link");
+  assert.doesNotMatch(getEl("mapnote").textContent, /Showing the last 6 months/);
+});
+
+test("with a ward chosen, a long period is allowed and the panel's limit is lifted", async () => {
+  getEl("ward").value = "5";
+  getEl("ward").dispatchEvent({ type: "change" });
+  await sleep(10);
+  assert.equal(panelLimit, null, "the whole-city limit does not apply to a ward");
+  panelOpts.onChange("l12");
+  await sleep(10);
+  assert.match(hashes.at(-1), /when=l12/);
+  assert.match(hashes.at(-1), /ward=5/);
 });

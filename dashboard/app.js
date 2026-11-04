@@ -18,14 +18,15 @@
 
   let D, filtered = [], sortKey = "t", sortDir = -1, page = 0, open = new Set();
   let map, pointLayer, heatLayer, layerChoice = "auto";   // "auto" picks by date span; the buttons override it
-  let defaultRange = "all", cityLimited = false, bounds = null, priorInfo = null;
+  const DEFAULT_WHEN = "latest";                 // the map opens on the latest month
+  let when = DEFAULT_WHEN, panel = null, cityLimited = false, bounds = null, priorInfo = null;
   let wardLayer, outlineLayer, wardCounts = new Map(), nbhdCounts = new Map(), wardFeatures = new Map(), nbhdFeatures = new Map(), wardNbhds = new Map();
   let addrLayer, ringLayer, center = null, curMatches = null, pinMode = false;   // center: the searched address and radius, or null
   let addrSource = "";                                                          // which lookup service found the searched address (shown in the report)
   const incCount = new Map();
 
   // ------------------------------------------------------------ filters
-  const FIELDS = ["q", "range", "month", "ward", "nbhd", "pt", "lbl", "radius", "cat"];   // pt = "lat,lon" of a searched address
+  const FIELDS = ["q", "ward", "nbhd", "pt", "lbl", "radius", "cat"];   // pt = "lat,lon" of a searched address
 
   // ---- date ranges: calendar months, because the City publishes whole months (no "last 7 days")
   const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -39,37 +40,23 @@
 
   // The chosen period as { from, to } Dates. A picked month wins over the preset menu.
   function rangeBounds(f) {
-    const keys = D.months.map((x) => x.m), last = keys.at(-1), first = keys[0];
-    const back = (n) => keys[Math.max(0, keys.length - n)];
-    const v = f.month ? "m:" + f.month : f.range;
-    if (v.startsWith("m:")) return { from: monStart(v.slice(2)), to: monEnd(v.slice(2)) };
-    if (v === "last3") return { from: monStart(back(3)), to: monEnd(last) };
-    if (v === "last6") return { from: monStart(back(6)), to: monEnd(last) };
-    if (v === "last12") return { from: monStart(back(12)), to: monEnd(last) };
-    if (v === "all") return { from: monStart(first), to: monEnd(last) };
-    if (v === "ytd") { const jan = last.slice(0, 4) + "-01"; return { from: monStart(jan < first ? first : jan), to: monEnd(last) }; }
-    return { from: monStart(last), to: monEnd(last) };
+    const r = WHEN.resolve(f.when, D.months.map((x) => x.m)) || WHEN.resolve(DEFAULT_WHEN, D.months.map((x) => x.m));
+    return { from: monStart(r.from), to: monEnd(r.to) };
   }
 
-  function buildRangeOptions() {
-    const keys = D.months.map((x) => x.m), last = keys.at(-1);
-    const opt = (v, t, extra = "") => `<option value="${v}"${extra}>${esc(t)}</option>`;
-    defaultRange = "m:" + last;
-    $("range").innerHTML =
-      opt("m:" + last, `Latest month (${monLabel(last)})`)
-      + opt("last3", "Last 3 months")
-      + opt("last6", "Last 6 months")
-      + opt("last12", "Last 12 months")
-      + opt("ytd", "Year to date")
-      + opt("all", "All dates")
-      + opt("month", "Single month", " hidden");               // shown only while a month is picked
-    $("month").innerHTML = opt("", "Or pick a month…") + [...keys].reverse().map((k) => opt(k, monLabel(k))).join("");
-    $("range").value = defaultRange;
+  // The When button and its panel. Whole-city views are limited to six months of dots (see apply), which the panel enforces.
+  function buildWhenPanel() {
+    panel = WHENPANEL.mount($("when"), {
+      keys: D.months.map((x) => x.m), value: when,
+      limitNote: "Longer periods are available when you choose a ward, a neighborhood or search an address.",
+      onChange: (w) => { when = w; layerChoice = "auto"; apply(); },
+    });
   }
 
   function readFilters() {
     const f = {};
     for (const k of FIELDS) f[k] = $(k).value;
+    f.when = when;
     f.fa = $("fa").checked;
     f.hide = TYPES.filter((t) => !$("t-" + t).checked);
     return f;
@@ -84,7 +71,8 @@
 
   function writeHash(f) {
     const p = new URLSearchParams();
-    for (const k of FIELDS) if (f[k] && !(k === "range" && (f[k] === defaultRange || f[k] === "month")) && !(k === "radius" && f[k] === DEFAULT_RADIUS)) p.set(k, f[k]);
+    for (const k of FIELDS) if (f[k] && !(k === "radius" && f[k] === DEFAULT_RADIUS)) p.set(k, f[k]);
+    if (f.when !== DEFAULT_WHEN) p.set("when", f.when);
     if (f.fa) p.set("fa", "1");
     if (f.hide.length) p.set("hide", f.hide.join(","));
     CRIME.carryGroupB(p);
@@ -101,20 +89,21 @@
     if (p.has("radius")) $("radius").value = RADIUS.snap(p.get("radius"));     // older or hand-edited links may hold an in-between or junk distance
     $("address").value = $("pt").value ? $("lbl").value : "";
     if ($("pt").value) { $("ward").value = ""; $("nbhd").value = ""; }   // a spot and a ward/neighborhood never go together (old links might)
-    if (!$("month").value) $("month").value = "";                // unknown month in the link
-    $("range").value = $("month").value ? "month" : ($("range").value || defaultRange);   // old or unknown ranges fall back
+    when = FILTERS.parse(location.hash).when || DEFAULT_WHEN;      // reads when, and the older range and month; unknown periods fall back
+    if (!WHEN.resolve(when, D.months.map((x) => x.m))) when = DEFAULT_WHEN;
+    panel.set(when);
     $("fa").checked = p.get("fa") === "1";
     const hide = (p.get("hide") || "").split(",");
     TYPES.forEach((t) => ($("t-" + t).checked = !hide.includes(t)));
   }
 
   function resetControls() {
-    for (const k of ["q", "month", "ward", "cat", "nbhd", "pt", "lbl", "address"]) $(k).value = "";
+    for (const k of ["q", "ward", "cat", "nbhd", "pt", "lbl", "address"]) $(k).value = "";
     $("radius").value = DEFAULT_RADIUS;
     setAddrMsg("");
     $("fa").checked = false;
     TYPES.forEach((t) => ($("t-" + t).checked = true));
-    $("range").value = defaultRange;
+    when = DEFAULT_WHEN; panel.set(when);
     layerChoice = "auto";
   }
 
@@ -126,7 +115,6 @@
     return (named.length ? named : all).sort((a, b) => b[1] - a[1]);
   };
 
-  const monthsOf = (range) => { const b = rangeBounds({ range, month: "" }); return monthsIn(b.from, b.to); };
 
   function apply() {
     syncRadiusUI();
@@ -144,9 +132,8 @@
     }
     const citywide = !f.ward && !f.nbhd && !center && !f.q.trim();
     cityLimited = false;
-    if (citywide && !f.month && monthsOf(f.range) > CITY_MAX_MONTHS) { $("range").value = "last6"; f = readFilters(); cityLimited = true; }
-    for (const o of $("range").options) o.disabled = o.value !== "month" && citywide && monthsOf(o.value) > CITY_MAX_MONTHS;
-    $("range").title = "Longer periods are available when you choose a ward, a neighborhood or search an address.";
+    panel.setLimit(citywide ? CITY_MAX_MONTHS : null);
+    if (citywide && WHEN.resolve(when, D.months.map((x) => x.m)).n > CITY_MAX_MONTHS) { when = "l6"; panel.set(when); f = readFilters(); cityLimited = true; }
     writeHash(f);
     bounds = rangeBounds(f);
     const { from, to } = bounds;
@@ -176,12 +163,9 @@
       if (a.nbhd) nbhdCounts.set(a.nbhd, (nbhdCounts.get(a.nbhd) || 0) + 1);
     }
 
-    // the same number of months immediately before, with the same filters (null if the data does not go back that far)
-    const pFrom = new Date(from.getFullYear(), from.getMonth() - n, 1), pTo = new Date(from.getTime() - 1);
-    priorInfo = pFrom < monStart(D.months[0].m) ? null : {
-      count: D.records.filter((a) => a.date >= pFrom && a.date <= pTo && matches(a)).length,
-      label: n === 1 ? monLabel(monKey(pFrom)) : `the previous ${n} months`,
-    };
+    // the comparison period (see when.js): the same months last year for Year to date, otherwise the same number of months right before
+    const pp = WHEN.prior(when, D.months.map((x) => x.m)), ppSet = pp ? new Set(pp.months) : null;
+    priorInfo = pp ? { count: D.records.filter((a) => ppSet.has(a.t.slice(0, 7)) && matches(a)).length, label: pp.label } : null;
     page = 0;
     $("addrClear").hidden = !center;
     $("reportBtn").hidden = !center;
@@ -619,8 +603,7 @@
   function showIncident(inc, month) {
     resetControls();
     $("q").value = inc;
-    $("month").value = D.months.some((x) => x.m === month) ? month : "";
-    $("range").value = $("month").value ? "month" : defaultRange;
+    when = D.months.some((x) => x.m === month) ? month : DEFAULT_WHEN; panel.set(when);
     apply();
   }
 
@@ -689,14 +672,11 @@
   function wire() {
     let t;
     $("q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(apply, 200); });
-    // the preset menu and the month picker steer the same setting; registered before apply so they run first
-    $("range").addEventListener("change", () => { $("month").value = ""; layerChoice = "auto"; });
-    $("month").addEventListener("change", () => { $("range").value = $("month").value ? "month" : defaultRange; layerChoice = "auto"; });
     // the ward and neighborhood menus choose one area: picking one clears the other, then zoom to it.
     // These must be registered BEFORE the apply listeners below so the filter sees only one area.
     $("ward").addEventListener("change", () => { if ($("ward").value) { $("nbhd").value = ""; clearAddress(); } zoomToScope(); });
     $("nbhd").addEventListener("change", () => { if ($("nbhd").value) { $("ward").value = ""; clearAddress(); } zoomToScope(); });
-    for (const id of ["range", "month", "ward", "cat", "nbhd", "radius", "fa", ...TYPES.map((x) => "t-" + x)]) $(id).addEventListener("change", apply);
+    for (const id of ["ward", "cat", "nbhd", "radius", "fa", ...TYPES.map((x) => "t-" + x)]) $(id).addEventListener("change", apply);
     $("reset").addEventListener("click", () => { resetControls(); apply(); zoomToScope(); });
     $("prev").addEventListener("click", () => { page--; renderTable(); });
     $("next").addEventListener("click", () => { page++; renderTable(); });
@@ -785,7 +765,7 @@
     // a neighborhood belongs to a ward if at least 10% of its offenses fall there (ignores stray geocoding)
     wn.forEach((m, w) => wardNbhds.set(w, new Set([...m].filter(([n, c]) => c >= 5 && c / total.get(n) >= 0.1).map(([n]) => n))));
 
-    buildRangeOptions();
+    buildWhenPanel();
     readHash();
     initMap();
     wire();
