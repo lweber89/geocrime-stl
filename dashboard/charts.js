@@ -370,7 +370,7 @@
       onClearAddress: () => { area.pt = area.lbl = ""; renderAll(); },
     });
     whatPanel = WHATPANEL.mount($("what"), {
-      groups: WHAT.groups(D), violent: WHAT.violentCats(D.records), value: area, groupB: CRIME.groupBOn(),
+      groups: WHAT.groups(D), violent: WHAT.violentCats(D.records), value: area, groupB: CRIME.groupBOn(), applyLabel: "Update charts",
       onChange: (v) => { Object.assign(area, v); renderAll(); },
       onGroupB: (on) => CRIME.setGroupB(on),                     // loads or drops the arrest-only rows: reloads the page, keeping this choice in the link
     });

@@ -6,19 +6,21 @@
  *     violent: WHAT.violentCats(D.records),            // Map: the categories Violent crime covers ("all" or "part")
  *     counts: () => Map | null,                        // optional: offenses per category right now, shown beside each name
  *     groupB: false,                                   // is the arrest-only (Group B) switch on? Omit to leave arrest-only out
- *     onChange: ({ cats, vc, fa }) => {},              // Show on map was pressed: apply this choice
+ *     applyLabel: "Show on map",                       // the apply button's words; each page names its own ("Update charts")
+ *     onChange: ({ cats, vc, fa }) => {},              // the apply button was pressed: apply this choice
  *     onGroupB: (on) => {},                            // ...and arrest-only was switched (the page reloads to load or drop those rows)
  *   });
  *   panel.set(value);                                  // the choice now in force (also drops an unfinished draft)
  *
- * The panel works on a DRAFT: nothing changes on the page until Show on map (greyed out while nothing is ticked). Cancel,
+ * The panel works on a DRAFT: nothing changes on the page until the apply button (greyed out while nothing is ticked). Cancel,
  * Escape, Close or a click outside throws the draft away; Reset sets the draft back to All offenses (Firearm off, arrest-only
  * off) without applying it. A tree: each group (Persons, Property ...) opens to its categories, with a tick box for each,
  * and one on the group that ticks them all (half-ticked when only some are). All offenses ticks every Persons, Property and
- * Society category (arrest-only stays off); Clear all unticks everything. It is stored as no categories at all (see
+ * Society category (arrest-only stays off); Clear selection unticks the offenses (Firearm stays as it is). Ticking Firearm
+ * with nothing ticked ticks All offenses first. It is stored as no categories at all (see
  * WHAT.normalize), so links stay short. Groups that are partly ticked open by themselves, ticked categories first.
  * Violent crime ticks the categories it covers and leaves the others greyed; Arrest-only is greyed under it, too.
- * Ticking an arrest-only category (or its group) includes those offenses: Show on map then reloads the page.
+ * Ticking an arrest-only category (or its group) includes those offenses: applying then reloads the page.
  * Same frame as the When and Where panels: opens under the button, fills the screen on a phone.
  */
 (() => {
@@ -30,6 +32,7 @@
   const num = (n) => n.toLocaleString("en-US");
 
   function mount(host, opts) {
+    const applyLabel = opts.applyLabel || "Show on map";
     const id = "what" + ++uid, GB = "Group B", hasB = opts.groupB != null, violent = opts.violent || new Map();
     const groups = (opts.groups || []).filter((g) => g.key !== GB || hasB);
     const allA = groups.filter((g) => g.key !== GB).flatMap((g) => g.cats), allB = (groups.find((g) => g.key === GB) || { cats: [] }).cats;
@@ -58,7 +61,8 @@
     const faRow = h("label", { class: "whatcheck", for: id + "-fa" });
     faRow.append(fa, document.createTextNode(" Firearm only (narrows the choice below)"));
     const quick = h("div", { class: "whenpresets" });
-    const note = h("p", { class: "whenhint muted small", hidden: "" }, "Violent crime ticks the categories below that it covers. Untick one to leave it out. * means only some offenses in that category count (see Methodology).");
+    const hasPart = [...violent.values()].includes("part");                       // is any category only partly violent? only then is a * ever shown
+    const note = h("p", { class: "whenhint muted small", hidden: "" }, "Violent crime ticks the categories below that it covers. Untick one to leave it out." + (hasPart ? " * means only some offenses in that category count (see Methodology)." : ""));
     const tree = h("div", { class: "whattree" });
 
     // ---- the tree, built once; refresh() only updates ticks, greying and counts, so keyboard focus stays where it is
@@ -72,7 +76,7 @@
       const sum = h("span", { class: "whatgsum muted" });
       head.append(cb, toggle, sum);
       const list = h("div", { class: "whatlist", id: `${id}-l-${g.key}`, hidden: "" });
-      if (isB) list.append(h("p", { class: "muted small whatbnote" }, "Recorded when someone is arrested, so they say more about enforcement than about how much crime happens. Left out of every number unless you include them; Show on map reloads the page to load them."));
+      if (isB) list.append(h("p", { class: "muted small whatbnote" }, "Recorded when someone is arrested, so they say more about enforcement than about how much crime happens. Left out of every number unless you include them; " + applyLabel + " reloads the page to load them."));
       for (const c of g.cats) {
         const lab = h("label", { class: "whatcheck whatcat" }), ccb = h("input", { type: "checkbox" });
         const name = h("span", { class: "whatcname" }, c), n = h("span", { class: "whatn muted" });
@@ -96,7 +100,7 @@
 
     const reset = h("button", { type: "button", class: "btn ghost" }, "Reset");
     const cancel = h("button", { type: "button", class: "btn ghost" }, "Cancel");
-    const show = h("button", { type: "button", class: "btn whenapply" }, "Show on map");
+    const show = h("button", { type: "button", class: "btn whenapply" }, applyLabel);
     const empty = h("p", { class: "whenhint muted small whatempty", hidden: "" }, "Tick at least one offense to show.");
     const foot = h("div", { class: "whatfoot" });
     const spacer = h("span", { class: "whatspacer" });
@@ -120,7 +124,7 @@
       quick.replaceChildren(
         q("All offenses", all, "Every Persons, Property and Society category (arrest-only offenses stay off).", () => { draft = { cats: [...allA], vc: false, fa: draft.fa }; refresh(); }),
         q("Violent crime (FBI definition)", vc, VIOLENT_NOTE, () => { draft = vc ? { ...draft, vc: false } : WHAT.setViolent(draft, true, violent); refresh(); }),
-        q("Clear all", none && !vc, "Untick everything, then tick what you want.", () => { draft = { cats: [], vc: false, fa: draft.fa }; refresh(); }));
+        q("Clear selection", none && !vc, "Untick every offense, then tick what you want. Firearm only stays as it is.", () => { draft = { cats: [], vc: false, fa: draft.fa }; refresh(); }));
       show.disabled = none; empty.hidden = !none;
       note.hidden = !vc;
       for (const [c, r] of rows) {
@@ -185,7 +189,11 @@
     cancel.addEventListener("click", () => closePanel(true));
     show.addEventListener("click", apply);
     reset.addEventListener("click", () => { draft = { cats: [...allA], vc: false, fa: false }; refresh(); });
-    fa.addEventListener("change", () => { draft = { ...draft, fa: fa.checked }; refresh(); });
+    fa.addEventListener("change", () => {
+      draft = { ...draft, fa: fa.checked };
+      if (fa.checked && !draft.cats.length && !draft.vc) draft.cats = [...allA];              // Firearm only narrows something: with nothing ticked, that is all offenses
+      refresh();
+    });
     host.addEventListener("keydown", (e) => { if (e.key === "Escape" && !panel.hidden) { e.stopPropagation(); closePanel(true); } });
     document.addEventListener("click", (e) => { if (!panel.hidden && !e.composedPath().includes(host)) closePanel(false); });
 
