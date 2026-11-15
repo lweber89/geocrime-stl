@@ -1,33 +1,38 @@
 /* what-panel.js: the "What" button and its panel, the same on every page. Needs what.js.
  *
  *   const panel = WHATPANEL.mount(hostElement, {
- *     types: ["Person", "Property", "Society"],        // D.types
- *     groupBCats: ["Trespass", ...],                  // D.groupBCats: the arrest-only categories, which get their own tab
- *     cats: { Person: ["Robbery", ...], ... },         // D.cats: categories by type, most common first
- *     value: { cat, vc, hide, fa },                    // the current choice (see what.js)
- *     violent: Map | null,                             // WHAT.violentCats(records): shown on the menu while Violent crime is chosen
+ *     groups: WHAT.groups(D),                          // [{ key, name, cats }]: Persons, Property, Society, ..., Arrest-only (key "Group B")
+ *     value: { cats, vc, fa },                         // the choice now in force (see what.js)
+ *     violent: WHAT.violentCats(D.records),            // Map: the categories Violent crime covers ("all" or "part")
  *     counts: () => Map | null,                        // optional: offenses per category right now, shown beside each name
- *     groupB: false,                                   // is the arrest-only (Group B) switch on? Omit to leave the switch out
- *     onChange: ({ cat, vc, hide, fa }) => {},
+ *     groupB: false,                                   // is the arrest-only (Group B) switch on? Omit to leave arrest-only out
+ *     onChange: ({ cats, vc, fa }) => {},              // Show on map was pressed: apply this choice
+ *     onGroupB: (on) => {},                            // ...and arrest-only was switched (the page reloads to load or drop those rows)
  *   });
- *   panel.set(value);  panel.groupBInput               // the Group B checkbox, for CRIME.bindGroupB (it reloads the page)
+ *   panel.set(value);                                  // the choice now in force (also drops an unfinished draft)
  *
- * The two switches first (Firearm only; the arrest-only Group B switch), then quick choices (All offenses, Violent crime)
- * and the offense types (tick to show, untick to hide) with their categories underneath (click one to see only that one). Same frame as the When
- * and Where panels: opens under the button, fills the screen on a phone, Escape or a click outside closes it.
+ * The panel works on a DRAFT: nothing changes on the page until Show on map. Cancel, Escape, Close or a click outside
+ * throws the draft away; Reset sets the draft back to All offenses (Firearm off, arrest-only off) without applying it.
+ * A tree: each group (Persons, Property ...) opens to its categories, with a tick box for each, several at a time, and
+ * one on the group that ticks them all (half-ticked when only some are). Categories ticked when the panel opens come first.
+ * Violent crime ticks the categories it covers and leaves the others greyed; Arrest-only is greyed under it, too.
+ * Same frame as the When and Where panels: opens under the button, fills the screen on a phone.
  */
 (() => {
   "use strict";
 
   let uid = 0;
   const VIOLENT_NOTE = "Murder, rape, robbery and aggravated assault (the FBI's definition; see Methodology).";
+  const DOT = { Persons: "person", Property: "property", Society: "society" };       // the type colors; everything else is the gray ring color
+  const num = (n) => n.toLocaleString("en-US");
 
   function mount(host, opts) {
-    const id = "what" + ++uid, cats = opts.cats || {}, gbSet = new Set(opts.groupBCats || []), GB = "Arrest-only";
-    const aCats = (t) => (cats[t] || []).filter((c) => !gbSet.has(c));             // Group A categories of a type; arrest-only ones have their own tab
-    const types = opts.types.filter((t) => aCats(t).length), hasB = opts.groupB != null, tabTypes = hasB ? [...types, GB] : types;
-    let value = { cat: "", vc: false, hide: [], fa: false, ...opts.value };
-    const typeOfCat = (c) => (gbSet.has(c) ? GB : types.find((t) => aCats(t).includes(c)));
+    const id = "what" + ++uid, GB = "Group B", hasB = opts.groupB != null, violent = opts.violent || new Map();
+    const groups = (opts.groups || []).filter((g) => g.key !== GB || hasB);
+    let applied = { cats: [], vc: false, fa: false, ...opts.value }, appliedB = !!opts.groupB;
+    let draft = { ...applied, gb: appliedB };
+    const open = new Set();                                                  // the groups showing their categories
+    const rows = new Map(), heads = new Map();                              // category -> row parts; group key -> header parts
     const h = (tag, attrs = {}, text) => {
       const e = document.createElement(tag);
       for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
@@ -42,105 +47,153 @@
     const close = h("button", { type: "button", class: "btn ghost whenclose" }, "Close");
     const top = h("div", { class: "whentop" });
     top.append(h("strong", { class: "whentitle" }, "Choose the offenses"), close);
-    const quick = h("div", { class: "whenpresets" }), body = h("div", { class: "whatbody" });
-    const tabs = h("div", { class: "whentabs", role: "tablist", "aria-label": "Offense types" });
-    let active = null, lastVc = false;
-    const note = h("p", { class: "whenhint muted small", hidden: "" }, "Violent crime covers the tinted categories. Click one to narrow to it, or untick a type to leave it out. * means only some offenses in that category count (see Methodology).");
+
     const fa = h("input", { type: "checkbox", id: id + "-fa" });
     const faRow = h("label", { class: "whatcheck", for: id + "-fa" });
     faRow.append(fa, document.createTextNode(" Firearm only (narrows the choice below)"));
-    panel.append(top, faRow);                                   // Firearm first: it is easy to miss further down
+    const quick = h("div", { class: "whenpresets" });
+    const note = h("p", { class: "whenhint muted small", hidden: "" }, "Violent crime ticks the categories below that it covers. Untick one to leave it out. * means only some offenses in that category count (see Methodology).");
+    const tree = h("div", { class: "whattree" });
 
-    let groupBInput = null, groupBRow = null, groupBText = null;
-    if (opts.groupB != null) {
-      groupBInput = h("input", { type: "checkbox", id: id + "-gb" });
-      const row = h("label", { class: "whatcheck", for: id + "-gb", title: "Group B offenses are arrest-only: trespass, disorderly conduct, drunk driving, curfew and liquor violations, and the catch-all 'all other offenses'. They are off by default and left out of every number." });
-      groupBText = document.createTextNode(""); groupBRow = row;
-      row.append(groupBInput, groupBText);
+    // ---- the tree, built once; refresh() only updates ticks, greying and counts, so keyboard focus stays where it is
+    for (const g of groups) {
+      const isB = g.key === GB, dot = `var(--type-${DOT[g.key] || "other"})`;
+      const sec = h("div", { class: "whatgroup" }), head = h("div", { class: "whatghead" });
+      const cb = h("input", { type: "checkbox", id: `${id}-g-${g.key}`, "aria-label": `Include all ${g.name} offenses` });
+      const toggle = h("button", { type: "button", class: "whatexpand", "aria-expanded": "false", "aria-controls": `${id}-l-${g.key}` });
+      const arrow = h("span", { class: "whatarrow", "aria-hidden": "true" }, "▸");
+      toggle.append(arrow, h("i", { class: "dot", style: `background:${dot}` }), h("span", { class: "whatgname" }, g.name));
+      const sum = h("span", { class: "whatgsum muted" });
+      head.append(cb, toggle, sum);
+      const list = h("div", { class: "whatlist", id: `${id}-l-${g.key}`, hidden: "" });
+      if (isB) list.append(h("p", { class: "muted small whatbnote" }, "Recorded when someone is arrested, so they say more about enforcement than about how much crime happens. Left out of every number unless you include them; Show on map reloads the page to load them."));
+      for (const c of g.cats) {
+        const lab = h("label", { class: "whatcheck whatcat" }), ccb = h("input", { type: "checkbox" });
+        const name = h("span", { class: "whatcname" }, c), n = h("span", { class: "whatn muted" });
+        lab.append(ccb, name, n);
+        list.append(lab);
+        rows.set(c, { lab, cb: ccb, name, n, group: g, isB });
+        ccb.addEventListener("change", () => {
+          draft = WHAT.toggleCat(draft, c, draft.vc ? violent : null);
+          if (isB && draft.cats.includes(c)) draft.gb = true;                      // a ticked arrest-only category needs those rows loaded
+          refresh();
+        });
+      }
+      sec.append(head, list);
+      tree.append(sec);
+      heads.set(g.key, { cb, toggle, arrow, sum, list, group: g, isB, sec });
+      toggle.addEventListener("click", () => { open.has(g.key) ? open.delete(g.key) : open.add(g.key); refresh(); });
+      cb.addEventListener("change", () => {
+        if (isB) {                                                                  // the arrest-only box is the include switch
+          draft = { ...draft, gb: cb.checked, cats: cb.checked ? draft.cats : draft.cats.filter((c) => !g.cats.includes(c)) };
+          if (cb.checked) open.add(g.key);
+        } else {
+          draft = WHAT.toggleGroup(draft, g.cats, cb.checked, draft.vc ? violent : null);
+          if (cb.checked) open.add(g.key);
+        }
+        refresh();
+      });
     }
-    panel.append(h("p", { class: "whenhead" }, "Quick choices"), quick, note, tabs, body);
+
+    const reset = h("button", { type: "button", class: "btn ghost" }, "Reset");
+    const cancel = h("button", { type: "button", class: "btn ghost" }, "Cancel");
+    const show = h("button", { type: "button", class: "btn whenapply" }, "Show on map");
+    const foot = h("div", { class: "whatfoot" });
+    const spacer = h("span", { class: "whatspacer" });
+    foot.append(reset, spacer, cancel, show);
+    panel.append(top, faRow, h("p", { class: "whenhead" }, "Quick choices"), quick, note, tree, foot);
     host.append(btn, panel);
 
-    const emit = (next) => { value = { ...value, ...next }; render(); opts.onChange({ ...value }); };
+    const q = (text, pressed, title, fn) => {
+      const b = h("button", { type: "button", class: "btn ghost", "aria-pressed": String(pressed) }, text);
+      if (title) b.title = title;
+      b.addEventListener("click", fn);
+      return b;
+    };
 
-    function render() {
-      vEl.textContent = WHAT.label(value, types);
+    function refresh() {
+      const counts = opts.counts ? opts.counts() : null, vc = draft.vc;
+      vEl.textContent = WHAT.label(applied, { violent, gb: appliedB });
       btn.title = "Offenses shown: " + vEl.textContent;
-      const q = (text, pressed, title, fn) => {
-        const b = h("button", { type: "button", class: "btn ghost", "aria-pressed": String(pressed) }, text);
-        if (title) b.title = title;
-        b.addEventListener("click", fn);
-        return b;
-      };
-      const all = !value.vc && !value.cat && !(value.hide || []).length;
+      fa.checked = !!draft.fa;
+      const all = !vc && !draft.cats.length;
       quick.replaceChildren(
-        q("All offenses", all, "", () => emit({ ...WHAT.clear(value), fa: value.fa })),
-        q("Violent crime (FBI definition)", value.vc, VIOLENT_NOTE, () => emit(WHAT.setViolent(value, !value.vc))));
-      const counts = opts.counts ? opts.counts() : null;
-      note.hidden = !value.vc;
-      const listOf = (t) => (t === GB ? (opts.groupB ? [...gbSet] : []) : aCats(t));      // arrest-only categories can be chosen once they are loaded
-      const cover = (t) => (value.vc && opts.violent ? (t === GB ? 0 : listOf(t).filter((c) => opts.violent.has(c)).length) : null);
-      const isOn = (t) => (t === GB ? !!opts.groupB && !value.vc : !(value.hide || []).includes(t) && (cover(t) == null || cover(t) > 0));
-      if (value.vc && !lastVc) active = types.find((t) => cover(t) > 0) || active;      // turning Violent crime on: open the first tab it covers
-      lastVc = value.vc;
-      if (!tabTypes.includes(active)) active = (value.cat && typeOfCat(value.cat)) || types.find(isOn) || tabTypes[0];
-      tabs.replaceChildren(...tabTypes.map((t) => {
-        const tb = h("button", { type: "button", role: "tab", class: "whentab" + (isOn(t) ? "" : " off") + (t !== GB && (value.hide || []).includes(t) ? " struck" : ""), "aria-selected": String(t === active), id: id + "-tab-" + t });
-        tb.append(h("i", { class: "dot", style: `background:var(--type-${t === GB ? "other" : t.toLowerCase()})` }), document.createTextNode(" " + t));
-        tb.addEventListener("click", () => { active = t; render(); });
-        return tb;
-      }));
-      const t = active, list0 = listOf(t), vcN = cover(t);
-      const sec = h("div", { class: "whattype", role: "tabpanel", "aria-labelledby": id + "-tab-" + t });
-      let lab;
-      if (t === GB) lab = groupBRow;                         // the arrest-only switch lives in its own tab (turning it on reloads the page)
-      else {
-        lab = h("label", { class: "whatcheck whattypehead" });
-        const cb = h("input", { type: "checkbox" }); cb.checked = isOn(t); cb.indeterminate = vcN != null && vcN > 0 && vcN < list0.length;
-        cb.disabled = vcN === 0;
-        cb.addEventListener("change", () => emit(WHAT.toggleType(value, t, value.vc && opts.violent ? types.filter((x) => cover(x) > 0) : types, typeOfCat)));
-        lab.append(cb, document.createTextNode(` Include ${t} offenses`));
+        q("All offenses", all, "", () => { draft = { ...WHAT.clear(), fa: draft.fa, gb: draft.gb }; refresh(); }),
+        q("Violent crime (FBI definition)", vc, VIOLENT_NOTE, () => { draft = vc ? { ...draft, vc: false } : { ...WHAT.setViolent(draft, true, violent), gb: false }; refresh(); }));
+      note.hidden = !vc;
+      for (const [c, r] of rows) {
+        const cov = violent.get(c), ok = !vc || (!r.isB && !!cov);
+        r.cb.checked = draft.cats.includes(c);
+        r.cb.disabled = !ok;
+        r.lab.classList.toggle("dim", !ok);
+        r.lab.classList.toggle("covered", vc && ok);
+        r.name.textContent = c + (vc && cov === "part" ? " *" : "");
+        r.lab.title = vc && cov === "part" ? "Only some offenses in this category count as violent crime (for example rape, but not fondling)." : "";
+        const n = counts ? counts.get(c) : undefined;
+        r.n.textContent = n == null ? "" : num(n);
       }
-      const list = h("div", { class: "nbhdlist" });
-      for (const c of list0) {
-        const n = counts ? ` (${(counts.get(c) || 0).toLocaleString()})` : "";
-        const cov = value.vc && opts.violent ? opts.violent.get(c) : null;       // while Violent crime is on, mark what it covers
-        const live = !value.vc || !opts.violent || (cov && isOn(t));              // a category outside the violent set, or of a type left out, cannot be chosen
-        const b = q(c + n + (cov === "part" ? " *" : ""), value.cat === c, cov === "part" ? "Only some offenses in this category count as violent crime (for example rape, but not fondling)." : "", () => emit(WHAT.setCat(value, c, typeOfCat, opts.violent)));
-        if (value.vc && opts.violent) { if (live) b.classList.add("covered"); else { b.classList.add("dim"); b.disabled = true; } }
-        list.append(b);
-      }
-      sec.append(lab);
-      if (t === GB && !opts.groupB) sec.append(h("p", { class: "muted small" }, `Arrest-only offenses (${[...gbSet].slice(0, 3).join(", ")} and more) are recorded when someone is arrested, so they say more about enforcement than about how much crime happens. They are left out of every number unless you include them; turning them on reloads the page.`));
-      else if (t === GB && value.vc) sec.append(h("p", { class: "muted small" }, "None of these are part of violent crime."));
-      else sec.append(list);
-      body.replaceChildren(sec);
-      fa.checked = !!value.fa;
-      if (groupBInput) {                                       // no arrest-only offense is violent crime, so the switch would do nothing
-        groupBInput.disabled = !!value.vc;
-        groupBRow.classList.toggle("dim", !!value.vc);
-        groupBText.nodeValue = " Include arrest-only offenses (Group B)" + (value.vc ? ": not part of violent crime" : "");
+      for (const [key, g] of heads) {
+        const cats = g.group.cats;
+        if (g.isB) {
+          g.cb.checked = draft.gb && !vc; g.cb.indeterminate = false; g.cb.disabled = vc;
+          g.sum.textContent = vc ? "none is violent crime" : draft.gb ? "included" : "off";
+        } else {
+          const st = WHAT.groupState(draft, cats, vc ? violent : null), able = !vc || cats.some((c) => violent.has(c));
+          g.cb.checked = st === "all"; g.cb.indeterminate = st === "some"; g.cb.disabled = !able;
+          const ticked = cats.filter((c) => draft.cats.includes(c)).length;
+          const total = counts ? cats.reduce((s, c) => s + (counts.get(c) || 0), 0) : null;
+          g.sum.textContent = [ticked ? `${ticked} of ${cats.length}` : "", total != null ? num(total) : ""].filter(Boolean).join(" · ");
+          g.sec.classList.toggle("dim", !able);
+        }
+        const on = open.has(key);
+        g.list.hidden = !on;
+        g.toggle.setAttribute("aria-expanded", String(on));
+        g.arrow.textContent = on ? "▾" : "▸";
       }
     }
 
+    // Opening: the draft starts as what is in force, groups with ticked categories open, and ticked categories come first
+    // (worked out now, not while ticking, so rows do not jump under the pointer).
     function openPanel() {
-      active = null; panel.hidden = false; btn.setAttribute("aria-expanded", "true"); render();
+      draft = { ...applied, gb: appliedB };
+      open.clear();
+      for (const [key, g] of heads) {
+        const cats = g.group.cats, ticked = cats.filter((c) => draft.cats.includes(c));
+        if (ticked.length || (g.isB && appliedB && !draft.vc)) open.add(key);
+        const sorted = [...ticked, ...cats.filter((c) => !ticked.includes(c))];
+        for (const c of sorted) g.list.append(rows.get(c).lab);                  // appending moves the row into place
+      }
+      panel.hidden = false; btn.setAttribute("aria-expanded", "true"); refresh();
       panel.classList.remove("whenright");
       if (panel.getBoundingClientRect().right > document.documentElement.clientWidth - 8) panel.classList.add("whenright");
     }
-    function closePanel(focus) { if (panel.hidden) return; panel.hidden = true; btn.setAttribute("aria-expanded", "false"); if (focus) btn.focus(); }
+    function closePanel(focus) {
+      if (panel.hidden) return;
+      panel.hidden = true; btn.setAttribute("aria-expanded", "false");
+      draft = { ...applied, gb: appliedB };                                       // anything not shown on the map is dropped
+      if (focus) btn.focus();
+    }
+    function apply() {
+      const next = { cats: [...draft.cats], vc: draft.vc, fa: draft.fa }, gb = draft.gb;
+      applied = next; closePanel(true);
+      opts.onChange({ ...next, cats: [...next.cats] });
+      if (hasB && gb !== appliedB && opts.onGroupB) opts.onGroupB(gb);            // loads or drops the arrest-only rows (reloads the page)
+      refresh();
+    }
 
     btn.addEventListener("click", () => (panel.hidden ? openPanel() : closePanel(true)));
     close.addEventListener("click", () => closePanel(true));
-    fa.addEventListener("change", () => emit({ fa: fa.checked }));
+    cancel.addEventListener("click", () => closePanel(true));
+    show.addEventListener("click", apply);
+    reset.addEventListener("click", () => { draft = { ...WHAT.clear(), gb: false }; refresh(); });
+    fa.addEventListener("change", () => { draft = { ...draft, fa: fa.checked }; refresh(); });
     host.addEventListener("keydown", (e) => { if (e.key === "Escape" && !panel.hidden) { e.stopPropagation(); closePanel(true); } });
     document.addEventListener("click", (e) => { if (!panel.hidden && !e.composedPath().includes(host)) closePanel(false); });
 
-    render();
+    refresh();
     return {
-      set(v) { value = { cat: "", vc: false, hide: [], fa: false, ...v }; render(); },
+      set(v) { applied = { cats: [], vc: false, fa: false, ...v }; draft = { ...applied, gb: appliedB }; refresh(); },
       close: () => closePanel(false),
-      groupBInput,
     };
   }
 

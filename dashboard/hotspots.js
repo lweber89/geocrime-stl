@@ -19,15 +19,15 @@
   const RAMP = ["#fff1d6", "#fdd49e", "#fc8d59", "#d7301f", "#7f0000"];           // same fifths as the map's ward and neighborhood shading
   const UP = ["#fc8d59", "#d7301f"], DOWN = ["#8db8e8", "#2b6cb0"], FLAT = "#d9d7cf";
 
-  let placeLayer = null, panel, wherePanel, whatPanel, D, map, hexLayer, hexByKey = new Map(), st = { vc: false, hide: [], ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", fa: false, when: "l12", tab: "hex", mode: "count", sort: "rate", dir: "desc" };
+  let placeLayer = null, panel, wherePanel, whatPanel, D, map, hexLayer, hexByKey = new Map(), st = { vc: false, cats: [], ward: "", nbhd: "", pt: "", lbl: "", radius: "", fa: false, when: "l12", tab: "hex", mode: "count", sort: "rate", dir: "desc" };
   let view = null;                       // everything computed for the current filters
 
   // ------------------------------------------------------------ state in the page link
   function readState() {
     const p = new URLSearchParams(location.hash.slice(1));
     const f = FILTERS.parse(location.hash);
-    st.cat = f.cat; st.fa = f.fa; st.vc = f.vc; st.hide = f.hide.filter((t) => D.types.includes(t));
-    if (st.cat && !D.records.some((a) => a.cat === st.cat)) st.cat = "";
+    const w = WHAT.fromLink(f, D);                                          // the ticked categories (also from the older cat and hide), vc and fa
+    st.cats = w.cats; st.fa = w.fa; st.vc = w.vc;
     for (const k of ["ward", "nbhd", "pt", "lbl", "radius"]) st[k] = f[k];
     if (st.ward && !(D.wards && D.wards.features.some((x) => String(x.properties.ward) === st.ward))) st.ward = "";
     if (st.nbhd && !D.nbhds.includes(st.nbhd)) st.nbhd = "";
@@ -37,7 +37,7 @@
     st.tab = ["hex", "nbhd", "ward", "block"].includes(p.get("tab")) ? p.get("tab") : "hex";
     st.mode = ["count", "change"].includes(p.get("mode")) ? p.get("mode") : "count";
   }
-  const shared = () => ({ ward: st.ward, nbhd: st.nbhd, pt: st.pt, lbl: st.lbl, radius: st.radius, cat: st.cat, vc: st.vc, hide: st.hide, fa: st.fa, gb: CRIME.groupBOn() });          // what the other pages understand
+  const shared = () => ({ ward: st.ward, nbhd: st.nbhd, pt: st.pt, lbl: st.lbl, radius: st.radius, cats: st.cats, vc: st.vc, fa: st.fa, gb: CRIME.groupBOn() });          // what the other pages understand
   function writeState() {
     const p = new URLSearchParams(FILTERS.hash("hotspots", shared()));
     if (st.when !== "l12") p.set("when", st.when);
@@ -290,10 +290,11 @@
       onClearAddress: () => { st.pt = st.lbl = st.radius = ""; render(); },
     });
     panel = WHENPANEL.mount($("when"), { keys: D.months.map((x) => x.m), value: st.when, onChange: (w) => { st.when = w; render(); } });
-    whatPanel = WHATPANEL.mount($("what"), { types: D.types, cats: D.cats, groupBCats: D.groupBCats, violent: WHAT.violentCats(D.records), value: st, groupB: CRIME.groupBOn(), onChange: (v) => { Object.assign(st, v); render(); } });
-    CRIME.bindGroupB(whatPanel.groupBInput, D);
+    whatPanel = WHATPANEL.mount($("what"), { groups: WHAT.groups(D), violent: WHAT.violentCats(D.records), value: st, groupB: CRIME.groupBOn(),
+      onChange: (v) => { Object.assign(st, v); render(); },
+      onGroupB: (on) => CRIME.setGroupB(on) });                     // loads or drops the arrest-only rows: reloads the page, keeping this choice in the link
     initMap(); zoomToPlace();
-    $("reset").addEventListener("click", () => { st = { ...st, ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", vc: false, hide: [], fa: false, when: "l12" }; wherePanel.set(st); whatPanel.set(st); zoomToPlace(); panel.set("l12"); render(); });
+    $("reset").addEventListener("click", () => { st = { ...st, ward: "", nbhd: "", pt: "", lbl: "", radius: "", cats: [], vc: false, fa: false, when: "l12" }; wherePanel.set(st); whatPanel.set(st); zoomToPlace(); panel.set("l12"); render(); });
     document.querySelectorAll(".seg button[data-mode]").forEach((b) => b.addEventListener("click", () => { st.mode = b.dataset.mode; writeState(); renderMap(); renderList(); }));
     document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { st.tab = b.dataset.tab; writeState(); renderList(); }));
     $("list").addEventListener("click", (e) => {

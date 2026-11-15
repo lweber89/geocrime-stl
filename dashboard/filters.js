@@ -3,7 +3,9 @@
  * The Explorer has three kinds of filter, and every page link carries them the same way:
  *   Where   ward, nbhd, pt ("lat,lon" of an address or pin), lbl (its label), radius
  *   When    one shared period, written `when` here (see below)
- *   What    cat (offense category), vc (violent crime shortcut), fa (firearm), hide (offense types switched off), gb (Group B on), q (search text)
+ *   What    cats (offense categories ticked, separated by |; a category name can hold a comma), vc (violent crime), fa (firearm), gb (Group B on), q (search text)
+ * The older `cat` (one category) is read as a one-item `cats`; the older `hide` (offense types switched off) is read and
+ * passed on until a page that has its data turns it into `cats` (WHAT.fromLink), so older links keep working.
  * Anything else in a link (tab, mode, sort ...) belongs to one page and is passed through untouched as `other`.
  *
  * `when` values (the same words on every page):
@@ -12,15 +14,15 @@
  * Every page writes `when`. The older names (the map's range and month; Hotspots' and Charts' per) are still read and
  * converted, so every older link keeps working.
  *
- *   const s = FILTERS.parse(location.hash);          // { ward, nbhd, pt, lbl, radius, cat, q, fa, hide, gb, when, other }
- *   FILTERS.hash("charts", s)                        // the link fragment the Charts page understands, e.g. "ward=5&cat=Robbery&per=p6"
+ *   const s = FILTERS.parse(location.hash);          // { ward, nbhd, pt, lbl, radius, cats, q, vc, fa, hide, gb, when, other }
+ *   FILTERS.hash("charts", s)                        // the link fragment the Charts page understands, e.g. "ward=5&cats=Robbery&per=p6"
  *   FILTERS.page("charts")                           // "charts.html"
  */
 (() => {
   "use strict";
 
   const WHERE = ["ward", "nbhd", "pt", "lbl", "radius"];
-  const WHAT = ["cat", "vc", "fa", "hide", "gb"];            // vc = the FBI violent crime shortcut; hide = offense types switched off
+  const WHAT = ["cats", "vc", "fa", "hide", "gb"];           // vc = the FBI violent crime shortcut; hide = offense types switched off (older links only)
   // What each page understands. Every page filters by What; Hotspots filters by ward and neighborhood only and carries an address or pin through its links without filtering by it.
   const PAGE = {
     map: { file: "./", keys: [...WHERE, "q", ...WHAT] },
@@ -53,12 +55,14 @@
 
   function parse(hash) {
     const p = new URLSearchParams(String(hash || "").replace(/^#/, ""));
-    const known = new Set([...PAGE.map.keys, "when", "range", "month", "per"]);
+    const known = new Set([...PAGE.map.keys, "when", "range", "month", "per", "cat"]);
     const other = new URLSearchParams();
     p.forEach((v, k) => { if (!known.has(k)) other.set(k, v); });
     const s = { when: whenOf(p), other, fa: p.get("fa") === "1", vc: p.get("vc") === "1", gb: p.get("gb") === "1",
                 hide: (p.get("hide") || "").split(",").filter(Boolean) };
-    for (const k of [...WHERE, "q", "cat"]) s[k] = p.get(k) || "";
+    for (const k of [...WHERE, "q"]) s[k] = p.get(k) || "";
+    s.cats = (p.get("cats") || "").split("|").filter(Boolean);
+    if (p.get("cat") && !s.cats.includes(p.get("cat"))) s.cats.push(p.get("cat"));        // the older link: one category
     return s;
   }
 
@@ -70,6 +74,7 @@
       const v = s[k];
       if (k === "fa" || k === "gb" || k === "vc") { if (v) p.set(k, "1"); }
       else if (k === "hide") { if (v && v.length) p.set(k, v.join(",")); }
+      else if (k === "cats") { if (v && v.length) p.set(k, v.join("|")); }
       else if (v) p.set(k, v);
     }
     if (s.when && cleanWhen(s.when)) p.set("when", s.when);

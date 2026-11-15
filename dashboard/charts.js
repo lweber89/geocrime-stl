@@ -38,18 +38,18 @@
   const text = (s, attrs) => { const t = el("text", attrs); t.textContent = s; return t; };
 
   // ------------------------------------------------------------ state (shared with the map through the page link)
-  const AREA_FIELDS = ["ward", "nbhd", "pt", "lbl", "radius", "cat"];
+  const AREA_FIELDS = ["ward", "nbhd", "pt", "lbl", "radius"];
 
   function readState() {
     const p = new URLSearchParams(location.hash.slice(1));
     area = {};
     for (const k of AREA_FIELDS) area[k] = p.get(k) || "";
-    area.fa = p.get("fa") === "1"; area.vc = p.get("vc") === "1";
-    area.hide = (p.get("hide") || "").split(",").filter((t) => D.types.includes(t));
+    const w = WHAT.fromLink(FILTERS.parse(location.hash), D);          // the ticked categories (also from the older cat and hide), vc and fa
+    area.cats = w.cats; area.fa = w.fa; area.vc = w.vc;
     when = FILTERS.parse(location.hash).when || "l12";                    // reads when, and the older per, range and month
     if (!WHEN.resolve(when, D.months.map((x) => x.m))) when = "l12";
     other = new URLSearchParams();                     // everything else (the map's period, filters...) is passed through untouched
-    p.forEach((v, k) => { if (!AREA_FIELDS.includes(k) && !["fa", "vc", "hide", "per", "when", "range", "month"].includes(k)) other.set(k, v); });
+    p.forEach((v, k) => { if (!AREA_FIELDS.includes(k) && !["cats", "cat", "fa", "vc", "hide", "per", "when", "range", "month"].includes(k)) other.set(k, v); });
   }
 
   function writeState() {
@@ -57,12 +57,12 @@
     for (const k of AREA_FIELDS) if (area[k] && !(k === "radius" && !area.pt)) p.set(k, area[k]);
     if (area.fa) p.set("fa", "1");
     if (area.vc) p.set("vc", "1");
-    if (area.hide.length) p.set("hide", area.hide.join(","));
+    if (area.cats.length) p.set("cats", area.cats.join("|"));
     if (when !== "l12") p.set("when", when);
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
     document.querySelectorAll('a[data-nav="map"]').forEach((link) => { link.href = "./" + (p.toString() ? "#" + p : ""); });
     const hot = document.querySelector('a[data-nav="hotspots"]');
-    if (hot) hot.href = FILTERS.link("hotspots", { ward: area.ward, nbhd: area.nbhd, pt: area.pt, lbl: area.lbl, radius: area.radius, cat: area.cat, vc: area.vc, hide: area.hide, fa: area.fa, gb: CRIME.groupBOn(), when: when !== "l12" ? when : "" });
+    if (hot) hot.href = FILTERS.link("hotspots", { ward: area.ward, nbhd: area.nbhd, pt: area.pt, lbl: area.lbl, radius: area.radius, cats: area.cats, vc: area.vc, fa: area.fa, gb: CRIME.groupBOn(), when: when !== "l12" ? when : "" });
   }
 
   function describeArea() {
@@ -370,12 +370,12 @@
       onClearAddress: () => { area.pt = area.lbl = ""; renderAll(); },
     });
     whatPanel = WHATPANEL.mount($("what"), {
-      types: D.types, cats: D.cats, groupBCats: D.groupBCats, violent: WHAT.violentCats(D.records), value: area, groupB: CRIME.groupBOn(),
+      groups: WHAT.groups(D), violent: WHAT.violentCats(D.records), value: area, groupB: CRIME.groupBOn(),
       onChange: (v) => { Object.assign(area, v); renderAll(); },
+      onGroupB: (on) => CRIME.setGroupB(on),                     // loads or drops the arrest-only rows: reloads the page, keeping this choice in the link
     });
-    CRIME.bindGroupB(whatPanel.groupBInput, D);
     const sync = () => { wherePanel.set(area); whatPanel.set(area); panel.set(when); };
-    $("reset").addEventListener("click", () => { area = { ward: "", nbhd: "", pt: "", lbl: "", radius: "", cat: "", vc: false, hide: [], fa: false }; when = "l12"; sync(); renderAll(); });
+    $("reset").addEventListener("click", () => { area = { ward: "", nbhd: "", pt: "", lbl: "", radius: "", cats: [], vc: false, fa: false }; when = "l12"; sync(); renderAll(); });
     let t; const redraw = () => { clearTimeout(t); t = setTimeout(() => { if (D) renderAll(); }, 120); };
     window.addEventListener("resize", redraw);
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw);

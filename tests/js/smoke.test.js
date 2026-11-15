@@ -215,24 +215,27 @@ test("the Where panel: a neighborhood replaces the ward, and an address locks bo
   assert.doesNotMatch(hashes.at(-1), /nbhd=/);
 });
 
-test("the What panel: a category, the violent crime shortcut and a hidden type go into the link and back", async () => {
-  whatOpts.onChange({ cat: "Larceny", vc: false, hide: [], fa: false });
+test("the What panel: categories, the violent crime shortcut and an older hide link go into the link and back", async () => {
+  whatOpts.onChange({ cats: ["Larceny", "Weapons Law Violations"], vc: false, fa: false });
   await sleep(10);
-  assert.match(hashes.at(-1), /cat=Larceny/);
-  assert.equal(whatValue.cat, "Larceny", "the panel is told the choice");
-  whatOpts.onChange({ cat: "", vc: true, hide: [], fa: true });
+  assert.match(hashes.at(-1), /cats=Larceny%7CWeapons\+Law\+Violations/, "several categories, joined with |");
+  assert.equal(JSON.stringify(whatValue.cats), '["Larceny","Weapons Law Violations"]', "the panel is told the choice");
+  whatOpts.onChange({ cats: [], vc: true, fa: true });
   await sleep(10);
   assert.match(hashes.at(-1), /vc=1/);
   assert.match(hashes.at(-1), /fa=1/);
-  assert.doesNotMatch(hashes.at(-1), /cat=/);
+  assert.doesNotMatch(hashes.at(-1), /cats=/);
   assert.equal(whatValue.vc, true);
-  whatOpts.onChange({ cat: "", vc: false, hide: ["Society"], fa: false });
+  whatOpts.onChange({ cats: [], vc: false, fa: false });
   await sleep(10);
-  assert.match(hashes.at(-1), /hide=Society/);
-  assert.doesNotMatch(hashes.at(-1), /vc=/);
-  assert.equal(JSON.stringify(whatValue.hide), '["Society"]');      // (arrays from the page sandbox are not reference-equal)
-  whatOpts.onChange({ cat: "", vc: false, hide: [], fa: false });
-  await sleep(10);
+  assert.doesNotMatch(hashes.at(-1), /vc=|cats=|fa=/);
+});
+
+test("the What panel is built from the data's groups, and an older cat= link becomes a category", async () => {
+  assert.ok(Array.isArray(whatOpts.groups) && whatOpts.groups.some((g) => g.key === "Group B"), "groups come from WHAT.groups, arrest-only last");
+  assert.equal(typeof whatOpts.onGroupB, "function");
+  const w = sandbox.WHAT.fromLink(sandbox.FILTERS.parse("#cat=Larceny"), { types: ["Person", "Property", "Society"], cats: { Property: ["Larceny"] }, groupBCats: [] });
+  assert.equal(JSON.stringify(w.cats), '["Larceny"]');
 });
 
 test("searching an incident number maps it and zooms to it; clearing the box zooms back out", async () => {

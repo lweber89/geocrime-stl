@@ -67,12 +67,6 @@
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
     location.reload();
   }
-  function bindGroupB(input, D) {
-    if (!input) return;
-    input.checked = D.includeGroupB;
-    input.addEventListener("change", () => setGroupB(input.checked));
-  }
-
   async function load(opts = {}) {
     const manifest = await getJSON("data/manifest.json?v=" + Date.now());
     let list = manifest.months.map((x) => x.m);
@@ -174,7 +168,7 @@
   // what data exists, so it is not mistaken for the period the person has chosen.
   const dataNote = (months) => `Data available: ${span(months)} · Updated monthly.`;
 
-  const api = { load, incidents, title, span, dataNote, lockExtent, pct, MIN_BASE, carryGroupB, bindGroupB, groupBOn: () => groupBOn };
+  const api = { load, incidents, title, span, dataNote, lockExtent, pct, MIN_BASE, carryGroupB, setGroupB, groupBOn: () => groupBOn };
   if (typeof module !== "undefined" && module.exports) module.exports = api;      // so tests can load this file in Node
   else window.CRIME = api;
 })();

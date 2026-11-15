@@ -271,24 +271,39 @@ table.hot th.sortable[aria-sort="descending"]::after { content: "↓"; visibilit
   .nbhdlist .btn { min-height: 40px; }
 }
 
-/* ---- the "What" panel (what-panel.js; shares the When panel's frame) ---- */
-.whatpanel { max-height: min(78vh, 620px); overflow: auto; min-width: min(30em, 92vw); }
-.whattype { margin: 8px 0 12px; }
-.whatcheck { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 3px 0; }
-.whattypehead { font-weight: 600; margin-bottom: 4px; }
+/* ---- the "What" panel (what-panel.js; shares the When panel's frame): a tree of groups and categories with a sticky footer ---- */
+.whatpanel { max-height: min(680px, calc(100vh - 230px)); overflow: auto; min-width: min(30em, 92vw); padding-bottom: 0; }
+.whatcheck { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 3px 0; }
+.whatpanel input[type="checkbox"] { width: 18px; height: 18px; flex: none; accent-color: var(--when); margin: 0; }
 .whatpanel .whenpresets { flex-wrap: wrap; }
-.whatpanel .nbhdlist { max-height: none; overflow: visible; }
-.whatpanel .nbhdlist .btn[aria-pressed="true"], .whatpanel .whenpresets .btn[aria-pressed="true"] { background: var(--when); color: var(--when-ink); border-color: var(--when); font-weight: 600; }
-@media (max-width: 640px) { .whatpanel { max-height: none; } .whatpanel .nbhdlist .btn { min-height: 40px; } }
+.whatpanel .whenpresets .btn[aria-pressed="true"] { background: var(--when); color: var(--when-ink); border-color: var(--when); font-weight: 600; }
 .whatpanel .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .whatpanel .whatcheck + .whenhead { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
 .whatpanel .dim { opacity: .45; }
-.whatpanel .whatbody .whenhint { margin: 8px 0 0; }
-.whentabs { display: flex; gap: 4px; margin-top: 12px; border-bottom: 1px solid var(--border); }
-.whentab { font: inherit; font-size: 13px; padding: 6px 12px; background: none; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-bottom: -1px; }
-.whentab[aria-selected="true"] { color: var(--ink); font-weight: 600; background: var(--surface); border-color: var(--border); border-bottom: 1px solid var(--surface); }
-.whentab.off { opacity: .5; }
-.whentab.struck { text-decoration: line-through; }   /* switched off by the person, not just left out of Violent crime */
-.whatpanel .whenhint + .whentabs, .whatpanel .whenpresets + .whentabs { margin-top: 12px; }
-@media (max-width: 640px) { .whentab { min-height: 44px; flex: 1; justify-content: center; } }
-.whatpanel .btn.covered:not([aria-pressed="true"]) { background: color-mix(in srgb, var(--when) 20%, var(--surface)); border-color: var(--when); }
+.whattree { margin-top: 10px; }
+.whatgroup { border-top: 1px solid var(--border); padding: 4px 0; }
+.whatghead { display: flex; align-items: center; gap: 8px; }
+.whatexpand { flex: 1; display: flex; align-items: center; gap: 6px; font: inherit; font-weight: 600; background: none; border: 0; padding: 6px 0; color: var(--ink); cursor: pointer; text-align: left; min-height: 32px; }
+.whatarrow { width: 1em; color: var(--muted); font-size: 12px; }
+.whatgsum { font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.whatlist { margin: 0 0 6px 26px; display: flex; flex-direction: column; gap: 1px; }
+.whatlist[hidden] { display: none; }
+.whatcat { font-size: 13px; padding: 4px 6px; border-radius: 6px; }
+.whatcat.covered { background: color-mix(in srgb, var(--when) 14%, transparent); }
+.whatcname { flex: 1; }
+.whatn { font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.whatbnote { margin: 2px 0 4px; }
+.whatfoot { position: sticky; bottom: 0; display: flex; align-items: center; gap: 8px; margin: 8px -14px 0; padding: 12px 14px; background: var(--surface); border-top: 1px solid var(--border); }
+.whatspacer { flex: 1; }
+.whatpanel .whenapply { background: var(--when); color: var(--when-ink); border-color: var(--when); font-weight: 600; }
+.whatpanel .whatbody .whenhint, .whatpanel .whenhint { margin: 8px 0 0; }
+@media (max-width: 640px) {
+  .whatpanel { max-height: none; padding-bottom: 0; }
+  .whatpanel .whenpresets .btn, .whatfoot .btn { min-height: 44px; }
+  .whatcat { min-height: 40px; }
+  .whatexpand { min-height: 44px; }
+  .whatfoot { margin: 8px -16px 0; padding: 12px 16px; }
+}
+
+/* "Drop a pin" in the Where panel's address hint: set off from the sentence, like the button it names */
+.pinword { font-weight: 600; color: var(--ink); padding: 1px 7px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); white-space: nowrap; }

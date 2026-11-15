@@ -26,7 +26,7 @@
   const incCount = new Map();
 
   // ------------------------------------------------------------ filters
-  const FIELDS = ["q", "ward", "nbhd", "pt", "lbl", "radius", "cat", "vc"];   // pt = "lat,lon" of a searched address
+  const FIELDS = ["q", "ward", "nbhd", "pt", "lbl", "radius", "cats", "vc"];   // pt = "lat,lon" of a searched address; cats = the ticked offense categories, joined with |
 
   // ---- date ranges: calendar months, because the City publishes whole months (no "last 7 days")
   const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -47,20 +47,21 @@
   // The When button and its panel. Whole-city views are limited to six months of dots (see apply), which the panel enforces.
   // The Where button. The hidden ward and neighborhood menus (#ward, #nbhd) still hold the choice, so every rule that reads
   // them (filtering, shading, zoom, the link) is unchanged: the panel sets a menu and fires its change event.
-  // The What button, the same way: the hidden #cat, #vc, #fa and type checkboxes (#t-Person ...) hold the choice.
+  // The What button, the same way: the hidden #cats (categories joined with |), #vc and #fa hold the choice. The panel works on a
+  // draft and calls onChange once, when Show on map is pressed.
   let whatPanel = null, whatCounts = null;
-  const whatValue = () => ({ cat: $("cat").value, vc: $("vc").value === "1", hide: TYPES.filter((t) => !$("t-" + t).checked), fa: $("fa").checked });
+  const catList = (v) => String(v || "").split("|").filter(Boolean);
+  const whatValue = () => ({ cats: catList($("cats").value), vc: $("vc").value === "1", fa: $("fa").checked });
   const syncWhat = () => { if (whatPanel) whatPanel.set(whatValue()); };
   function buildWhatPanel() {
     whatPanel = WHATPANEL.mount($("what"), {
-      types: D.types, cats: D.cats, groupBCats: D.groupBCats, violent: WHAT.violentCats(D.records), value: whatValue(), groupB: CRIME.groupBOn(), counts: () => whatCounts,
+      groups: WHAT.groups(D), violent: WHAT.violentCats(D.records), value: whatValue(), groupB: CRIME.groupBOn(), counts: () => whatCounts,
       onChange: (v) => {
-        $("cat").value = v.cat; $("vc").value = v.vc ? "1" : ""; $("fa").checked = v.fa;
-        TYPES.forEach((t) => ($("t-" + t).checked = !v.hide.includes(t)));
-        $("cat").dispatchEvent(new Event("change"));
+        $("cats").value = v.cats.join("|"); $("vc").value = v.vc ? "1" : ""; $("fa").checked = v.fa;
+        $("cats").dispatchEvent(new Event("change"));
       },
+      onGroupB: (on) => CRIME.setGroupB(on),                   // loads or drops the arrest-only rows: reloads the page, keeping this choice in the link
     });
-    CRIME.bindGroupB(whatPanel.groupBInput, D);
   }
   let wherePanel = null;
   const whereValue = () => ({ ward: $("ward").value, nbhd: $("nbhd").value, pt: $("pt").value, lbl: $("lbl").value });
@@ -91,7 +92,6 @@
     for (const k of FIELDS) f[k] = $(k).value;
     f.when = when;
     f.fa = $("fa").checked;
-    f.hide = TYPES.filter((t) => !$("t-" + t).checked);
     return f;
   }
 
@@ -107,7 +107,6 @@
     for (const k of FIELDS) if (f[k] && !(k === "radius" && f[k] === DEFAULT_RADIUS)) p.set(k, f[k]);
     if (f.when !== DEFAULT_WHEN) p.set("when", f.when);
     if (f.fa) p.set("fa", "1");
-    if (f.hide.length) p.set("hide", f.hide.join(","));
     CRIME.carryGroupB(p);
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
     const charts = document.querySelector('a[data-nav="charts"]');       // the Charts page opens on the same area and filters
@@ -125,17 +124,15 @@
     when = FILTERS.parse(location.hash).when || DEFAULT_WHEN;      // reads when, and the older range and month; unknown periods fall back
     if (!WHEN.resolve(when, D.months.map((x) => x.m))) when = DEFAULT_WHEN;
     panel.set(when);
-    $("fa").checked = p.get("fa") === "1";
-    const hide = (p.get("hide") || "").split(",");
-    TYPES.forEach((t) => ($("t-" + t).checked = !hide.includes(t)));
+    const w = WHAT.fromLink(FILTERS.parse(location.hash), D);      // reads cats, and the older cat and hide; drops categories the data does not have
+    $("cats").value = w.cats.join("|"); $("vc").value = w.vc ? "1" : ""; $("fa").checked = w.fa;
   }
 
   function resetControls() {
-    for (const k of ["q", "ward", "cat", "vc", "nbhd", "pt", "lbl", "address"]) $(k).value = "";
+    for (const k of ["q", "ward", "cats", "vc", "nbhd", "pt", "lbl", "address"]) $(k).value = "";
     $("radius").value = DEFAULT_RADIUS;
     setAddrMsg("");
     $("fa").checked = false;
-    TYPES.forEach((t) => ($("t-" + t).checked = true));
     when = DEFAULT_WHEN; panel.set(when);
     layerChoice = "auto";
   }
@@ -173,14 +170,12 @@
     const n = monthsIn(from, to);
     const terms = f.q.trim().toUpperCase().split(/\s+/).filter(Boolean);
     const near = (a) => a.lat != null && ((a.lat - center.lat) * 110540) ** 2 + ((a.lon - center.lon) * center.kx) ** 2 <= center.m2;
+    const sel = { cats: catList(f.cats), vc: f.vc === "1", fa: f.fa };          // the What choice
     const matches = (a, withWard = true, withArea = true, withNbhd = true, withCat = true) => {
       if (withArea && center && !near(a)) return false;
       if (withWard && f.ward && a.ward !== f.ward) return false;
-      if (f.hide.includes(a.type)) return false;
-      if (withCat && f.cat && a.cat !== f.cat) return false;
       if (withNbhd && f.nbhd && a.nbhd !== f.nbhd) return false;
-      if (f.vc && !a.violent) return false;
-      if (f.fa && !a.firearm) return false;
+      if (!WHAT.matches(a, withCat ? sel : { ...sel, cats: [] })) return false;
       return !terms.length || terms.every((t) => a.text.includes(t));
     };
     curMatches = matches;
@@ -719,7 +714,7 @@
     // These must be registered BEFORE the apply listeners below so the filter sees only one area.
     $("ward").addEventListener("change", () => { if ($("ward").value) { $("nbhd").value = ""; clearAddress(); } zoomToScope(); });
     $("nbhd").addEventListener("change", () => { if ($("nbhd").value) { $("ward").value = ""; clearAddress(); } zoomToScope(); });
-    for (const id of ["ward", "cat", "nbhd", "radius", "fa", ...TYPES.map((x) => "t-" + x)]) $(id).addEventListener("change", apply);
+    for (const id of ["ward", "cats", "nbhd", "radius", "fa"]) $(id).addEventListener("change", apply);
     $("reset").addEventListener("click", () => { resetControls(); apply(); zoomToScope(); });
     $("prev").addEventListener("click", () => { page--; renderTable(); });
     $("next").addEventListener("click", () => { page++; renderTable(); });
@@ -781,10 +776,6 @@
     D = await CRIME.load();
     D.records.forEach((a) => incCount.set(a.inc, (incCount.get(a.inc) || 0) + 1));
 
-    const counts = new Map();
-    D.records.forEach((a) => counts.set(a.cat, (counts.get(a.cat) || 0) + 1));
-    $("cat").innerHTML = '<option value="">Any category</option>' + D.types.map((t) =>
-      `<optgroup label="${esc(t)}">${D.cats[t].map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}</optgroup>`).join("");
     $("nbhd").innerHTML = '<option value="">Any neighborhood</option>' + D.nbhds.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
 
     $("sub").textContent = CRIME.dataNote(D.months);
