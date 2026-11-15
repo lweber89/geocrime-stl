@@ -307,3 +307,5 @@ table.hot th.sortable[aria-sort="descending"]::after { content: "↓"; visibilit
 
 /* "Drop a pin" in the Where panel's address hint: set off from the sentence, like the button it names */
 .pinword { font-weight: 600; color: var(--ink); padding: 1px 7px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); white-space: nowrap; }
+.whatpanel .whenapply:disabled { background: var(--surface); color: var(--muted); border-color: var(--border); font-weight: 400; cursor: not-allowed; }
+.whatempty { margin: 8px 0 0; }
