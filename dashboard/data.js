@@ -11,7 +11,8 @@
  *   t, date   ISO local time string and Date
  *   lat, lon  numbers, or null when unmapped
  *   addr, loc raw address and a Title Case label
- *   type      "Person" | "Property" | "Society" | "Other"
+ *   type      "Person" | "Property" | "Society" | "Other": the NIBRS group (Persons, Property, Society; Group B is "Other"), so
+ *             Robbery is Property here, as in NIBRS. Falls back to the police's own label if the feed has no category table.
  *   cat       NIBRS category (54 values)
  *   group     "Persons" | "Property" | "Society" | "Group B" (arrest-only), from the manifest's category table (null if the feed has none)
  *   violent   true for the FBI's violent crime offenses (murder, rape, robbery, aggravated assault)
@@ -26,6 +27,7 @@
 
   const title = (s) => (s || "").toLowerCase().replace(/\b([a-z])/g, (m) => m.toUpperCase());
   const TYPE_ORDER = ["Person", "Property", "Society", "Other"];
+  const TYPE_OF_GROUP = { Persons: "Person", Property: "Property", Society: "Society", "Group B": "Other" };      // the colors and totals follow NIBRS, so they match its documentation
 
   async function getJSON(url) {
     const res = await fetch(url);
@@ -40,7 +42,7 @@
       const cat = d.cat[ca], info = table.get(cat);
       const a = {
         id: `${m}-${i}`, inc, t, lat, lon, addr,
-        type: d.type[ty], cat, off: d.off[of], nbhd: d.nbhd[nb],
+        type: (info && TYPE_OF_GROUP[info.group]) || d.type[ty], cat, off: d.off[of], nbhd: d.nbhd[nb],
         group: info ? info.group : null,          // NIBRS group from the code; a brand-new category has none yet and is shown
         violent: !!(info && info.violent),
         district, firearm: fa === 1,
@@ -67,12 +69,6 @@
     history.replaceState(null, "", p.toString() ? "#" + p : location.pathname);
     location.reload();
   }
-  function bindGroupB(input, D) {
-    if (!input) return;
-    input.checked = D.includeGroupB;
-    input.addEventListener("change", () => setGroupB(input.checked));
-  }
-
   async function load(opts = {}) {
     const manifest = await getJSON("data/manifest.json?v=" + Date.now());
     let list = manifest.months.map((x) => x.m);
@@ -174,7 +170,7 @@
   // what data exists, so it is not mistaken for the period the person has chosen.
   const dataNote = (months) => `Data available: ${span(months)} · Updated monthly.`;
 
-  const api = { load, incidents, title, span, dataNote, lockExtent, pct, MIN_BASE, carryGroupB, bindGroupB, groupBOn: () => groupBOn };
+  const api = { load, incidents, title, span, dataNote, lockExtent, pct, MIN_BASE, carryGroupB, setGroupB, groupBOn: () => groupBOn };
   if (typeof module !== "undefined" && module.exports) module.exports = api;      // so tests can load this file in Node
   else window.CRIME = api;
 })();

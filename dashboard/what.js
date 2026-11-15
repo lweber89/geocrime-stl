@@ -1,55 +1,45 @@
 /* what.js: the rules for the "What" filter, with no page code, so every page and the tests share them.
  *
- * A What choice is { cat, vc, hide, fa }:
- *   cat   one offense category ("Robbery"), or "" for all
+ * A What choice is { cats, vc, fa }:
+ *   cats  the offense categories ticked, as a list of names; an empty list means every offense
  *   vc    true = the FBI's violent crime definition (murder, rape, robbery, aggravated assault; see the Methodology page)
- *   hide  offense types switched off: "Person", "Property", "Society", "Other"
  *   fa    only offenses involving a firearm
- * Violent crime is a preset: it starts a fresh choice, then stays on while a category or a type narrows it (Sex Offenses
- * within violent crime leaves out fondling; unticking Person leaves Person out of it). One category and a list of
- * switched-off types otherwise stand alone. Firearm combines with any of them.
+ * The three narrow together: an offense must be in a ticked category (if any are ticked), be violent crime (if vc is on)
+ * and involve a firearm (if fa is on). Violent crime is also a shortcut: it ticks every category it covers, then stays
+ * on as a check of its own, so a category it only partly covers (Sex Offenses: rape counts, fondling does not) shows
+ * only the violent part. Arrest-only (Group B) offenses are switched on and off separately by CRIME (they load on a
+ * page reload); `cats` may name Group B categories once they are loaded.
  *
- *   WHAT.matches(record, s)    does this offense pass?
- *   WHAT.label(s, types)       "All offenses", "Violent crime · Firearm", "Robbery", "Person + Property"
+ * Older links wrote one category (`cat`) and switched-off types (`hide`); fromLink() turns them into `cats`.
+ *
+ *   WHAT.matches(record, s)        does this offense pass?
+ *   WHAT.label(s, opts)            "All offenses", "Violent crime · Firearm", "Robbery", "3 categories"
+ *   WHAT.fromLink(parsed, D)       the choice for a page that has loaded its data D, from FILTERS.parse()
+ *   WHAT.groups(D)                 the tree: [{ key, name, cats }] for Persons, Property, Society (and Other), then Arrest-only
+ *   WHAT.toggleCat / toggleGroup / setViolent / clear / groupState   the panel's rules for a draft choice
  */
 (() => {
   "use strict";
 
-  // The type tick boxes (hide) are for the Group A types; arrest-only (Group B) offenses have their own tab and switch.
-  const matches = (a, s) =>
-    (!s.vc || a.violent) && (a.group === "Group B" || !(s.hide || []).includes(a.type)) && (!s.cat || a.cat === s.cat) && (!s.fa || a.firearm);
+  const catsOf = (s) => (s && s.cats) || [];
 
-  function label(s, types = []) {
-    const hide = s.hide || [], shown = types.filter((t) => !hide.includes(t));
-    let base = "All offenses";
-    if (s.vc) base = "Violent crime" + (s.cat ? ` · ${s.cat}` : "") + (hide.length ? ` · without ${hide.join(" + ")}` : "");
-    else if (s.cat) base = s.cat;
-    else if (hide.length && shown.length) base = shown.join(" + ");
-    else if (hide.length) base = "Nothing selected";
+  const matches = (a, s) => {
+    const cats = catsOf(s);
+    return (!s.vc || a.violent) && (!cats.length || cats.includes(a.cat)) && (!s.fa || a.firearm);
+  };
+
+  // opts.violent: Map of the categories violent crime covers (violentCats), so "Violent crime" with every one of them
+  // ticked reads as just "Violent crime". opts.gb: the arrest-only switch is on.
+  function label(s, opts = {}) {
+    const cats = catsOf(s), v = opts.violent;
+    let base;
+    if (s.vc) {
+      base = "Violent crime";
+      const narrowed = cats.length && (!v || cats.length < v.size);
+      if (narrowed) base += cats.length === 1 ? ` · ${cats[0]}` : ` · ${cats.length} categories`;
+    } else if (!cats.length) base = opts.gb ? "All offenses + arrest-only" : "All offenses";
+    else base = cats.length === 1 ? cats[0] : `${cats.length} categories`;
     return s.fa ? `${base} · Firearm` : base;
-  }
-
-  // The violent crime shortcut starts a fresh choice. After that it stays on: a category or a type then narrows it
-  // (see setCat and toggleType) until the person turns it off or chooses All offenses.
-  const setViolent = (s, on) => (on ? { ...s, vc: true, cat: "", hide: [] } : { ...s, vc: false });
-
-  // Choose one category (or, choosing it again, go back to all). Its type is switched on if it was off.
-  // While violent crime is on, only the categories it covers can be chosen (`violent`, from violentCats); the choice narrows it.
-  function setCat(s, cat, typeOfCat, violent) {
-    if (s.vc && violent && cat && !violent.has(cat)) return s;
-    const next = s.cat === cat ? "" : cat, type = next ? typeOfCat(next) : null;
-    return { ...s, cat: next, hide: (s.hide || []).filter((t) => t !== type) };
-  }
-
-  // Switch one offense type on or off. Switching off the type of the chosen category drops the category.
-  // The last type that is on cannot be switched off (the result would always be empty); pass only the types
-  // in play as `allTypes` (while violent crime is on, the types it covers).
-  function toggleType(s, type, allTypes, typeOfCat) {
-    const hide = s.hide || [], off = hide.includes(type);
-    if (!off && allTypes.filter((t) => !hide.includes(t)).length <= 1) return s;
-    const next = off ? hide.filter((t) => t !== type) : [...hide, type];
-    const dropCat = !off && s.cat && typeOfCat(s.cat) === type;
-    return { ...s, hide: next, cat: dropCat ? "" : s.cat };
   }
 
   // Which categories the violent crime shortcut covers, from the offenses themselves: Map category -> "all" or "part"
@@ -62,9 +52,65 @@
     return out;
   }
 
-  const clear = (s) => ({ ...s, cat: "", vc: false, hide: [], fa: false });
+  // The choice for a page that has loaded its data (D from CRIME.load), from a parsed link (FILTERS.parse). Categories the
+  // data does not have are dropped (a hand-edited link, or an arrest-only category while those are left out). The older
+  // `hide` (offense types switched off) becomes the list of categories of the types left on.
+  function fromLink(s, D) {
+    const known = new Set(Object.values(D.cats).flat());
+    let cats = catsOf(s).filter((c) => known.has(c));
+    const hide = (s.hide || []).filter((t) => D.types.includes(t));
+    if (!cats.length && hide.length) {
+      const gb = new Set(D.groupBCats || []);                                    // arrest-only categories were never affected by the type boxes
+      const kept = D.types.filter((t) => !hide.includes(t)).flatMap((t) => D.cats[t]).filter((c) => !gb.has(c));
+      cats = [...kept, ...(D.includeGroupB ? [...gb].filter((c) => known.has(c)) : [])];
+    }
+    return { cats: [...new Set(cats)], vc: !!s.vc, fa: !!s.fa };
+  }
 
-  const api = { matches, label, setViolent, setCat, toggleType, violentCats, clear };
+  // The groups the What panel shows, from the data (D from CRIME.load): the NIBRS groups Persons, Property and Society (most
+  // common category first), "Other" for any category with no group yet, and last the arrest-only (Group B) categories, which
+  // are known from the manifest even while those offenses are left out of the data.
+  function groups(D) {
+    const n = new Map(), groupOf = new Map(), gb = new Set(D.groupBCats || []);
+    for (const a of D.records) { n.set(a.cat, (n.get(a.cat) || 0) + 1); if (!groupOf.has(a.cat)) groupOf.set(a.cat, a.group); }
+    const inA = (pred) => [...groupOf].filter(([c, g]) => !gb.has(c) && pred(g)).map(([c]) => c).sort((x, y) => n.get(y) - n.get(x) || x.localeCompare(y));
+    const KNOWN = ["Persons", "Property", "Society"];
+    const out = KNOWN.map((g) => ({ key: g, name: g, cats: inA((x) => x === g) }));
+    out.push({ key: "Other", name: "Other", cats: inA((x) => !KNOWN.includes(x)) });
+    const arrest = [...gb].sort((x, y) => (n.get(y) || 0) - (n.get(x) || 0) || x.localeCompare(y));
+    return [...out.filter((g) => g.cats.length), { key: "Group B", name: "Arrest-only (Group B)", cats: arrest }];
+  }
+
+  // ---- the panel's draft choice. Each returns a new choice and leaves the old one alone.
+  // `violent` is the Map from violentCats while Violent crime is on (null otherwise): then only categories it covers can be ticked.
+  const allowed = (s, cat, violent) => !(s.vc && violent) || violent.has(cat);
+
+  function toggleCat(s, cat, violent) {
+    if (!allowed(s, cat, violent)) return s;
+    const cats = catsOf(s);
+    return { ...s, cats: cats.includes(cat) ? cats.filter((c) => c !== cat) : [...cats, cat] };
+  }
+
+  // Tick or untick every category of a group at once (only the ones violent crime covers, while it is on).
+  function toggleGroup(s, groupCats, on, violent) {
+    const list = groupCats.filter((c) => allowed(s, c, violent));
+    const rest = catsOf(s).filter((c) => !list.includes(c));
+    return { ...s, cats: on ? [...rest, ...list] : rest };
+  }
+
+  // "none", "some" or "all" of a group's categories ticked (counting only the ones that can be ticked).
+  function groupState(s, groupCats, violent) {
+    const list = groupCats.filter((c) => allowed(s, c, violent)), cats = catsOf(s);
+    const n = list.filter((c) => cats.includes(c)).length;
+    return !n ? "none" : n === list.length ? "all" : "some";
+  }
+
+  // Violent crime on ticks every category it covers (a fresh choice of categories); off leaves the ticks as they are.
+  const setViolent = (s, on, violent) => (on ? { ...s, vc: true, cats: violent ? [...violent.keys()] : [] } : { ...s, vc: false });
+
+  const clear = () => ({ cats: [], vc: false, fa: false });
+
+  const api = { matches, label, violentCats, fromLink, groups, toggleCat, toggleGroup, groupState, setViolent, clear };
   if (typeof module !== "undefined" && module.exports) module.exports = api;      // so tests can load this file in Node
   else window.WHAT = api;
 })();

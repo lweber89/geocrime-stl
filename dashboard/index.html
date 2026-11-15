@@ -43,14 +43,10 @@
   <span class="whenwrap" id="what"></span>
   <input type="search" id="q" placeholder="Find an incident #" aria-label="Find an incident number">
   <select id="ward" aria-label="Ward" hidden><option value="">Any ward</option></select>
-  <select id="cat" aria-label="Offense category" hidden><option value="">Any category</option></select>
+  <input type="hidden" id="cats">
   <select id="nbhd" aria-label="Neighborhood" hidden><option value="">Any neighborhood</option></select>
   <input type="hidden" id="vc">
   <input type="checkbox" id="fa" hidden>
-  <input type="checkbox" id="t-Person" checked hidden>
-  <input type="checkbox" id="t-Property" checked hidden>
-  <input type="checkbox" id="t-Society" checked hidden>
-  <input type="checkbox" id="t-Other" checked hidden>
   <button class="btn ghost" id="reset" type="button">Reset</button>
   <button class="btn ghost" id="listBtn" type="button" aria-expanded="false" aria-controls="listwrap">List</button>
   <button class="btn ghost" id="csvBtn" type="button" title="Download the offenses shown, as a spreadsheet (CSV)">Download CSV</button>

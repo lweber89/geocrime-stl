@@ -91,8 +91,8 @@ const feed = (withTable) => {
     m: "2026-09",
     d: { type: ["Property", "Person", "Society"], cat: ["Robbery", "Simple Assault", "Trespass of Real Property", "All Other Offenses"],
          off: ["x"], nbhd: ["Downtown"], ward: ["1"] },
-    r: [[1, "2026-09-01T10:00", 38.6, -90.2, "1 MAIN ST", 0, 0, 0, 0, "1", 0, 0, 0, 0],
-        [2, "2026-09-02T10:00", 38.6, -90.2, "2 MAIN ST", 1, 1, 0, 0, "1", 0, 0, 0, 0],
+    r: [[1, "2026-09-01T10:00", 38.6, -90.2, "1 MAIN ST", 1, 0, 0, 0, "1", 0, 0, 0, 0],             // the police label Robbery a Person offense
+        [2, "2026-09-02T10:00", 38.6, -90.2, "2 MAIN ST", 0, 1, 0, 0, "1", 0, 0, 0, 0],
         [3, "2026-09-03T10:00", 38.6, -90.2, "3 MAIN ST", 2, 2, 0, 0, "1", 0, 0, 0, 0],
         [4, "2026-09-04T10:00", 38.6, -90.2, "4 MAIN ST", 2, 3, 0, 0, "1", 0, 0, 0, 0]],
   };
@@ -138,4 +138,15 @@ test("carryGroupB keeps the choice in a rewritten link only when it is on", asyn
   await withFeed(true, "");
   const q = new URLSearchParams(); CRIME.carryGroupB(q);
   assert.equal(q.has("gb"), false);
+});
+
+test("an offense's type follows its NIBRS group, not the police's own label (Robbery is Property)", async () => {
+  const D = await withFeed(true, "#gb=1");
+  const t = (cat) => D.records.find((a) => a.cat === cat).type;
+  assert.equal(t("Robbery"), "Property", "the police feed said Person");
+  assert.equal(t("Simple Assault"), "Person", "the police feed said Property");
+  assert.equal(t("Trespass of Real Property"), "Other", "arrest-only (Group B) is Other");
+  assert.deepEqual(D.cats.Property, ["Robbery"]);
+  const old = await withFeed(false, "");
+  assert.equal(old.records.find((a) => a.cat === "Robbery").type, "Person", "a feed with no category table keeps the police label");
 });

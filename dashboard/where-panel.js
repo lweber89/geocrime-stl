@@ -86,7 +86,10 @@
         addrRow.append(clear);
         hint.textContent = "Ward and neighborhood are off while an address or pin is chosen.";
       } else {
-        addrRow.append(h("span", { class: "muted small" }, opts.addressHint || ""));
+        const hintEl = h("span", { class: "muted small" }), parts = (opts.addressHint || "").split("Drop a pin");
+        hintEl.append(document.createTextNode(parts[0]));
+        for (const rest of parts.slice(1)) { hintEl.append(h("b", { class: "pinword" }, "Drop a pin"), document.createTextNode(rest)); }     // "Drop a pin" is set off like the button it names
+        addrRow.append(hintEl);
         if (opts.addressLink) { const l = opts.addressLink, a = h("a", { href: typeof l.href === "function" ? l.href() : l.href }, l.text); addrRow.append(a); }
         hint.textContent = "";
       }

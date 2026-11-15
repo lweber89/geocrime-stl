@@ -2,11 +2,11 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const FILTERS = require("../../dashboard/filters.js");
 
-const none = { cat: "", fa: false, gb: false };
+const none = { cats: [], fa: false, gb: false };
 
 test("parse reads where, what and the older period names from a map link", () => {
   const s = FILTERS.parse("#range=last6&ward=5&nbhd=Dutchtown&cat=Robbery&fa=1&hide=Society,Other&gb=1&q=main+st&pt=38.6,-90.2&lbl=1+Main&radius=0.75");
-  assert.equal(s.ward, "5"); assert.equal(s.nbhd, "Dutchtown"); assert.equal(s.cat, "Robbery"); assert.equal(s.q, "main st");
+  assert.equal(s.ward, "5"); assert.equal(s.nbhd, "Dutchtown"); assert.deepEqual(s.cats, ["Robbery"]); assert.equal(s.q, "main st");
   assert.equal(s.pt, "38.6,-90.2"); assert.equal(s.lbl, "1 Main"); assert.equal(s.radius, "0.75");
   assert.equal(s.fa, true); assert.equal(s.gb, true); assert.deepEqual(s.hide, ["Society", "Other"]);
   assert.equal(s.when, "l6");
@@ -44,9 +44,9 @@ test("parse keeps what a page owns (tab, mode, sort) apart from the shared filte
 
 test("hash writes only what the page understands, and nothing empty", () => {
   const s = FILTERS.parse("#ward=5&cat=Robbery&fa=1&gb=1&q=main&hide=Other");
-  assert.equal(FILTERS.hash("hotspots", s), "ward=5&cat=Robbery&fa=1&hide=Other&gb=1");
-  assert.equal(FILTERS.hash("charts", s), "ward=5&cat=Robbery&fa=1&hide=Other&gb=1");
-  assert.equal(FILTERS.hash("map", s), "ward=5&q=main&cat=Robbery&fa=1&hide=Other&gb=1");
+  assert.equal(FILTERS.hash("hotspots", s), "ward=5&cats=Robbery&fa=1&hide=Other&gb=1");
+  assert.equal(FILTERS.hash("charts", s), "ward=5&cats=Robbery&fa=1&hide=Other&gb=1");
+  assert.equal(FILTERS.hash("map", s), "ward=5&q=main&cats=Robbery&fa=1&hide=Other&gb=1");
   assert.equal(FILTERS.hash("map", { ...none }), "");
 });
 
@@ -60,31 +60,31 @@ test("every page writes the period as `when`, and leaves out one it does not und
 
 test("link joins the page file and the fragment, with no # when there is nothing to carry", () => {
   assert.equal(FILTERS.link("map", none), "./");
-  assert.equal(FILTERS.link("map", { ...none, cat: "Robbery", fa: true }), "./#cat=Robbery&fa=1");
+  assert.equal(FILTERS.link("map", { ...none, cats: ["Robbery"], fa: true }), "./#cats=Robbery&fa=1");
   assert.equal(FILTERS.link("charts", none), "charts.html");
-  assert.equal(FILTERS.link("charts", { ...none, cat: "Robbery", when: "l3" }), "charts.html#cat=Robbery&when=l3");
+  assert.equal(FILTERS.link("charts", { ...none, cats: ["Robbery"], when: "l3" }), "charts.html#cats=Robbery&when=l3");
   assert.equal(FILTERS.link("hotspots", { ...none, gb: true }), "hotspots.html#gb=1");
 });
 
 test("extra values are added to a link and empty ones are skipped (the Hotspots 'See on the map' links)", () => {
-  const h = FILTERS.hash("map", { ...none, cat: "Arson" }, { pt: "38.6,-90.2", lbl: "Hex 4", radius: "0.25", q: "", ward: null });
-  assert.equal(h, "cat=Arson&pt=38.6%2C-90.2&lbl=Hex+4&radius=0.25");
-  assert.deepEqual([...new URLSearchParams(h)].map(([k]) => k), ["cat", "pt", "lbl", "radius"]);
+  const h = FILTERS.hash("map", { ...none, cats: ["Arson"] }, { pt: "38.6,-90.2", lbl: "Hex 4", radius: "0.25", q: "", ward: null });
+  assert.equal(h, "cats=Arson&pt=38.6%2C-90.2&lbl=Hex+4&radius=0.25");
+  assert.deepEqual([...new URLSearchParams(h)].map(([k]) => k), ["cats", "pt", "lbl", "radius"]);
 });
 
 test("a link read and written again keeps its filters, and moves the period to `when`", () => {
   const s = FILTERS.parse("ward=5&q=main&cat=Robbery&fa=1&hide=Other&gb=1&range=last6");
   const out = [...new URLSearchParams(FILTERS.hash("map", s))].map(([k, v]) => k + "=" + v).sort();
-  assert.deepEqual(out, ["cat=Robbery", "fa=1", "gb=1", "hide=Other", "q=main", "ward=5", "when=l6"]);
+  assert.deepEqual(out, ["cats=Robbery", "fa=1", "gb=1", "hide=Other", "q=main", "ward=5", "when=l6"]);
 });
 
 test("the map's and Charts' links to Hotspots carry the place, category, firearm, Group B and the period", () => {
   const fromMap = (h) => FILTERS.link("hotspots", FILTERS.parse(h));
-  assert.equal(fromMap("cat=Robbery&fa=1&ward=5&hide=Other&range=last6"), "hotspots.html#ward=5&cat=Robbery&fa=1&hide=Other&when=l6");
-  assert.equal(fromMap("cat=Arson&gb=1"), "hotspots.html#cat=Arson&gb=1", "no period in the link, no period written");
+  assert.equal(fromMap("cat=Robbery&fa=1&ward=5&hide=Other&range=last6"), "hotspots.html#ward=5&cats=Robbery&fa=1&hide=Other&when=l6");
+  assert.equal(fromMap("cat=Arson&gb=1"), "hotspots.html#cats=Arson&gb=1", "no period in the link, no period written");
   assert.equal(fromMap("ward=5&range=ytd"), "hotspots.html#ward=5&when=ytd");
   assert.equal(fromMap("range=all"), "hotspots.html#when=all");
-  assert.equal(FILTERS.link("hotspots", { cat: "Robbery", fa: true, gb: false, when: "l3" }), "hotspots.html#cat=Robbery&fa=1&when=l3");
+  assert.equal(FILTERS.link("hotspots", { cats: ["Robbery"], fa: true, gb: false, when: "l3" }), "hotspots.html#cats=Robbery&fa=1&when=l3");
 });
 
 test("the violent crime shortcut (vc) is read and written like the other switches, on every page", () => {
@@ -94,4 +94,20 @@ test("the violent crime shortcut (vc) is read and written like the other switche
   assert.equal(FILTERS.parse("#cat=Robbery").vc, false);
   assert.doesNotMatch(FILTERS.hash("map", FILTERS.parse("#cat=Robbery")), /vc=/);
   assert.equal(FILTERS.parse("#vc=1&tab=ward").other.has("vc"), false);
+});
+
+test("several categories travel as cats=A|B, and a category name with a comma survives", () => {
+  const s = FILTERS.parse("#cats=Robbery|Human+Trafficking%2C+Commercial+Sex+Acts|Larceny");
+  assert.deepEqual(s.cats, ["Robbery", "Human Trafficking, Commercial Sex Acts", "Larceny"]);
+  const out = FILTERS.hash("map", s);
+  assert.deepEqual(FILTERS.parse("#" + out).cats, s.cats, "written and read again");
+  assert.match(out, /^cats=Robbery%7CHuman/);
+});
+
+test("an older cat= link is read as a one-item cats, and written back as cats", () => {
+  assert.deepEqual(FILTERS.parse("#cat=Arson").cats, ["Arson"]);
+  assert.deepEqual(FILTERS.parse("#cat=Arson&cats=Robbery").cats, ["Robbery", "Arson"]);
+  assert.deepEqual(FILTERS.parse("#cats=Arson&cat=Arson").cats, ["Arson"], "no doubles");
+  assert.equal(FILTERS.hash("charts", FILTERS.parse("#cat=Arson")), "cats=Arson");
+  assert.equal(FILTERS.parse("#cat=Arson&tab=ward").other.has("cat"), false);
 });
