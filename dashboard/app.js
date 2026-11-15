@@ -55,7 +55,7 @@
   const syncWhat = () => { if (whatPanel) whatPanel.set(whatValue()); };
   function buildWhatPanel() {
     whatPanel = WHATPANEL.mount($("what"), {
-      groups: WHAT.groups(D), violent: WHAT.violentCats(D.records), value: whatValue(), groupB: CRIME.groupBOn(), counts: () => whatCounts,
+      groups: WHAT.groups(D), violent: WHAT.violentCats(D.records), value: whatValue(), groupB: CRIME.groupBOn(), counts: () => whatCounts, applyLabel: "Show on map",
       onChange: (v) => {
         $("cats").value = v.cats.join("|"); $("vc").value = v.vc ? "1" : ""; $("fa").checked = v.fa;
         $("cats").dispatchEvent(new Event("change"));
@@ -112,7 +112,7 @@
     const charts = document.querySelector('a[data-nav="charts"]');       // the Charts page opens on the same area and filters
     if (charts) charts.href = "charts.html" + (p.toString() ? "#" + p : "");
     const hot = document.querySelector('a[data-nav="hotspots"]');          // Hotspots takes the category, firearm and (when it has a matching preset) the period
-    if (hot) hot.href = FILTERS.link("hotspots", FILTERS.parse(p.toString()));
+    if (hot) hot.href = FILTERS.link("hotspots", { ...FILTERS.parse(p.toString()), when: f.when });      // Hotspots takes the map's period too, even the default (Charts keeps its own 12 months)
   }
 
   function readHash() {

@@ -290,7 +290,7 @@
       onClearAddress: () => { st.pt = st.lbl = st.radius = ""; render(); },
     });
     panel = WHENPANEL.mount($("when"), { keys: D.months.map((x) => x.m), value: st.when, onChange: (w) => { st.when = w; render(); } });
-    whatPanel = WHATPANEL.mount($("what"), { groups: WHAT.groups(D), violent: WHAT.violentCats(D.records), value: st, groupB: CRIME.groupBOn(),
+    whatPanel = WHATPANEL.mount($("what"), { groups: WHAT.groups(D), violent: WHAT.violentCats(D.records), value: st, groupB: CRIME.groupBOn(), applyLabel: "Update hotspots",
       onChange: (v) => { Object.assign(st, v); render(); },
       onGroupB: (on) => CRIME.setGroupB(on) });                     // loads or drops the arrest-only rows: reloads the page, keeping this choice in the link
     initMap(); zoomToPlace();
