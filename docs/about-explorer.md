@@ -24,7 +24,7 @@ It covers reported offenses inside the City of St. Louis from **January 2024** a
 
 ## How it is built and updated
 
-The Explorer is plain HTML, CSS, JavaScript and Leaflet (a map library), hosted free on GitHub Pages as part of this documentation site. A GitHub Action runs daily from the 10th to the 25th of each month, downloads the new month, updates the master dataset and redeploys; if the police have not posted by the 25th it fails so the owner is told. See `dashboard/README.md` and `data/README.md` in the repository for the details.
+The Explorer is plain HTML, CSS, JavaScript and Leaflet (a map library), hosted free on GitHub Pages as part of this documentation site. A GitHub Action runs daily from the 7th to the 12th of each month, downloads the new month, updates the master dataset and redeploys; if the police have not posted by the 12th it fails so the owner is told. See `dashboard/README.md` and `data/README.md` in the repository for the details.
 
 ## Credits
 

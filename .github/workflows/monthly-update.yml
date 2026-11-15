@@ -1,9 +1,10 @@
 # Adds each new month of SLMPD crime data and republishes the site.
 #
-# SLMPD posts a month around the 5th of the next one. This runs every day from the 10th to the 25th (about 9 am Central):
+# SLMPD posts a month around the 5th of the next one. This runs every day from the 7th to the 12th, starting at 12:03 UTC
+# (about 6 am Central in winter, 7 am in summer; GitHub's schedule is UTC only and can start a few minutes late):
 #   - if the master dataset already has last month, it does nothing;
 #   - if the police have not posted it yet, it ends quietly and tries again tomorrow;
-#   - on the 25th an unsuccessful run fails on purpose, so GitHub emails you that the data never arrived;
+#   - on the 12th an unsuccessful run fails on purpose, so GitHub emails you that the data never arrived;
 #   - any other failure (bad data, a failed plausibility check) fails right away, and nothing is published.
 # On success it commits the updated master parquet to main and redeploys the site.
 # You can also run it by hand from the Actions tab (it works on the previous calendar month).
@@ -11,7 +12,7 @@ name: monthly-update
 
 on:
     schedule:
-        - cron: "17 14 10-25 * *"
+        - cron: "3 12 7-12 * *"
     workflow_dispatch:
 
 concurrency:
@@ -70,7 +71,7 @@ jobs:
                   set -e
                   day=$(date -u +%d)
                   if [ "$rc" -ne 0 ]; then
-                      if grep -q "Extraction phase" pipeline.log && [ "$((10#$day))" -lt 25 ]; then
+                      if grep -q "Extraction phase" pipeline.log && [ "$((10#$day))" -lt 12 ]; then
                           echo "::notice::${{ steps.have.outputs.label }} is not published yet. Trying again tomorrow."
                           echo "ready=false" >> "$GITHUB_OUTPUT"
                           exit 0
