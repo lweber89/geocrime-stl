@@ -375,7 +375,7 @@
       onGroupB: (on) => CRIME.setGroupB(on),                     // loads or drops the arrest-only rows: reloads the page, keeping this choice in the link
     });
     const sync = () => { wherePanel.set(area); whatPanel.set(area); panel.set(when); };
-    $("reset").addEventListener("click", () => { area = { ward: "", nbhd: "", pt: "", lbl: "", radius: "", cats: [], vc: false, fa: false }; when = "l12"; sync(); renderAll(); });
+    $("reset").addEventListener("click", () => { area = { ward: "", nbhd: "", pt: "", lbl: "", radius: "", cats: [], vc: false, fa: false }; when = "l12"; sync(); renderAll(); if (CRIME.groupBOn()) CRIME.setGroupB(false); });      // back to how the page opens, arrest-only off too (that reloads)
     let t; const redraw = () => { clearTimeout(t); t = setTimeout(() => { if (D) renderAll(); }, 120); };
     window.addEventListener("resize", redraw);
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw);
