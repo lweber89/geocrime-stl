@@ -36,8 +36,8 @@ The site is published with GitHub Pages from `.github/workflows/docs.yml`: the p
 dashboard at `/dashboard/`, with its data feed rebuilt from the master dataset (`data/processed/*.parquet`) at deploy time.
 `data/web/` is therefore not committed.
 
-`.github/workflows/monthly-update.yml` adds each new month. It runs daily from the 10th to the 25th, stops quietly
-if the police have not posted last month yet, commits the updated master parquet to `main` and redeploys. If the month never arrives by the 25th the run fails, so GitHub emails the repository owner.
+`.github/workflows/monthly-update.yml` adds each new month. It runs daily from the 7th to the 12th, stops quietly
+if the police have not posted last month yet, commits the updated master parquet to `main` and redeploys. If the month never arrives by the 12th the run fails, so GitHub emails the repository owner.
 It can also be started by hand from the Actions tab.
 
 ## Credits
