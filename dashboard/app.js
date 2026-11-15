@@ -715,7 +715,7 @@
     $("ward").addEventListener("change", () => { if ($("ward").value) { $("nbhd").value = ""; clearAddress(); } zoomToScope(); });
     $("nbhd").addEventListener("change", () => { if ($("nbhd").value) { $("ward").value = ""; clearAddress(); } zoomToScope(); });
     for (const id of ["ward", "cats", "nbhd", "radius", "fa"]) $(id).addEventListener("change", apply);
-    $("reset").addEventListener("click", () => { resetControls(); apply(); zoomToScope(); });
+    $("reset").addEventListener("click", () => { resetControls(); apply(); zoomToScope(); if (CRIME.groupBOn()) CRIME.setGroupB(false); });      // back to how the page opens, arrest-only off too (that reloads)
     $("prev").addEventListener("click", () => { page--; renderTable(); });
     $("next").addEventListener("click", () => { page++; renderTable(); });
     document.querySelectorAll("th[data-sort]").forEach((th) => th.addEventListener("click", () => {

@@ -294,7 +294,7 @@
       onChange: (v) => { Object.assign(st, v); render(); },
       onGroupB: (on) => CRIME.setGroupB(on) });                     // loads or drops the arrest-only rows: reloads the page, keeping this choice in the link
     initMap(); zoomToPlace();
-    $("reset").addEventListener("click", () => { st = { ...st, ward: "", nbhd: "", pt: "", lbl: "", radius: "", cats: [], vc: false, fa: false, when: "l12" }; wherePanel.set(st); whatPanel.set(st); zoomToPlace(); panel.set("l12"); render(); });
+    $("reset").addEventListener("click", () => { st = { ...st, ward: "", nbhd: "", pt: "", lbl: "", radius: "", cats: [], vc: false, fa: false, when: "l12", tab: "hex", mode: "count", sort: "rate", dir: "desc" }; wherePanel.set(st); whatPanel.set(st); zoomToPlace(); panel.set("l12"); render(); if (CRIME.groupBOn()) CRIME.setGroupB(false); });      // back to how the page opens (view too), arrest-only off too (that reloads)
     document.querySelectorAll(".seg button[data-mode]").forEach((b) => b.addEventListener("click", () => { st.mode = b.dataset.mode; writeState(); renderMap(); renderList(); }));
     document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { st.tab = b.dataset.tab; writeState(); renderList(); }));
     $("list").addEventListener("click", (e) => {

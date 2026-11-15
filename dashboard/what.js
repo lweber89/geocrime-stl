@@ -17,6 +17,7 @@
  *   WHAT.fromLink(parsed, D)       the choice for a page that has loaded its data D, from FILTERS.parse()
  *   WHAT.groups(D)                 the tree: [{ key, name, cats }] for Persons, Property, Society (and Other), then Arrest-only
  *   WHAT.toggleCat / toggleGroup / setViolent / clear / groupState   the panel's rules for a draft choice
+ *   WHAT.expand / normalize        a stored choice <-> the ticks the panel shows ("All offenses" is stored as no categories)
  */
 (() => {
   "use strict";
@@ -29,7 +30,8 @@
   };
 
   // opts.violent: Map of the categories violent crime covers (violentCats), so "Violent crime" with every one of them
-  // ticked reads as just "Violent crime". opts.gb: the arrest-only switch is on.
+  // ticked reads as just "Violent crime". opts.gb: the arrest-only switch is on. opts.groups: WHAT.groups(D), so ticking
+  // exactly whole groups reads "Persons + Property".
   function label(s, opts = {}) {
     const cats = catsOf(s), v = opts.violent;
     let base;
@@ -38,7 +40,13 @@
       const narrowed = cats.length && (!v || cats.length < v.size);
       if (narrowed) base += cats.length === 1 ? ` · ${cats[0]}` : ` · ${cats.length} categories`;
     } else if (!cats.length) base = opts.gb ? "All offenses + arrest-only" : "All offenses";
-    else base = cats.length === 1 ? cats[0] : `${cats.length} categories`;
+    else if (cats.length === 1) base = cats[0];
+    else {                                                                       // exactly whole groups ticked: name them ("Persons + Property")
+      const whole = (opts.groups || []).filter((g) => g.cats.length && g.cats.every((c) => cats.includes(c)));
+      const covered = new Set(whole.flatMap((g) => g.cats));
+      const exact = whole.length && covered.size === cats.length && cats.every((c) => covered.has(c));
+      base = exact ? whole.map((g) => (g.key === "Group B" ? "Arrest-only" : g.name)).join(" + ") : `${cats.length} categories`;
+    }
     return s.fa ? `${base} · Firearm` : base;
   }
 
@@ -110,7 +118,30 @@
 
   const clear = () => ({ cats: [], vc: false, fa: false });
 
-  const api = { matches, label, violentCats, fromLink, groups, toggleCat, toggleGroup, groupState, setViolent, clear };
+  // The panel shows "All offenses" as every Persons, Property and Society category ticked, but a choice stores it as an empty
+  // list (short links; a category added in a later month is included automatically). These two convert between the two.
+  // ctx = { allA: every Group A category, allB: every arrest-only category, violent: the Map from violentCats }.
+  //   expand(choice, ctx)     the ticks to show for a stored choice
+  //   normalize(draft, ctx)   the choice to store from the ticks, and gb: are any arrest-only categories ticked?
+  function expand(s, ctx) {
+    const cats = catsOf(s);
+    if (cats.length) return [...cats];
+    if (s.vc) return ctx.violent ? [...ctx.violent.keys()] : [];                 // violent crime with nothing narrowed: the categories it covers
+    return [...ctx.allA, ...(s.gb ? ctx.allB : [])];                               // all offenses, with the arrest-only ones if they are on
+  }
+
+  function normalize(s, ctx) {
+    const cats = catsOf(s), B = ctx.allB || [], A = ctx.allA || [];
+    const tickedB = cats.filter((c) => B.includes(c)), gb = tickedB.length > 0;
+    if (s.vc) {                                                                    // every violent category ticked is plain "violent crime"
+      const v = ctx.violent ? [...ctx.violent.keys()] : [];
+      return { cats: v.length && v.every((c) => cats.includes(c)) ? [] : [...cats], vc: true, fa: !!s.fa, gb: false };
+    }
+    const everyA = A.length > 0 && A.every((c) => cats.includes(c));
+    return { cats: everyA && (!gb || tickedB.length === B.length) ? [] : [...cats], vc: false, fa: !!s.fa, gb };
+  }
+
+  const api = { matches, label, violentCats, fromLink, groups, toggleCat, toggleGroup, groupState, setViolent, clear, expand, normalize };
   if (typeof module !== "undefined" && module.exports) module.exports = api;      // so tests can load this file in Node
   else window.WHAT = api;
 })();

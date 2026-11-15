@@ -120,3 +120,49 @@ test("groups lists Persons, Property and Society by size, then the arrest-only c
   assert.equal(g[0].cats.includes("Trespass"), false, "an arrest-only category is only in its own group");
   assert.deepEqual(WHAT.groups({ groupBCats: [], records: [] }).map((x) => x.key), ["Group B"]);
 });
+
+const ctx = { allA: ["Robbery", "Larceny", "Arson"], allB: ["Trespass", "DUI"], violent: new Map([["Robbery", "all"]]) };
+
+test("expand shows All offenses as every Group A category ticked (and the arrest-only ones when they are on)", () => {
+  assert.deepEqual(WHAT.expand(none, ctx), ["Robbery", "Larceny", "Arson"]);
+  assert.deepEqual(WHAT.expand({ ...none, gb: true }, ctx), ["Robbery", "Larceny", "Arson", "Trespass", "DUI"]);
+  assert.deepEqual(WHAT.expand({ ...none, vc: true }, ctx), ["Robbery"], "violent crime with nothing narrowed: what it covers");
+  assert.deepEqual(WHAT.expand({ ...none, cats: ["Arson"] }, ctx), ["Arson"]);
+});
+
+test("normalize stores everything ticked as no categories, and anything less as the list", () => {
+  assert.deepEqual(WHAT.normalize({ ...none, cats: ["Robbery", "Larceny", "Arson"] }, ctx), { cats: [], vc: false, fa: false, gb: false });
+  assert.deepEqual(WHAT.normalize({ ...none, cats: ["Robbery", "Larceny"] }, ctx).cats, ["Robbery", "Larceny"]);
+  const withB = WHAT.normalize({ ...none, cats: ["Robbery", "Larceny", "Arson", "Trespass", "DUI"] }, ctx);
+  assert.deepEqual(withB, { cats: [], vc: false, fa: false, gb: true }, "everything including arrest-only: no list, arrest-only on");
+  const some = WHAT.normalize({ ...none, cats: ["Robbery", "Larceny", "Arson", "Trespass"] }, ctx);
+  assert.deepEqual(some.cats, ["Robbery", "Larceny", "Arson", "Trespass"], "only some arrest-only ones: keep the list");
+  assert.equal(some.gb, true);
+  assert.equal(WHAT.normalize({ ...none, cats: ["Trespass"] }, ctx).gb, true, "a ticked arrest-only category switches them on");
+  assert.equal(WHAT.normalize({ ...none, cats: ["Robbery"], fa: true }, ctx).fa, true);
+});
+
+test("normalize: every violent category ticked is plain violent crime, with arrest-only off", () => {
+  assert.deepEqual(WHAT.normalize({ ...none, vc: true, cats: ["Robbery"] }, ctx), { cats: [], vc: true, fa: false, gb: false });
+  const two = { ...ctx, violent: new Map([["Robbery", "all"], ["Arson", "all"]]) };
+  assert.deepEqual(WHAT.normalize({ ...none, vc: true, cats: ["Robbery"] }, two).cats, ["Robbery"], "narrowed: keep the list");
+});
+
+test("what is stored and shown again gives the same ticks", () => {
+  for (const ticks of [["Robbery", "Larceny", "Arson"], ["Larceny"], ["Robbery", "Larceny", "Arson", "Trespass", "DUI"], ["Arson", "DUI"]]) {
+    const n = WHAT.normalize({ ...none, cats: ticks }, ctx);
+    assert.deepEqual(WHAT.expand({ cats: n.cats, vc: n.vc, fa: n.fa, gb: n.gb }, ctx).sort(), [...ticks].sort(), ticks.join());
+  }
+});
+
+test("label names whole groups when exactly those are ticked", () => {
+  const groups = [{ key: "Persons", name: "Persons", cats: ["Assault", "Rape"] }, { key: "Property", name: "Property", cats: ["Larceny", "Arson"] },
+    { key: "Group B", name: "Arrest-only (Group B)", cats: ["Trespass"] }];
+  const L = (cats) => WHAT.label({ ...none, cats }, { groups });
+  assert.equal(L(["Assault", "Rape"]), "Persons");
+  assert.equal(L(["Assault", "Rape", "Larceny", "Arson"]), "Persons + Property");
+  assert.equal(L(["Assault", "Rape", "Trespass"]), "Persons + Arrest-only");
+  assert.equal(L(["Assault", "Larceny"]), "2 categories", "part of a group: a count");
+  assert.equal(L(["Assault", "Rape", "Larceny"]), "3 categories", "a whole group plus a bit of another: a count");
+  assert.equal(L(["Assault"]), "Assault");
+});
